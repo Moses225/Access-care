@@ -4,12 +4,12 @@ import { Firestore, collection, getFirestore } from 'firebase/firestore';
 import { FirebaseStorage, getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAMYBfxhljita9XVqTc_HHahMA7mFVFPn8",
+  apiKey: "************************************",
   authDomain: "accesscare-app.firebaseapp.com",
   projectId: "accesscare-app",
   storageBucket: "accesscare-app.firebasestorage.app",
-  messagingSenderId: "283308941540",
-  appId: "1:283308941540:web:e3c57ebf0e16ca9c8f4cf1"
+  messagingSenderId: "****************************",
+  appId: "*************************************"
 };
 
 const app: FirebaseApp = initializeApp(firebaseConfig);
