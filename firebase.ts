@@ -1,6 +1,7 @@
 import { FirebaseApp, initializeApp } from 'firebase/app';
 import { Auth, getAuth } from 'firebase/auth';
 import { Firestore, collection, getFirestore } from 'firebase/firestore';
+import { FirebaseStorage, getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAMYBfxhljita9XVqTc_HHahMA7mFVFPn8",
@@ -14,8 +15,10 @@ const firebaseConfig = {
 const app: FirebaseApp = initializeApp(firebaseConfig);
 const auth: Auth = getAuth(app);
 const db: Firestore = getFirestore(app);
+const storage: FirebaseStorage = getStorage(app);
 
 export const providersCollection = collection(db, 'providers');
 export const appointmentsCollection = collection(db, 'appointments');
 
-export { auth, db };
+export { auth, db, storage };
+

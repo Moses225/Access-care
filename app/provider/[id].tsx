@@ -1,24 +1,17 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { addDoc, collection, deleteDoc, doc, getDocs, query, where } from "firebase/firestore";
-import React, { useEffect, useState } from "react";
-import {
-  Alert,
-  Linking,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import MapView, { Marker } from "react-native-maps";
-import { mockProviders } from "../../data/providers";
-import { auth, db } from "../../firebase";
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { addDoc, collection, deleteDoc, doc, getDocs, query, where } from 'firebase/firestore';
+import React, { useEffect, useState } from 'react';
+import { Alert, Linking, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import MapView, { Marker } from 'react-native-maps';
+import { useTheme } from '../../context/ThemeContext';
+import { mockProviders } from '../../data/providers';
+import { auth, db } from '../../firebase';
 
 export default function ProviderDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const provider = mockProviders.find((p) => String(p.id) === String(id));
+  const { colors } = useTheme();
+  const provider = mockProviders.find(p => p.id === id);
   const [isSaved, setIsSaved] = useState(false);
   const [savedDocId, setSavedDocId] = useState<string | null>(null);
 
@@ -30,32 +23,33 @@ export default function ProviderDetailScreen() {
     const uid = auth.currentUser?.uid;
     if (!uid || !provider) return;
 
-    const q = query(
-      collection(db, 'savedProviders'),
-      where('userId', '==', uid),
-      where('providerId', '==', provider.id)
-    );
-    
-    const snapshot = await getDocs(q);
-    if (!snapshot.empty) {
-      setIsSaved(true);
-      setSavedDocId(snapshot.docs[0].id);
+    try {
+      const q = query(
+        collection(db, 'savedProviders'),
+        where('userId', '==', uid),
+        where('providerId', '==', provider.id)
+      );
+      const snapshot = await getDocs(q);
+      if (!snapshot.empty) {
+        setIsSaved(true);
+        setSavedDocId(snapshot.docs[0].id);
+      }
+    } catch (error) {
+      console.log('Error checking saved status:', error);
     }
   };
 
-  const toggleSaveProvider = async () => {
+  const toggleSave = async () => {
     const uid = auth.currentUser?.uid;
     if (!uid || !provider) return;
 
     try {
       if (isSaved && savedDocId) {
-        // Remove from saved
         await deleteDoc(doc(db, 'savedProviders', savedDocId));
         setIsSaved(false);
         setSavedDocId(null);
-        Alert.alert('Removed', `${provider.name} removed from saved providers`);
+        Alert.alert('Removed', 'Provider removed from saved list');
       } else {
-        // Add to saved
         const docRef = await addDoc(collection(db, 'savedProviders'), {
           userId: uid,
           providerId: provider.id,
@@ -66,133 +60,147 @@ export default function ProviderDetailScreen() {
         });
         setIsSaved(true);
         setSavedDocId(docRef.id);
-        Alert.alert('Saved', `${provider.name} added to saved providers`);
+        Alert.alert('Saved', 'Provider added to your saved list');
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to update saved providers');
-      console.error('Save error:', error);
+      Alert.alert('Error', 'Failed to update saved status');
+    }
+  };
+
+  const openDirections = () => {
+    if (!provider) return;
+
+    const { latitude, longitude, name, address } = provider;
+    
+    // Create URLs for different platforms
+    const appleMapsUrl = `maps://app?daddr=${latitude},${longitude}&q=${encodeURIComponent(name)}`;
+    const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}&destination_place_id=${encodeURIComponent(name)}`;
+    const webMapsUrl = `https://maps.google.com/?q=${latitude},${longitude}`;
+
+    // Platform-specific logic
+    if (Platform.OS === 'ios') {
+      // Try Apple Maps first on iOS
+      Linking.canOpenURL(appleMapsUrl)
+        .then((supported) => {
+          if (supported) {
+            return Linking.openURL(appleMapsUrl);
+          } else {
+            // Fallback to Google Maps web
+            return Linking.openURL(webMapsUrl);
+          }
+        })
+        .catch(() => {
+          // Last resort: open in browser
+          Linking.openURL(webMapsUrl);
+        });
+    } else {
+      // Android or other platforms - use Google Maps
+      Linking.openURL(googleMapsUrl).catch(() => {
+        // Fallback to web
+        Linking.openURL(webMapsUrl);
+      });
     }
   };
 
   if (!provider) {
     return (
-      <View style={styles.container}>
-        <Text>Provider not found</Text>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <Text style={{ color: colors.text }}>Provider not found</Text>
       </View>
     );
   }
 
-  const openDirections = () => {
-    const lat = 35.4676;
-    const lng = -97.5164;
-    const label = encodeURIComponent(provider.name);
-
-    const url = Platform.select({
-      ios: `http://maps.apple.com/?ll=${lat},${lng}&q=${label}`,
-      android: `geo:${lat},${lng}?q=${lat},${lng}(${label})`,
-    });
-
-    if (url) {
-      Linking.openURL(url);
-    }
-  };
-
-  const handleBookAppointment = () => {
-    router.push(`/booking/${provider.id}` as any);
-  };
-
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.topBar}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.saveButton} onPress={toggleSaveProvider}>
-          <Text style={styles.saveIcon}>{isSaved ? '⭐' : '☆'}</Text>
-          <Text style={styles.saveText}>{isSaved ? 'Saved' : 'Save'}</Text>
-        </TouchableOpacity>
-      </View>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <Text style={[styles.backButtonText, { color: colors.primary }]}>← Back</Text>
+      </TouchableOpacity>
 
-      <View style={styles.header}>
-        <View style={styles.avatarLarge}>
-          <Text style={styles.avatarText}>
-            {provider.name.split(" ").map((n) => n[0]).join("")}
-          </Text>
-        </View>
-        <Text style={styles.name}>{provider.name}</Text>
-        <Text style={styles.specialty}>{provider.specialty}</Text>
-        <View style={styles.ratingContainer}>
-          <Text style={styles.rating}>⭐ {provider.rating}</Text>
-          <Text style={styles.distance}>📍 {provider.distance} miles away</Text>
-        </View>
-      </View>
-
-      <View style={styles.section}>
-  <Text style={styles.sectionTitle}>Contact Information</Text>
-  <View style={styles.infoRow}>
-    <Text style={styles.label}>Address:</Text>
-  </View>
-  <Text style={styles.addressText}>{provider.address}</Text>
-  
-  <View style={styles.infoRow}>
-    <Text style={styles.label}>Phone:</Text>
-    <Text style={styles.value}>{provider.phone}</Text>
-  </View>
-  </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Services</Text>
-        {["Prenatal Care", "Ultrasound", "Labor & Delivery", "Postpartum Care"].map((s) => (
-          <View key={s} style={styles.serviceItem}>
-            <Text style={styles.serviceBullet}>•</Text>
-            <Text style={styles.serviceText}>{s}</Text>
+      <View style={[styles.header, { backgroundColor: colors.card }]}>
+        <View style={styles.headerTop}>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.name, { color: colors.text }]}>{provider.name}</Text>
+            <Text style={[styles.specialty, { color: colors.primary }]}>{provider.specialty}</Text>
+            <Text style={[styles.category, { color: colors.subtext }]}>{provider.category}</Text>
           </View>
-        ))}
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Location</Text>
-        <View style={styles.mapContainer}>
-          <MapView
-            style={styles.map}
-            initialRegion={{
-              latitude: 35.4676,
-              longitude: -97.5164,
-              latitudeDelta: 0.05,
-              longitudeDelta: 0.05,
-            }}
-          >
-            <Marker
-              coordinate={{ latitude: 35.4676, longitude: -97.5164 }}
-              title={provider.name}
-              description={provider.address}
-            />
-          </MapView>
+          <TouchableOpacity onPress={toggleSave}>
+            <Text style={styles.saveIcon}>{isSaved ? '⭐' : '☆'}</Text>
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.directionsButton} onPress={openDirections}>
-          <Text style={styles.directionsButtonText}>Get Directions</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.costSection}>
-        <Text style={styles.sectionTitle}>Estimated Cost</Text>
-        <View style={styles.costBox}>
-          <Text style={styles.costLabel}>Typical Visit</Text>
-          <Text style={styles.costAmount}>$150 - $250</Text>
-          <Text style={styles.costNote}>*With insurance: $25-$50 copay</Text>
+        <View style={styles.stats}>
+          <View style={styles.statItem}>
+            <Text style={[styles.statValue, { color: colors.primary }]}>⭐ {provider.rating}</Text>
+            <Text style={[styles.statLabel, { color: colors.subtext }]}>Rating</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={[styles.statValue, { color: colors.primary }]}>📍 {provider.distance} mi</Text>
+            <Text style={[styles.statLabel, { color: colors.subtext }]}>Distance</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={[styles.statValue, { color: provider.available ? colors.success : colors.error }]}>
+              {provider.available ? '✓ Available' : '✗ Unavailable'}
+            </Text>
+            <Text style={[styles.statLabel, { color: colors.subtext }]}>Status</Text>
+          </View>
         </View>
       </View>
 
-      <TouchableOpacity 
-        style={[styles.bookButton, !provider.available && styles.bookButtonDisabled]}
-        onPress={handleBookAppointment}
-        disabled={!provider.available}
+      <MapView
+        style={styles.map}
+        initialRegion={{
+          latitude: provider.latitude,
+          longitude: provider.longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        }}
       >
-        <Text style={styles.bookButtonText}>
-          {provider.available ? 'Book Appointment' : 'Currently Unavailable'}
-        </Text>
+        <Marker
+          coordinate={{
+            latitude: provider.latitude,
+            longitude: provider.longitude,
+          }}
+          title={provider.name}
+          description={provider.address}
+        />
+      </MapView>
+
+      <TouchableOpacity style={[styles.directionsButton, { backgroundColor: colors.primary }]} onPress={openDirections}>
+        <Text style={styles.directionsButtonText}>🗺️ Get Directions</Text>
+      </TouchableOpacity>
+
+      <View style={[styles.section, { backgroundColor: colors.card }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Contact Information</Text>
+        <View style={styles.infoRow}>
+          <Text style={[styles.label, { color: colors.subtext }]}>Address:</Text>
+        </View>
+        <Text style={[styles.addressText, { color: colors.text }]}>{provider.address}</Text>
+        
+        <View style={styles.infoRow}>
+          <Text style={[styles.label, { color: colors.subtext }]}>Phone:</Text>
+          <TouchableOpacity onPress={() => Linking.openURL(`tel:${provider.phone}`)}>
+            <Text style={[styles.value, styles.phoneLink, { color: colors.primary }]}>{provider.phone}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {provider.services && provider.services.length > 0 && (
+        <View style={[styles.section, { backgroundColor: colors.card }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Services Offered</Text>
+          {provider.services.map((service, index) => (
+            <View key={index} style={styles.serviceItem}>
+              <Text style={styles.serviceBullet}>•</Text>
+              <Text style={[styles.serviceText, { color: colors.text }]}>{service}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      <TouchableOpacity
+        style={[styles.bookButton, { backgroundColor: colors.primary }]}
+        onPress={() => router.push(`/booking/${provider.id}` as any)}
+      >
+        <Text style={styles.bookButtonText}>📅 Book Appointment</Text>
       </TouchableOpacity>
 
       <View style={styles.bottomPadding} />
@@ -201,91 +209,33 @@ export default function ProviderDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  topBar: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 10,
-  },
-  addressText: { 
-  fontSize: 16, 
-  color: '#333',
-  lineHeight: 22,
-  marginBottom: 15,
-},
-  backButton: { },
-  backButtonText: { fontSize: 16, color: "#667eea", fontWeight: "600" },
-  saveButton: { 
-    flexDirection: 'row', 
-    alignItems: 'center',
-    backgroundColor: '#f0f0ff',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  saveIcon: { fontSize: 18, marginRight: 5 },
-  saveText: { fontSize: 14, color: '#667eea', fontWeight: '600' },
-  header: {
-    alignItems: "center",
-    paddingVertical: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-  },
-  avatarLarge: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: "#667eea",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 15,
-  },
-  avatarText: { fontSize: 32, fontWeight: "bold", color: "#fff" },
-  name: { fontSize: 24, fontWeight: "bold", color: "#333", marginBottom: 5 },
-  specialty: { fontSize: 16, color: "#667eea", fontWeight: "600", marginBottom: 10 },
-  ratingContainer: { flexDirection: "row", gap: 20 },
-  rating: { fontSize: 16, color: "#666" },
-  distance: { fontSize: 16, color: "#666" },
-  section: { padding: 20, borderBottomWidth: 1, borderBottomColor: "#e0e0e0" },
-  sectionTitle: { fontSize: 18, fontWeight: "bold", color: "#333", marginBottom: 15 },
-  infoRow: { marginBottom: 10 },
-  label: { fontSize: 14, color: "#666", marginBottom: 3 },
-  value: { fontSize: 16, color: "#333", flexWrap: 'wrap',flex: 1,},
-  serviceItem: { flexDirection: "row", marginBottom: 10 },
-  serviceBullet: { marginRight: 10, color: "#667eea", fontSize: 16 },
-  serviceText: { fontSize: 15, color: "#666", flex: 1 },
-  mapContainer: { height: 200, borderRadius: 15, overflow: "hidden", marginBottom: 15 },
-  map: { width: "100%", height: "100%" },
-  directionsButton: {
-    borderWidth: 2,
-    borderColor: "#667eea",
-    padding: 12,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  directionsButtonText: { color: "#667eea", fontWeight: "600", fontSize: 14 },
-  costSection: { padding: 20 },
-  costBox: {
-    backgroundColor: "#f0f0ff",
-    padding: 20,
-    borderRadius: 15,
-    borderWidth: 2,
-    borderColor: "#667eea",
-  },
-  costLabel: { fontSize: 14, color: "#666", marginBottom: 5 },
-  costAmount: { fontSize: 28, fontWeight: "bold", color: "#667eea", marginBottom: 5 },
-  costNote: { fontSize: 12, color: "#999", fontStyle: "italic" },
-  bookButton: {
-    backgroundColor: "#667eea",
-    margin: 20,
-    padding: 18,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  bookButtonDisabled: { backgroundColor: "#ccc" },
-  bookButtonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
+  container: { flex: 1 },
+  backButton: { padding: 20, paddingTop: 60 },
+  backButtonText: { fontSize: 16, fontWeight: '600' },
+  header: { padding: 20, marginHorizontal: 20, borderRadius: 15, marginBottom: 20 },
+  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 15 },
+  name: { fontSize: 24, fontWeight: 'bold', marginBottom: 5 },
+  specialty: { fontSize: 16, fontWeight: '600', marginBottom: 3 },
+  category: { fontSize: 13 },
+  saveIcon: { fontSize: 32 },
+  stats: { flexDirection: 'row', justifyContent: 'space-around', paddingTop: 15, borderTopWidth: 1, borderTopColor: '#e0e0e0' },
+  statItem: { alignItems: 'center' },
+  statValue: { fontSize: 14, fontWeight: 'bold', marginBottom: 3 },
+  statLabel: { fontSize: 11 },
+  map: { height: 250, marginHorizontal: 20, borderRadius: 15, marginBottom: 15 },
+  directionsButton: { marginHorizontal: 20, padding: 15, borderRadius: 12, alignItems: 'center', marginBottom: 20 },
+  directionsButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  section: { marginHorizontal: 20, padding: 15, borderRadius: 12, marginBottom: 15 },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15 },
+  infoRow: { marginBottom: 5 },
+  label: { fontSize: 14, fontWeight: '600', marginBottom: 5 },
+  value: { fontSize: 16 },
+  addressText: { fontSize: 16, lineHeight: 22, marginBottom: 15 },
+  phoneLink: { fontWeight: '600', textDecorationLine: 'underline' },
+  serviceItem: { flexDirection: 'row', marginBottom: 8, paddingLeft: 5 },
+  serviceBullet: { fontSize: 16, marginRight: 10, color: '#667eea' },
+  serviceText: { fontSize: 15, flex: 1 },
+  bookButton: { marginHorizontal: 20, padding: 18, borderRadius: 12, alignItems: 'center' },
+  bookButtonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
   bottomPadding: { height: 40 },
 });
