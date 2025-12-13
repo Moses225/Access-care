@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "AccessCare",
+    "slug": "accesscare",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/AccessCare-logo.png",
+    "scheme": "accesscare",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/images/Accesscare.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.accesscare.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/AccessCare-logo.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.accesscare.app"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/AccessCare-logo.png"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
