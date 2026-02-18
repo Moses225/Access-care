@@ -21,7 +21,7 @@ async function importProviders() {
   const providers = [];
   
   // Read CSV file (use your geocoded CSV)
-  fs.createReadStream('../AccessCare_Providers_GEOCODED.csv')
+  fs.createReadStream('../data/AccessCare_Providers_FINAL.csv')
     .pipe(csv())
     .on('data', (row) => {
       // Map CSV columns to Firestore fields
