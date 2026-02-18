@@ -12,13 +12,17 @@ const firebaseConfig = {
   appId: "1:283308941540:web:e3c57ebf0e16ca9c8f4cf1"
 };
 
+// Initialize Firebase
 const app: FirebaseApp = initializeApp(firebaseConfig);
-const auth: Auth = getAuth(app);
+
+// Initialize services
 const db: Firestore = getFirestore(app);
 const storage: FirebaseStorage = getStorage(app);
+const auth: Auth = getAuth(app);
 
+// Collection references
 export const providersCollection = collection(db, 'providers');
 export const appointmentsCollection = collection(db, 'appointments');
 
-export { auth, db, storage };
-
+// Export services
+export { app, auth, db, storage };

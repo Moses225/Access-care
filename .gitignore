@@ -41,3 +41,47 @@ app-example
 # generated native folders
 /ios
 /android
+
+# Firebase credentials (NEVER COMMIT!)
+scripts/serviceAccountKey.json
+**/serviceAccountKey.json
+
+# Provider data CSV files (contains real provider info)
+data/*.csv
+*.csv
+
+# Environment files
+.env
+.env.local
+
+# Firebase config (optional - yours is already in code, but good practice)
+# firebase-config.json
+
+# Expo
+.expo/
+.expo-shared/
+
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

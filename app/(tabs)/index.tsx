@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   FlatList,
   ScrollView,
   StyleSheet,
@@ -10,14 +11,37 @@ import {
   View,
 } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
-import { mockProviders, Provider, ProviderCategory } from '../../data/providers';
+import { fetchProviders, Provider, ProviderCategory } from '../../data/providers';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  
+  // State management
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<ProviderCategory | 'All'>('All');
   const [selectedSpecialty, setSelectedSpecialty] = useState<string>('All');
+
+  // Load providers from Firebase on mount
+  useEffect(() => {
+    loadProviders();
+  }, []);
+
+  const loadProviders = async () => {
+    console.log('🔄 Loading providers...');
+    setLoading(true);
+    try {
+      const data = await fetchProviders();
+      console.log('✅ Loaded providers:', data.length);
+      setProviders(data);
+    } catch (error) {
+      console.error('❌ Error loading providers:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const categories: Array<ProviderCategory | 'All'> = [
     'All',
@@ -28,14 +52,14 @@ export default function HomeScreen() {
 
   // Get unique specialties based on selected category
   const availableSpecialties = selectedCategory === 'All' 
-    ? ['All', ...Array.from(new Set(mockProviders.map(p => p.specialty)))]
+    ? ['All', ...Array.from(new Set(providers.map(p => p.specialty)))]
     : ['All', ...Array.from(new Set(
-        mockProviders
+        providers
           .filter(p => p.category === selectedCategory)
           .map(p => p.specialty)
       ))];
 
-  const filteredProviders = mockProviders.filter(provider => {
+  const filteredProviders = providers.filter(provider => {
     const matchesSearch = provider.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          provider.specialty.toLowerCase().includes(searchQuery.toLowerCase());
     
@@ -44,6 +68,19 @@ export default function HomeScreen() {
     
     return matchesSearch && matchesCategory && matchesSpecialty;
   });
+
+  // Show loading state while fetching from Firebase
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.text }]}>Loading providers...</Text>
+        <Text style={[styles.loadingSubtext, { color: colors.subtext }]}>
+          Fetching real Oklahoma providers from Firebase
+        </Text>
+      </View>
+    );
+  }
 
   const renderProvider = ({ item }: { item: Provider }) => (
     <TouchableOpacity 
@@ -58,7 +95,7 @@ export default function HomeScreen() {
       <View style={styles.providerHeader}>
         <View style={[styles.providerAvatar, { backgroundColor: colors.primary }]}>
           <Text style={styles.providerAvatarText}>
-            {item.name.split(' ').map(n => n[0]).join('')}
+            {item.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
           </Text>
         </View>
         <View style={styles.providerInfo}>
@@ -78,7 +115,9 @@ export default function HomeScreen() {
       <View style={styles.providerDetails}>
         <View style={styles.detailItem}>
           <Text style={styles.detailIcon}>📍</Text>
-          <Text style={[styles.detailText, { color: colors.subtext }]}>{item.distance} miles</Text>
+          <Text style={[styles.detailText, { color: colors.subtext }]}>
+            {item.distance > 0 ? `${item.distance} miles` : 'Location available'}
+          </Text>
         </View>
         <View style={styles.detailItem}>
           <Text style={styles.detailIcon}>⭐</Text>
@@ -96,7 +135,9 @@ export default function HomeScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.card }]}>
         <Text style={[styles.title, { color: colors.primary }]}>🤰 Find Your Provider</Text>
-        <Text style={[styles.subtitle, { color: colors.subtext }]}>Comprehensive maternal healthcare network</Text>
+        <Text style={[styles.subtitle, { color: colors.subtext }]}>
+          {providers.length} real Oklahoma providers
+        </Text>
       </View>
       
       <TextInput
@@ -196,7 +237,24 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { 
+    flex: 1 
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 20,
+  },
+  loadingSubtext: {
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: 'center',
+  },
   header: {
     paddingHorizontal: 20,
     paddingTop: 60,

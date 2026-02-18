@@ -32,7 +32,8 @@
       "favicon": "./assets/images/AccessCare-logo.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
