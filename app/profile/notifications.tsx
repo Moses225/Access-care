@@ -1,10 +1,12 @@
+import { useRouter } from 'expo-router';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
-import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { auth, db } from '../../firebase';
 
 export default function NotificationsScreen() {
+  const router = useRouter();
   const { colors } = useTheme();
   const [appointmentReminders, setAppointmentReminders] = useState(true);
   const [generalUpdates, setGeneralUpdates] = useState(true);
@@ -48,33 +50,65 @@ export default function NotificationsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.row, { borderBottomColor: colors.border }]}>
-        <Text style={[styles.label, { color: colors.text }]}>Appointment Reminders</Text>
-        <Switch
-          value={appointmentReminders}
-          onValueChange={(val) => {
-            setAppointmentReminders(val);
-            updateSetting('appointmentReminders', val);
-          }}
-        />
+      {/* Header */}
+      <View style={[styles.header, { backgroundColor: colors.card }]}>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Text style={[styles.backText, { color: colors.primary }]}>← Back</Text>
+        </TouchableOpacity>
+        <Text style={[styles.title, { color: colors.text }]}>Notifications</Text>
       </View>
 
-      <View style={[styles.row, { borderBottomColor: colors.border }]}>
-        <Text style={[styles.label, { color: colors.text }]}>General Updates</Text>
-        <Switch
-          value={generalUpdates}
-          onValueChange={(val) => {
-            setGeneralUpdates(val);
-            updateSetting('generalUpdates', val);
-          }}
-        />
+      {/* Content */}
+      <View style={styles.content}>
+        <View style={[styles.row, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.label, { color: colors.text }]}>Appointment Reminders</Text>
+          <Switch
+            value={appointmentReminders}
+            onValueChange={(val) => {
+              setAppointmentReminders(val);
+              updateSetting('appointmentReminders', val);
+            }}
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor={appointmentReminders ? '#fff' : '#f4f3f4'}
+          />
+        </View>
+
+        <View style={[styles.row, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.label, { color: colors.text }]}>General Updates</Text>
+          <Switch
+            value={generalUpdates}
+            onValueChange={(val) => {
+              setGeneralUpdates(val);
+              updateSetting('generalUpdates', val);
+            }}
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor={generalUpdates ? '#fff' : '#f4f3f4'}
+          />
+        </View>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20 },
+  container: { flex: 1 },
+  header: {
+    paddingTop: 60,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+  },
+  backText: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 10,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+  },
+  content: {
+    padding: 20,
+  },
   row: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 

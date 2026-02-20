@@ -1,28 +1,24 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { addDoc, collection, doc, getDoc } from 'firebase/firestore';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { useTheme } from '../../context/ThemeContext';
 import { auth, db } from '../../firebase';
-import { sendBookingConfirmationSMS } from '../../utils/sms';
 
 export default function BookingScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { providerId } = useLocalSearchParams<{ providerId: string }>();
   const { colors } = useTheme();
   
-  const [provider, setProvider] = useState<any>(null);
-  const [loadingProvider, setLoadingProvider] = useState(true);
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
   const [patientName, setPatientName] = useState('');
@@ -30,30 +26,7 @@ export default function BookingScreen() {
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    loadProvider();
-  }, [id]);
-
-  const loadProvider = async () => {
-    if (!id) return;
-
-    try {
-      const providerDoc = await getDoc(doc(db, 'providers', id));
-      
-      if (providerDoc.exists()) {
-        setProvider({
-          id: providerDoc.id,
-          ...providerDoc.data()
-        });
-      }
-    } catch (error) {
-      console.error('Error loading provider:', error);
-      Alert.alert('Error', 'Failed to load provider details');
-    } finally {
-      setLoadingProvider(false);
-    }
-  };
-
+  // Generate available time slots (9 AM - 5 PM, every 30 minutes)
   const generateTimeSlots = () => {
     const slots = [];
     for (let hour = 9; hour < 17; hour++) {
@@ -65,24 +38,16 @@ export default function BookingScreen() {
 
   const timeSlots = generateTimeSlots();
 
+  // Get minimum date (today)
   const today = new Date().toISOString().split('T')[0];
   
+  // Get maximum date (3 months from now)
   const maxDate = new Date();
   maxDate.setMonth(maxDate.getMonth() + 3);
   const maxDateString = maxDate.toISOString().split('T')[0];
 
-  const formatDate = (dateString: string) => {
-    const [year, month, day] = dateString.split('-').map(Number);
-    const localDate = new Date(year, month - 1, day);
-    return localDate.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
-
   const handleBooking = async () => {
+    // Validation
     if (!selectedDate) {
       Alert.alert('Error', 'Please select a date');
       return;
@@ -103,13 +68,24 @@ export default function BookingScreen() {
     setLoading(true);
 
     try {
+      // Get provider details
+      const providerDoc = await getDoc(doc(db, 'providers', providerId));
+      
+      if (!providerDoc.exists()) {
+        Alert.alert('Error', 'Provider not found');
+        setLoading(false);
+        return;
+      }
+
+      const providerData = providerDoc.data();
       const user = auth.currentUser;
 
+      // Create booking
       const bookingData = {
         userId: user?.uid || 'guest',
-        providerId: id,
-        providerName: provider.name,
-        providerSpecialty: provider.specialty,
+        providerId,
+        providerName: providerData.name,
+        providerSpecialty: providerData.specialty,
         date: selectedDate,
         time: selectedTime,
         patientName: patientName.trim(),
@@ -123,18 +99,10 @@ export default function BookingScreen() {
 
       console.log('✅ Booking created:', bookingRef.id);
 
-      // Send SMS confirmation
-      await sendBookingConfirmationSMS(
-        patientPhone.trim(),
-        provider.name,
-        formatDate(selectedDate),
-        selectedTime,
-        bookingRef.id
-      );
-
+      // Show success and navigate to confirmation
       Alert.alert(
         'Booking Requested!',
-        `Your appointment request for ${formatDate(selectedDate)} at ${selectedTime} has been submitted. The provider will confirm shortly.`,
+        `Your appointment request for ${selectedDate} at ${selectedTime} has been submitted. The provider will confirm shortly.`,
         [
           {
             text: 'OK',
@@ -150,63 +118,24 @@ export default function BookingScreen() {
     }
   };
 
-  if (loadingProvider) {
-    return (
-      <View style={[styles.container, styles.loadingContainer, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={[styles.loadingText, { color: colors.text }]}>Loading provider...</Text>
-      </View>
-    );
-  }
-
-  if (!provider) {
-    return (
-      <View style={[styles.container, styles.loadingContainer, { backgroundColor: colors.background }]}>
-        <Text style={[styles.errorText, { color: colors.text }]}>Provider not found</Text>
-        <TouchableOpacity
-          style={[styles.backButton, { backgroundColor: colors.primary }]}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.backButtonText}>Go Back</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.card }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Text style={[styles.backText, { color: colors.primary }]}>← Back</Text>
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Book Appointment</Text>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Provider Info */}
-        <View style={[styles.providerCard, { backgroundColor: colors.card }]}>
-          <View style={[styles.providerAvatar, { backgroundColor: colors.primary }]}>
-            <Text style={styles.avatarText}>
-              {provider.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2) || 'PR'}
-            </Text>
-          </View>
-          <Text style={[styles.providerName, { color: colors.text }]}>{provider.name}</Text>
-          <Text style={[styles.providerSpecialty, { color: colors.primary }]}>
-            {provider.specialty}
-          </Text>
-        </View>
-
         {/* Calendar */}
         <View style={[styles.section, { backgroundColor: colors.card }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Select Date</Text>
           <Calendar
             minDate={today}
             maxDate={maxDateString}
-            onDayPress={(day) => {
-              setSelectedDate(day.dateString);
-              console.log('📅 Selected date:', day.dateString);
-            }}
+            onDayPress={(day) => setSelectedDate(day.dateString)}
             markedDates={{
               [selectedDate]: {
                 selected: true,
@@ -226,16 +155,6 @@ export default function BookingScreen() {
               arrowColor: colors.primary,
             }}
           />
-          {selectedDate && (
-            <View style={styles.selectedDateDisplay}>
-              <Text style={[styles.selectedDateLabel, { color: colors.subtext }]}>
-                Selected:
-              </Text>
-              <Text style={[styles.selectedDateValue, { color: colors.text }]}>
-                {formatDate(selectedDate)}
-              </Text>
-            </View>
-          )}
         </View>
 
         {/* Time Slots */}
@@ -314,13 +233,14 @@ export default function BookingScreen() {
           <View style={[styles.section, { backgroundColor: colors.card }]}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Booking Summary</Text>
             <View style={styles.summaryRow}>
-              <Text style={[styles.summaryLabel, { color: colors.subtext }]}>Provider:</Text>
-              <Text style={[styles.summaryValue, { color: colors.text }]}>{provider.name}</Text>
-            </View>
-            <View style={styles.summaryRow}>
               <Text style={[styles.summaryLabel, { color: colors.subtext }]}>Date:</Text>
               <Text style={[styles.summaryValue, { color: colors.text }]}>
-                {formatDate(selectedDate)}
+                {new Date(selectedDate).toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
               </Text>
             </View>
             <View style={styles.summaryRow}>
@@ -355,25 +275,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  loadingContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-  },
-  errorText: {
-    fontSize: 18,
-    marginBottom: 20,
-  },
   header: {
     paddingTop: 60,
     paddingBottom: 20,
     paddingHorizontal: 20,
   },
-  backBtn: {
+  backButton: {
     marginBottom: 10,
   },
   backText: {
@@ -384,35 +291,6 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
   },
-  providerCard: {
-    margin: 16,
-    padding: 20,
-    borderRadius: 16,
-    alignItems: 'center',
-  },
-  providerAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  avatarText: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  providerName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  providerSpecialty: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
   section: {
     margin: 16,
     padding: 20,
@@ -422,20 +300,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 16,
-  },
-  selectedDateDisplay: {
-    marginTop: 16,
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: 'rgba(0,0,0,0.05)',
-  },
-  selectedDateLabel: {
-    fontSize: 12,
-    marginBottom: 4,
-  },
-  selectedDateValue: {
-    fontSize: 16,
-    fontWeight: '600',
   },
   timeSlots: {
     flexDirection: 'row',
@@ -472,7 +336,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 12,
-    flexWrap: 'wrap',
   },
   summaryLabel: {
     fontSize: 16,
@@ -480,9 +343,6 @@ const styles = StyleSheet.create({
   summaryValue: {
     fontSize: 16,
     fontWeight: '600',
-    flex: 1,
-    textAlign: 'right',
-    marginLeft: 16,
   },
   footer: {
     position: 'absolute',
@@ -501,16 +361,5 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
-  },
-  backButton: {
-    paddingHorizontal: 30,
-    paddingVertical: 15,
-    borderRadius: 12,
-    marginTop: 20,
-  },
-  backButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
   },
 });

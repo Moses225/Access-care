@@ -1,9 +1,8 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { doc, getDoc } from 'firebase/firestore';
+import { arrayRemove, arrayUnion, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Linking,
   Platform,
   ScrollView,
@@ -14,7 +13,7 @@ import {
 } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { useTheme } from '../../context/ThemeContext';
-import { db } from '../../firebase';
+import { auth, db } from '../../firebase';
 
 interface ProviderData {
   id: string;
@@ -44,9 +43,11 @@ export default function ProviderDetailScreen() {
   
   const [provider, setProvider] = useState<ProviderData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isFavorite, setIsFavorite] = useState(false);
 
   useEffect(() => {
     loadProvider();
+    loadFavoriteStatus();
   }, [id]);
 
   const loadProvider = async () => {
@@ -59,7 +60,6 @@ export default function ProviderDetailScreen() {
     try {
       console.log('🔄 Loading provider:', id);
       
-      // Get provider document from Firebase
       const providerDoc = await getDoc(doc(db, 'providers', id));
       
       if (providerDoc.exists()) {
@@ -88,32 +88,71 @@ export default function ProviderDetailScreen() {
         });
       } else {
         console.error('❌ Provider not found in Firebase');
-        Alert.alert('Error', 'Provider not found');
       }
     } catch (error) {
       console.error('❌ Error loading provider:', error);
-      Alert.alert('Error', 'Failed to load provider details');
     } finally {
       setLoading(false);
     }
   };
 
+  const loadFavoriteStatus = async () => {
+    const user = auth.currentUser;
+    if (!user || !id) return;
+
+    try {
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      if (userDoc.exists()) {
+        const favorites = userDoc.data().favorites || [];
+        setIsFavorite(favorites.includes(id));
+      }
+    } catch (error) {
+      console.error('Error loading favorite status:', error);
+    }
+  };
+
+  const handleToggleFavorite = async () => {
+    if (!id) return;
+    const user = auth.currentUser;
+    if (!user) return;
+
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      
+      if (isFavorite) {
+        await updateDoc(userRef, {
+          favorites: arrayRemove(id)
+        });
+        console.log('❤️ Removed from favorites');
+      } else {
+        await setDoc(userRef, {
+          favorites: arrayUnion(id),
+          userId: user.uid,
+          email: user.email,
+          updatedAt: new Date().toISOString(),
+        }, { merge: true });
+        console.log('💙 Added to favorites');
+      }
+      
+      setIsFavorite(!isFavorite);
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
+  };
+
   const handleCall = () => {
     if (!provider?.phone) return;
-    
     const phoneNumber = provider.phone.replace(/[^0-9]/g, '');
     Linking.openURL(`tel:${phoneNumber}`);
   };
 
   const handleDirections = () => {
     if (!provider) return;
-    
     const address = `${provider.address}, ${provider.city}, ${provider.state} ${provider.zip}`;
     const url = Platform.select({
       ios: `maps:0,0?q=${encodeURIComponent(address)}`,
       android: `geo:0,0?q=${encodeURIComponent(address)}`,
     });
-    
     if (url) {
       Linking.openURL(url);
     }
@@ -121,7 +160,6 @@ export default function ProviderDetailScreen() {
 
   const handleWebsite = () => {
     if (!provider?.website) return;
-    
     let url = provider.website;
     if (!url.startsWith('http')) {
       url = 'https://' + url;
@@ -130,38 +168,25 @@ export default function ProviderDetailScreen() {
   };
 
   const handleBookAppointment = () => {
-    Alert.alert(
-      'Book Appointment',
-      `Would you like to book an appointment with ${provider?.name}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Call Now', 
-          onPress: handleCall 
-        },
-      ]
-    );
+    if (!id) return;
+    console.log('📅 Navigating to booking page for provider:', id);
+    router.push(`/booking/${id}` as any);
   };
 
-  // Show loading state
   if (loading) {
     return (
-      <View style={[styles.container, styles.loadingContainer, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, styles.centerContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.primary} />
         <Text style={[styles.loadingText, { color: colors.text }]}>Loading provider...</Text>
       </View>
     );
   }
 
-  // Show error if provider not found
   if (!provider) {
     return (
-      <View style={[styles.container, styles.errorContainer, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, styles.centerContainer, { backgroundColor: colors.background }]}>
         <Text style={styles.errorIcon}>❌</Text>
         <Text style={[styles.errorTitle, { color: colors.text }]}>Provider Not Found</Text>
-        <Text style={[styles.errorText, { color: colors.subtext }]}>
-          This provider may have been removed or the link is invalid.
-        </Text>
         <TouchableOpacity 
           style={[styles.backButton, { backgroundColor: colors.primary }]}
           onPress={() => router.back()}
@@ -173,16 +198,18 @@ export default function ProviderDetailScreen() {
   }
 
   const hasValidLocation = provider.latitude !== 0 && provider.longitude !== 0;
+  const hasSoonerCare = provider.insuranceAccepted.includes('SoonerCare') || 
+                        provider.insuranceAccepted.includes('Medicaid');
+  const otherInsurances = provider.insuranceAccepted.filter(
+    ins => ins !== 'SoonerCare' && ins !== 'Medicaid'
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={[styles.header, { backgroundColor: colors.card }]}>
-          <TouchableOpacity 
-            style={styles.backBtn}
-            onPress={() => router.back()}
-          >
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
             <Text style={[styles.backBtnText, { color: colors.primary }]}>← Back</Text>
           </TouchableOpacity>
           
@@ -219,6 +246,42 @@ export default function ProviderDetailScreen() {
                 <Text style={styles.badgeText}>Telehealth</Text>
               </View>
             )}
+            {hasSoonerCare && (
+              <View style={[styles.badge, styles.soonerCareBadge]}>
+                <Text style={styles.badgeText}>✅ Accepts SoonerCare</Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* Quick Actions */}
+        <View style={[styles.section, { backgroundColor: colors.card }]}>
+          <View style={styles.quickActions}>
+            <TouchableOpacity
+              style={[styles.actionButton, { borderColor: colors.primary }]}
+              onPress={handleToggleFavorite}
+            >
+              <Text style={styles.actionIcon}>{isFavorite ? '❤️' : '🤍'}</Text>
+              <Text style={[styles.actionText, { color: colors.text }]}>
+                {isFavorite ? 'Saved' : 'Save'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionButton, { borderColor: colors.primary }]}
+              onPress={handleCall}
+            >
+              <Text style={styles.actionIcon}>📞</Text>
+              <Text style={[styles.actionText, { color: colors.text }]}>Call</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionButton, { borderColor: colors.primary }]}
+              onPress={handleDirections}
+            >
+              <Text style={styles.actionIcon}>🗺️</Text>
+              <Text style={[styles.actionText, { color: colors.text }]}>Directions</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -238,9 +301,7 @@ export default function ProviderDetailScreen() {
             <Text style={styles.contactIcon}>📍</Text>
             <View style={styles.contactInfo}>
               <Text style={[styles.contactLabel, { color: colors.subtext }]}>Address</Text>
-              <Text style={[styles.contactValue, { color: colors.text }]}>
-                {provider.address}
-              </Text>
+              <Text style={[styles.contactValue, { color: colors.text }]}>{provider.address}</Text>
               <Text style={[styles.contactValue, { color: colors.text }]}>
                 {provider.city}, {provider.state} {provider.zip}
               </Text>
@@ -306,13 +367,38 @@ export default function ProviderDetailScreen() {
 
           <View style={styles.infoItem}>
             <Text style={[styles.infoLabel, { color: colors.subtext }]}>Insurance Accepted</Text>
-            <Text style={[styles.infoValue, { color: colors.text }]}>
-              {provider.insuranceAccepted.join(', ')}
+            
+            {/* SoonerCare Badge - Prominent if accepted */}
+            {hasSoonerCare && (
+              <View style={[styles.insuranceBadge, { backgroundColor: colors.success }]}>
+                <Text style={styles.insuranceBadgeText}>✅ SoonerCare / Medicaid</Text>
+              </View>
+            )}
+            
+            {/* Other Insurances List */}
+            {otherInsurances.length > 0 && (
+              <View style={styles.insuranceList}>
+                {otherInsurances.map((insurance, index) => (
+                  <Text key={index} style={[styles.insuranceItem, { color: colors.text }]}>
+                    • {insurance}
+                  </Text>
+                ))}
+              </View>
+            )}
+
+            {/* No insurance listed */}
+            {provider.insuranceAccepted.length === 0 && (
+              <Text style={[styles.insuranceItem, { color: colors.subtext }]}>
+                Contact provider for insurance information
+              </Text>
+            )}
+            
+            <Text style={[styles.insuranceNote, { color: colors.subtext }]}>
+              💡 Always verify coverage with provider before booking
             </Text>
           </View>
         </View>
 
-        {/* Spacer for bottom button */}
         <View style={{ height: 100 }} />
       </ScrollView>
 
@@ -333,18 +419,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  loadingContainer: {
+  centerContainer: {
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-  },
-  errorContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
   },
   errorIcon: {
     fontSize: 64,
@@ -353,12 +435,7 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 12,
-  },
-  errorText: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 30,
+    marginBottom: 20,
   },
   backButton: {
     paddingHorizontal: 30,
@@ -449,6 +526,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#2196f3',
     borderColor: '#2196f3',
   },
+  soonerCareBadge: {
+    backgroundColor: '#10b981',
+    borderColor: '#10b981',
+  },
   section: {
     margin: 16,
     padding: 20,
@@ -458,6 +539,25 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 16,
+  },
+  quickActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  actionButton: {
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    minWidth: 90,
+  },
+  actionIcon: {
+    fontSize: 28,
+    marginBottom: 6,
+  },
+  actionText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   contactItem: {
     flexDirection: 'row',
@@ -501,10 +601,39 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 12,
-    marginBottom: 6,
+    marginBottom: 8,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   infoValue: {
     fontSize: 16,
+  },
+  insuranceBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginBottom: 12,
+    alignSelf: 'flex-start',
+  },
+  insuranceBadgeText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  insuranceList: {
+    marginBottom: 12,
+  },
+  insuranceItem: {
+    fontSize: 15,
+    marginBottom: 6,
+    paddingLeft: 8,
+  },
+  insuranceNote: {
+    fontSize: 12,
+    fontStyle: 'italic',
+    marginTop: 8,
+    lineHeight: 18,
   },
   footer: {
     position: 'absolute',

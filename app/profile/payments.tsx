@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import {
   addDoc,
   collection,
@@ -10,7 +11,6 @@ import {
 import { useEffect, useState } from "react";
 import {
   Alert,
-  Button,
   FlatList,
   StyleSheet,
   Text,
@@ -18,6 +18,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useTheme } from '../../context/ThemeContext';
 import { auth, db } from "../../firebase";
 
 type PaymentMethodRecord = {
@@ -28,6 +29,8 @@ type PaymentMethodRecord = {
 export type PaymentMethod = PaymentMethodRecord & { id: string };
 
 export default function PaymentsScreen() {
+  const router = useRouter();
+  const { colors } = useTheme();
   const [cardNumber, setCardNumber] = useState("");
   const [methods, setMethods] = useState<PaymentMethod[]>([]);
 
@@ -82,69 +85,129 @@ export default function PaymentsScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Add Payment Method</Text>
-      <Text style={styles.note}>Note: This is just a demo for the final project.</Text>
-      
-      <TextInput
-        style={styles.input}
-        placeholder="Card Number (Last 4 digits for demo)"
-        placeholderTextColor="#999"
-        value={cardNumber}
-        onChangeText={setCardNumber}
-        keyboardType="number-pad"
-        maxLength={16}
-      />
-      <Button title="Add Payment Method" onPress={addPaymentMethod} />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Header */}
+      <View style={[styles.header, { backgroundColor: colors.card }]}>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Text style={[styles.backText, { color: colors.primary }]}>← Back</Text>
+        </TouchableOpacity>
+        <Text style={[styles.title, { color: colors.text }]}>Payment Methods</Text>
+        <Text style={[styles.note, { color: colors.warning }]}>Note: This is just a demo for the beta.</Text>
+      </View>
 
-      <Text style={styles.subtitle}>Saved Cards</Text>
+      <View style={styles.content}>
+        <View style={[styles.section, { backgroundColor: colors.card }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Add Payment Method</Text>
+          
+          <TextInput
+            style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
+            placeholder="Card Number (Last 4 digits for demo)"
+            placeholderTextColor={colors.subtext}
+            value={cardNumber}
+            onChangeText={setCardNumber}
+            keyboardType="number-pad"
+            maxLength={16}
+          />
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: colors.primary }]}
+            onPress={addPaymentMethod}
+          >
+            <Text style={styles.buttonText}>Add Payment Method</Text>
+          </TouchableOpacity>
+        </View>
 
-      <FlatList
-        data={methods}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Text style={styles.text}>
-              💳 Card ending in {item.cardNumber?.slice(-4) || "••••"}
-            </Text>
-            <TouchableOpacity onPress={() => removePaymentMethod(item.id)}>
-              <Text style={styles.remove}>Remove</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-        ListEmptyComponent={
-          <Text style={styles.empty}>No payment methods saved.</Text>
-        }
-      />
+        <View style={[styles.section, { backgroundColor: colors.card }]}>
+          <Text style={[styles.subtitle, { color: colors.text }]}>Saved Cards</Text>
+
+          <FlatList
+            data={methods}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <View style={[styles.card, { backgroundColor: colors.background }]}>
+                <Text style={[styles.text, { color: colors.text }]}>
+                  💳 Card ending in {item.cardNumber?.slice(-4) || "••••"}
+                </Text>
+                <TouchableOpacity onPress={() => removePaymentMethod(item.id)}>
+                  <Text style={[styles.remove, { color: colors.error }]}>Remove</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            ListEmptyComponent={
+              <Text style={[styles.empty, { color: colors.subtext }]}>No payment methods saved.</Text>
+            }
+          />
+        </View>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#fff' },
-  title: { fontSize: 20, fontWeight: 'bold', marginBottom: 5, color: '#333' },
-  note: { fontSize: 12, color: '#ff9800', marginBottom: 15, fontStyle: 'italic' },
-  subtitle: { fontSize: 18, fontWeight: 'bold', marginTop: 30, marginBottom: 15, color: '#333' },
+  container: { flex: 1 },
+  header: {
+    paddingTop: 60,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+  },
+  backText: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 10,
+  },
+  title: { 
+    fontSize: 28, 
+    fontWeight: 'bold', 
+    marginBottom: 5,
+  },
+  note: { 
+    fontSize: 12, 
+    marginBottom: 5, 
+    fontStyle: 'italic',
+  },
+  content: {
+    flex: 1,
+  },
+  section: {
+    margin: 16,
+    padding: 20,
+    borderRadius: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 15,
+  },
+  subtitle: { 
+    fontSize: 18, 
+    fontWeight: 'bold', 
+    marginBottom: 15,
+  },
   input: {
     borderWidth: 2,
-    borderColor: '#e0e0e0',
     borderRadius: 10,
     padding: 15,
     marginBottom: 15,
     fontSize: 16,
-    backgroundColor: '#fff',
-    color: '#333',
+  },
+  button: {
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   card: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     padding: 15,
-    backgroundColor: '#f0f0ff',
     borderRadius: 10,
     marginBottom: 10,
   },
-  text: { fontSize: 16, color: "#333" },
-  remove: { color: "#ff4444", fontWeight: "bold" },
-  empty: { fontSize: 16, color: "#999", textAlign: "center", marginTop: 30 },
+  text: { fontSize: 16 },
+  remove: { fontWeight: "bold" },
+  empty: { fontSize: 16, textAlign: "center", marginTop: 30 },
 });
