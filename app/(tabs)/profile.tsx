@@ -1,216 +1,514 @@
-import { useRouter } from "expo-router";
-import { signOut } from "firebase/auth";
-import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
-import { useEffect, useState } from "react";
-import { Alert, Image, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { useTheme } from "../../context/ThemeContext";
-import { auth, db } from "../../firebase";
+import { useRouter } from 'expo-router';
+import { signOut } from 'firebase/auth';
+import React, { useState } from 'react';
+import {
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
+import { auth } from '../../firebase';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { colors } = useTheme();
-  const [profileImage, setProfileImage] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
-  const [stats, setStats] = useState({ appointments: 0, questions: 0, saved: 0 });
+  const { colors, currentTheme, setTheme } = useTheme();
+  const [showThemeSelector, setShowThemeSelector] = useState(false);
+  const user = auth.currentUser;
 
-  useEffect(() => {
-    loadProfileImage();
-    loadStats();
-  }, []);
-
-  const loadProfileImage = async () => {
-    const uid = auth.currentUser?.uid;
-    if (!uid) return;
-    
-    try {
-      const docRef = doc(db, 'users', uid);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        setProfileImage(docSnap.data().profileImage || null);
-      }
-    } catch (error) {
-      console.log('Error loading profile image:', error);
-    }
-  };
-
-  const loadStats = async () => {
-    const uid = auth.currentUser?.uid;
-    if (!uid) return;
-
-    try {
-      const [appointmentsSnap, questionsSnap, savedSnap] = await Promise.all([
-        getDocs(query(collection(db, 'appointments'), where('userId', '==', uid))),
-        getDocs(query(collection(db, 'questions'), where('userId', '==', uid))),
-        getDocs(query(collection(db, 'savedProviders'), where('userId', '==', uid))),
-      ]);
-
-      setStats({
-        appointments: appointmentsSnap.size,
-        questions: questionsSnap.size,
-        saved: savedSnap.size,
-      });
-    } catch (error) {
-      console.log('Error loading stats:', error);
-    }
-  };
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await Promise.all([loadProfileImage(), loadStats()]);
-    setRefreshing(false);
-  };
-
-  const handleSignOut = async () => {
+  const handleLogout = async () => {
     Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
+      'Logout',
+      'Are you sure you want to logout?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Sign Out',
+          text: 'Logout',
           style: 'destructive',
           onPress: async () => {
             try {
               await signOut(auth);
+              console.log('✅ User logged out');
             } catch (error) {
-              Alert.alert("Error", "Failed to sign out");
+              console.error('❌ Logout error:', error);
+              Alert.alert('Error', 'Failed to logout');
             }
-          }
-        }
+          },
+        },
       ]
     );
   };
 
-  const navigateTo = (path: string) => {
-    router.push(path as any);
+  // Get current theme name for display
+  const getCurrentThemeName = () => {
+    const themeNames: { [key: string]: string } = {
+      maternal: 'Maternal Pink',
+      ocean: 'Ocean Blue',
+      lavender: 'Soft Lavender',
+      peach: 'Peach Cream',
+      mint: 'Mint Fresh',
+    };
+    const themeKey = currentTheme as unknown as string;
+    return themeNames[themeKey] || 'Maternal Pink';
   };
 
-  return (
-    <ScrollView 
-      style={[styles.container, { backgroundColor: colors.background }]}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-    >
-      <Text style={[styles.title, { color: colors.text }]}>My Profile</Text>
+  const themeOptions = [
+    {
+      id: 'maternal',
+      name: 'Maternal Pink',
+      description: 'Warm and nurturing',
+      colors: ['#f093fb', '#f5576c', '#ff9a9e'],
+    },
+    {
+      id: 'ocean',
+      name: 'Ocean Blue',
+      description: 'Calm and professional',
+      colors: ['#4facfe', '#00f2fe', '#43e8d8'],
+    },
+    {
+      id: 'lavender',
+      name: 'Soft Lavender',
+      description: 'Elegant and calming',
+      colors: ['#a29bfe', '#6c5ce7', '#fd79a8'],
+    },
+    {
+      id: 'peach',
+      name: 'Peach Cream',
+      description: 'Soft and warm',
+      colors: ['#ff6b9d', '#ffa06b', '#fff5f0'],
+    },
+    {
+      id: 'mint',
+      name: 'Mint Fresh',
+      description: 'Clean and refreshing',
+      colors: ['#00d2a0', '#5ce1a5', '#f0fdf9'],
+    },
+  ];
 
-      <View style={[styles.profileCard, { backgroundColor: colors.card }]}>
-        <TouchableOpacity onPress={() => navigateTo('/profile/edit')}>
-          {profileImage ? (
-            <Image source={{ uri: profileImage }} style={styles.avatar} />
-          ) : (
-            <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
-              <Text style={styles.avatarText}>
-                {auth.currentUser?.email?.[0].toUpperCase() || "U"}
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={[styles.header, { backgroundColor: colors.card }]}>
+          <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
+            <Text style={styles.avatarText}>
+              {user?.email?.charAt(0).toUpperCase() || 'U'}
+            </Text>
+          </View>
+          <Text style={[styles.email, { color: colors.text }]}>{user?.email}</Text>
+          <Text style={[styles.memberStatus, { color: colors.subtext }]}>
+            AccessCare Member
+          </Text>
+        </View>
+
+        {/* Account Settings */}
+        <View style={[styles.section, { backgroundColor: colors.card }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Account</Text>
+
+          <TouchableOpacity
+            style={[styles.settingItem, { borderBottomColor: colors.border }]}
+            onPress={() => router.push('/profile/edit' as any)}
+          >
+            <Text style={styles.settingIcon}>👤</Text>
+            <View style={styles.settingInfo}>
+              <Text style={[styles.settingTitle, { color: colors.text }]}>
+                Edit Profile
+              </Text>
+              <Text style={[styles.settingSubtitle, { color: colors.subtext }]}>
+                Update profile picture
               </Text>
             </View>
-          )}
-          <Text style={[styles.editText, { color: colors.primary }]}>Tap to edit</Text>
-        </TouchableOpacity>
-        <Text style={[styles.email, { color: colors.subtext }]}>{auth.currentUser?.email}</Text>
-      </View>
+            <Text style={[styles.chevron, { color: colors.subtext }]}>›</Text>
+          </TouchableOpacity>
 
-      <View style={styles.statsContainer}>
-        <View style={[styles.statCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
-          <Text style={[styles.statNumber, { color: colors.primary }]}>{stats.appointments}</Text>
-          <Text style={[styles.statLabel, { color: colors.subtext }]}>Appointments</Text>
+          <TouchableOpacity
+            style={[styles.settingItem, { borderBottomColor: colors.border }]}
+            onPress={() => router.push('/profile/insurance' as any)}
+          >
+            <Text style={styles.settingIcon}>💳</Text>
+            <View style={styles.settingInfo}>
+              <Text style={[styles.settingTitle, { color: colors.text }]}>
+                Insurance Information
+              </Text>
+              <Text style={[styles.settingSubtitle, { color: colors.subtext }]}>
+                Manage your insurance details
+              </Text>
+            </View>
+            <Text style={[styles.chevron, { color: colors.subtext }]}>›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.settingItem, { borderBottomColor: colors.border }]}
+            onPress={() => router.push('/profile/payments' as any)}
+          >
+            <Text style={styles.settingIcon}>💰</Text>
+            <View style={styles.settingInfo}>
+              <Text style={[styles.settingTitle, { color: colors.text }]}>
+                Payment Methods
+              </Text>
+              <Text style={[styles.settingSubtitle, { color: colors.subtext }]}>
+                Manage payment cards
+              </Text>
+            </View>
+            <Text style={[styles.chevron, { color: colors.subtext }]}>›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.settingItem, { borderBottomColor: 'transparent' }]}
+            onPress={() => router.push('/profile/saved' as any)}
+          >
+            <Text style={styles.settingIcon}>❤️</Text>
+            <View style={styles.settingInfo}>
+              <Text style={[styles.settingTitle, { color: colors.text }]}>
+                Saved Providers
+              </Text>
+              <Text style={[styles.settingSubtitle, { color: colors.subtext }]}>
+                Your favorite providers
+              </Text>
+            </View>
+            <Text style={[styles.chevron, { color: colors.subtext }]}>›</Text>
+          </TouchableOpacity>
         </View>
-        <View style={[styles.statCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
-          <Text style={[styles.statNumber, { color: colors.primary }]}>{stats.questions}</Text>
-          <Text style={[styles.statLabel, { color: colors.subtext }]}>Questions</Text>
+
+        {/* App Settings */}
+        <View style={[styles.section, { backgroundColor: colors.card }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>App Settings</Text>
+
+          <TouchableOpacity
+            style={[styles.settingItem, { borderBottomColor: colors.border }]}
+            onPress={() => setShowThemeSelector(true)}
+          >
+            <Text style={styles.settingIcon}>🎨</Text>
+            <View style={styles.settingInfo}>
+              <Text style={[styles.settingTitle, { color: colors.text }]}>App Theme</Text>
+              <Text style={[styles.settingSubtitle, { color: colors.subtext }]}>
+                {getCurrentThemeName()}
+              </Text>
+            </View>
+            <Text style={[styles.chevron, { color: colors.subtext }]}>›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.settingItem, { borderBottomColor: colors.border }]}
+            onPress={() => router.push('/profile/notifications' as any)}
+          >
+            <Text style={styles.settingIcon}>🔔</Text>
+            <View style={styles.settingInfo}>
+              <Text style={[styles.settingTitle, { color: colors.text }]}>Notifications</Text>
+              <Text style={[styles.settingSubtitle, { color: colors.subtext }]}>
+                Manage notification preferences
+              </Text>
+            </View>
+            <Text style={[styles.chevron, { color: colors.subtext }]}>›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.settingItem, { borderBottomColor: 'transparent' }]}
+            onPress={() => router.push('/profile/privacy' as any)}
+          >
+            <Text style={styles.settingIcon}>🔒</Text>
+            <View style={styles.settingInfo}>
+              <Text style={[styles.settingTitle, { color: colors.text }]}>
+                Privacy & Security
+              </Text>
+              <Text style={[styles.settingSubtitle, { color: colors.subtext }]}>
+                Control your data sharing
+              </Text>
+            </View>
+            <Text style={[styles.chevron, { color: colors.subtext }]}>›</Text>
+          </TouchableOpacity>
         </View>
-        <View style={[styles.statCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
-          <Text style={[styles.statNumber, { color: colors.primary }]}>{stats.saved}</Text>
-          <Text style={[styles.statLabel, { color: colors.subtext }]}>Saved</Text>
+
+        {/* Support */}
+        <View style={[styles.section, { backgroundColor: colors.card }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Support</Text>
+
+          <TouchableOpacity
+            style={[styles.settingItem, { borderBottomColor: colors.border }]}
+            onPress={() => router.push('/profile/help' as any)}
+          >
+            <Text style={styles.settingIcon}>❓</Text>
+            <View style={styles.settingInfo}>
+              <Text style={[styles.settingTitle, { color: colors.text }]}>Help Center</Text>
+              <Text style={[styles.settingSubtitle, { color: colors.subtext }]}>
+                FAQs and support
+              </Text>
+            </View>
+            <Text style={[styles.chevron, { color: colors.subtext }]}>›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.settingItem, { borderBottomColor: 'transparent' }]}
+            onPress={() => router.push('/profile/terms' as any)}
+          >
+            <Text style={styles.settingIcon}>📄</Text>
+            <View style={styles.settingInfo}>
+              <Text style={[styles.settingTitle, { color: colors.text }]}>
+                Terms of Service
+              </Text>
+              <Text style={[styles.settingSubtitle, { color: colors.subtext }]}>
+                Coming Soon
+              </Text>
+            </View>
+            <Text style={[styles.chevron, { color: colors.subtext }]}>›</Text>
+          </TouchableOpacity>
         </View>
-      </View>
 
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Healthcare</Text>
-        <MenuItem label="Ask Questions (Q&A)" icon="💬" onPress={() => navigateTo('/qa/')} />
-        <MenuItem label="My Appointments" icon="📅" onPress={() => navigateTo('/profile/appointments')} />
-        <MenuItem label="Saved Providers" icon="⭐" onPress={() => navigateTo('/profile/saved')} />
-      </View>
+        {/* About */}
+          <View style={[styles.section, { backgroundColor: colors.card }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>About</Text>
 
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Account</Text>
-        <MenuItem label="Insurance Information" icon="🏥" onPress={() => navigateTo('/profile/insurance')} />
-        <MenuItem label="Payment Methods" icon="💳" onPress={() => navigateTo('/profile/payments')} />
-      </View>
+            <TouchableOpacity
+              style={[styles.settingItem, { borderBottomColor: 'transparent' }]}
+              onPress={() => router.push('/profile/about' as any)}
+            >
+              <Text style={styles.settingIcon}>ℹ️</Text>
+              <View style={styles.settingInfo}>
+                <Text style={[styles.settingTitle, { color: colors.text }]}>
+                  About AccessCare
+                </Text>
+                <Text style={[styles.settingSubtitle, { color: colors.subtext }]}>
+                  Our mission and values
+                </Text>
+              </View>
+              <Text style={[styles.chevron, { color: colors.subtext }]}>›</Text>
+            </TouchableOpacity>
+          </View>
 
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Settings</Text>
-        <MenuItem label="Theme" icon="🎨" onPress={() => navigateTo('/profile/theme')} />
-        <MenuItem label="Notifications" icon="🔔" onPress={() => navigateTo('/profile/notifications')} />
-        <MenuItem label="Privacy & Security" icon="🔒" onPress={() => navigateTo('/profile/privacy')} />
-        <MenuItem label="Help & Support" icon="❓" onPress={() => navigateTo('/profile/help')} />
-      </View>
+        {/* Logout Button */}
+        <View style={styles.logoutContainer}>
+          <TouchableOpacity
+            style={[styles.logoutButton, { backgroundColor: '#ef4444' }]}
+            onPress={handleLogout}
+          >
+            <Text style={styles.logoutText}>Logout</Text>
+          </TouchableOpacity>
+        </View>
 
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Admin (Demo Only)</Text>
-        <MenuItem 
-          label="Answer Patient Questions" 
-          icon="👨‍⚕️" 
-          onPress={() => navigateTo('/admin/qa')} 
-        />
-      </View>
+        <View style={{ height: 40 }} />
+      </ScrollView>
 
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>About</Text>
-        <MenuItem 
-          label="About AccessCare" 
-          icon="ℹ️" 
-          onPress={() => navigateTo('/about')} 
-        />
-      </View>
+      {/* Theme Selector Modal */}
+      <Modal
+        visible={showThemeSelector}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowThemeSelector(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Choose Theme</Text>
 
-      <TouchableOpacity style={[styles.signOutButton, { backgroundColor: colors.error }]} onPress={handleSignOut}>
-        <Text style={styles.signOutText}>Sign Out</Text>
-      </TouchableOpacity>
+            <ScrollView style={styles.themeScroll} showsVerticalScrollIndicator={false}>
+              {themeOptions.map((theme) => {
+                const currentThemeStr = currentTheme as unknown as string;
+                const isSelected = currentThemeStr === theme.id;
+                return (
+                  <TouchableOpacity
+                    key={theme.id}
+                    style={[
+                      styles.themeOption,
+                      { borderBottomColor: colors.border },
+                      isSelected && { backgroundColor: 'rgba(0,0,0,0.05)' },
+                    ]}
+                    onPress={() => {
+                      setTheme(theme.id as any);
+                      setShowThemeSelector(false);
+                    }}
+                  >
+                    <View style={styles.themePreview}>
+                      {theme.colors.map((color, index) => (
+                        <View
+                          key={index}
+                          style={[styles.colorCircle, { backgroundColor: color }]}
+                        />
+                      ))}
+                    </View>
+                    <View style={styles.themeInfo}>
+                      <Text style={[styles.themeName, { color: colors.text }]}>
+                        {theme.name}
+                      </Text>
+                      <Text style={[styles.themeDescription, { color: colors.subtext }]}>
+                        {theme.description}
+                      </Text>
+                    </View>
+                    {isSelected && (
+                      <Text style={styles.checkmark}>✓</Text>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
 
-      <Text style={[styles.version, { color: colors.subtext }]}>AccessCare v1.0.0</Text>
-      <Text style={[styles.pullRefresh, { color: colors.subtext }]}>Pull down to refresh</Text>
-      <View style={styles.bottomPadding} />
-    </ScrollView>
-  );
-}
-
-function MenuItem({ label, icon, onPress }: { label: string; icon: string; onPress: () => void }) {
-  const { colors } = useTheme();
-  
-  return (
-    <TouchableOpacity style={[styles.menuItem, { borderBottomColor: colors.border }]} onPress={onPress}>
-      <View style={styles.menuLeft}>
-        <Text style={styles.menuIcon}>{icon}</Text>
-        <Text style={[styles.menuLabel, { color: colors.text }]}>{label}</Text>
-      </View>
-      <Text style={[styles.menuArrow, { color: colors.subtext }]}>›</Text>
-    </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setShowThemeSelector(false)}
+            >
+              <Text style={[styles.closeButtonText, { color: colors.primary }]}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  title: { fontSize: 28, fontWeight: "bold", padding: 20, paddingTop: 60 },
-  profileCard: { alignItems: "center", padding: 30, marginHorizontal: 20, borderRadius: 15, marginBottom: 20 },
-  avatar: { width: 100, height: 100, borderRadius: 50, justifyContent: "center", alignItems: "center", marginBottom: 10 },
-  avatarText: { fontSize: 40, fontWeight: "bold", color: "#fff" },
-  editText: { fontSize: 12, marginBottom: 10 },
-  email: { fontSize: 16 },
-  statsContainer: { flexDirection: 'row', marginHorizontal: 20, marginBottom: 30, gap: 10 },
-  statCard: { flex: 1, borderWidth: 2, borderRadius: 12, padding: 15, alignItems: 'center' },
-  statNumber: { fontSize: 28, fontWeight: 'bold', marginBottom: 5 },
-  statLabel: { fontSize: 12, fontWeight: '500' },
-  section: { marginBottom: 30 },
-  sectionTitle: { fontSize: 18, fontWeight: "bold", paddingHorizontal: 20, marginBottom: 15 },
-  menuItem: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 15, paddingHorizontal: 20, borderBottomWidth: 1 },
-  menuLeft: { flexDirection: "row", alignItems: "center" },
-  menuIcon: { fontSize: 20, marginRight: 15 },
-  menuLabel: { fontSize: 16 },
-  menuArrow: { fontSize: 24 },
-  signOutButton: { marginHorizontal: 20, padding: 18, borderRadius: 12, alignItems: "center", marginBottom: 10 },
-  signOutText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
-  version: { textAlign: "center", fontSize: 12, marginBottom: 5 },
-  pullRefresh: { textAlign: "center", fontSize: 11, marginBottom: 20 },
-  bottomPadding: { height: 40 },
+  container: {
+    flex: 1,
+  },
+  header: {
+    paddingTop: 60,
+    paddingBottom: 30,
+    alignItems: 'center',
+  },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  avatarText: {
+    color: '#fff',
+    fontSize: 36,
+    fontWeight: 'bold',
+  },
+  email: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  memberStatus: {
+    fontSize: 14,
+  },
+  section: {
+    margin: 16,
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  settingItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+  },
+  settingIcon: {
+    fontSize: 24,
+    marginRight: 16,
+    width: 32,
+  },
+  settingInfo: {
+    flex: 1,
+  },
+  settingTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  settingSubtitle: {
+    fontSize: 13,
+  },
+  chevron: {
+    fontSize: 24,
+    fontWeight: '300',
+  },
+  aboutItem: {
+    paddingVertical: 8,
+  },
+  aboutLabel: {
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  aboutValue: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  logoutContainer: {
+    padding: 16,
+  },
+  logoutButton: {
+    padding: 18,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  logoutText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '85%',
+    maxHeight: '80%',
+    borderRadius: 20,
+    padding: 24,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  themeScroll: {
+    maxHeight: 400,
+  },
+  themeOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+  },
+  themePreview: {
+    flexDirection: 'row',
+    marginRight: 16,
+  },
+  colorCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    marginRight: 4,
+  },
+  themeInfo: {
+    flex: 1,
+  },
+  themeName: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  themeDescription: {
+    fontSize: 13,
+  },
+  checkmark: {
+    fontSize: 24,
+    color: '#10b981',
+    fontWeight: 'bold',
+  },
+  closeButton: {
+    marginTop: 20,
+    padding: 16,
+    alignItems: 'center',
+  },
+  closeButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });

@@ -2,10 +2,12 @@ import { useRouter } from 'expo-router';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 import { auth, db } from '../../firebase';
 
 export default function InsuranceScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const [provider, setProvider] = useState('');
   const [policy, setPolicy] = useState('');
   const [loading, setLoading] = useState(false);
@@ -50,60 +52,84 @@ export default function InsuranceScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.label}>Insurance Provider</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="e.g., Blue Cross Blue Shield"
-        placeholderTextColor="#999"
-        value={provider}
-        onChangeText={setProvider}
-      />
-      
-      <Text style={styles.label}>Policy Number</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="e.g., ABC123456789"
-        placeholderTextColor="#999"
-        value={policy}
-        onChangeText={setPolicy}
-      />
-      
-      <TouchableOpacity 
-        style={[styles.button, loading && styles.buttonDisabled]}
-        onPress={saveInsurance}
-        disabled={loading}
-      >
-        <Text style={styles.buttonText}>
-          {loading ? 'Saving...' : 'Save Insurance Info'}
-        </Text>
-      </TouchableOpacity>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Header */}
+      <View style={[styles.header, { backgroundColor: colors.card }]}>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Text style={[styles.backText, { color: colors.primary }]}>← Back</Text>
+        </TouchableOpacity>
+        <Text style={[styles.title, { color: colors.text }]}>Insurance Information</Text>
+      </View>
+
+      {/* Content */}
+      <View style={styles.content}>
+        <Text style={[styles.label, { color: colors.text }]}>Insurance Provider</Text>
+        <TextInput
+          style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
+          placeholder="e.g., Blue Cross Blue Shield"
+          placeholderTextColor={colors.subtext}
+          value={provider}
+          onChangeText={setProvider}
+        />
+        
+        <Text style={[styles.label, { color: colors.text }]}>Policy Number</Text>
+        <TextInput
+          style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
+          placeholder="e.g., ABC123456789"
+          placeholderTextColor={colors.subtext}
+          value={policy}
+          onChangeText={setPolicy}
+        />
+        
+        <TouchableOpacity 
+          style={[styles.button, { backgroundColor: colors.primary }, loading && styles.buttonDisabled]}
+          onPress={saveInsurance}
+          disabled={loading}
+        >
+          <Text style={styles.buttonText}>
+            {loading ? 'Saving...' : 'Save Insurance Info'}
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#fff' },
-  label: { fontSize: 16, fontWeight: '600', color: '#333', marginBottom: 8, marginTop: 10 },
+  container: { flex: 1 },
+  header: {
+    paddingTop: 60,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+  },
+  backText: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 10,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+  },
+  content: {
+    padding: 20,
+  },
+  label: { fontSize: 16, fontWeight: '600', marginBottom: 8, marginTop: 10 },
   input: {
     borderWidth: 2,
-    borderColor: '#e0e0e0',
     borderRadius: 10,
     padding: 15,
     marginBottom: 15,
     fontSize: 16,
-    backgroundColor: '#fff',
-    color: '#333',
   },
   button: {
-    backgroundColor: '#667eea',
     padding: 18,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 20,
   },
   buttonDisabled: {
-    backgroundColor: '#ccc',
+    opacity: 0.5,
   },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
 });

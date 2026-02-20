@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { collection, getDocs } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -10,32 +11,95 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Animated, { SlideInRight } from 'react-native-reanimated';
 import { useTheme } from '../../context/ThemeContext';
-import { fetchProviders, Provider, ProviderCategory } from '../../data/providers';
+import { db } from '../../firebase';
+
+interface Provider {
+  id: string;
+  name: string;
+  specialty: string;
+  category: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
+  phone: string;
+  rating: number;
+  reviewCount: number;
+  acceptingNewPatients: boolean;
+}
 
 export default function HomeScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  
-  // State management
   const [providers, setProviders] = useState<Provider[]>([]);
+  const [filteredProviders, setFilteredProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<ProviderCategory | 'All'>('All');
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedSpecialty, setSelectedSpecialty] = useState<string>('All');
 
-  // Load providers from Firebase on mount
+  const categories = ['All', 'Core', 'Extended', 'Rare'];
+
+  const specialtyMap: { [key: string]: string[] } = {
+    All: ['All'],
+    Core: ['All', 'OB/GYN', 'Pediatrics', 'Family Medicine'],
+    Extended: [
+      'All',
+      'Doula Services',
+      'Mental Health Counselor',
+      'Dietitian',
+      'Home Health Agency',
+      'Lactation Consultant',
+      'Physical Therapy',
+      'Chiropractic',
+      'Midwifery',
+      'Dermatology',
+    ],
+    Rare: ['All', 'Reproductive Endocrinology', 'Genetic Counseling', 'Neonatology'],
+  };
+
+  const availableSpecialties = specialtyMap[selectedCategory] || ['All'];
+
   useEffect(() => {
     loadProviders();
   }, []);
 
+  useEffect(() => {
+    filterProviders();
+  }, [searchQuery, selectedCategory, selectedSpecialty, providers]);
+
   const loadProviders = async () => {
-    console.log('🔄 Loading providers...');
-    setLoading(true);
     try {
-      const data = await fetchProviders();
-      console.log('✅ Loaded providers:', data.length);
-      setProviders(data);
+      console.log('🔄 Loading providers...');
+      console.log('🔄 Fetching providers from Firebase...');
+
+      const querySnapshot = await getDocs(collection(db, 'providers'));
+
+      console.log('📊 Found', querySnapshot.size, 'providers in Firebase');
+
+      const providerData = querySnapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          name: data.name || 'Unknown Provider',
+          specialty: data.specialty || 'Unknown',
+          category: data.category || 'Extended',
+          address: data.address || '',
+          city: data.city || '',
+          state: data.state || 'OK',
+          zip: data.zip || '',
+          phone: data.phone || '',
+          rating: data.rating || 4.5,
+          reviewCount: data.reviewCount || 0,
+          acceptingNewPatients: data.acceptingNewPatients !== false,
+        };
+      });
+
+      console.log('✅ Successfully loaded providers:', providerData.length);
+      setProviders(providerData);
+      setFilteredProviders(providerData);
     } catch (error) {
       console.error('❌ Error loading providers:', error);
     } finally {
@@ -43,121 +107,148 @@ export default function HomeScreen() {
     }
   };
 
-  const categories: Array<ProviderCategory | 'All'> = [
-    'All',
-    'Core Services',
-    'Extended Services',
-    'Rare & Specialized Services'
-  ];
+  const filterProviders = () => {
+    let filtered = [...providers];
 
-  // Get unique specialties based on selected category
-  const availableSpecialties = selectedCategory === 'All' 
-    ? ['All', ...Array.from(new Set(providers.map(p => p.specialty)))]
-    : ['All', ...Array.from(new Set(
-        providers
-          .filter(p => p.category === selectedCategory)
-          .map(p => p.specialty)
-      ))];
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (provider) =>
+          provider.name.toLowerCase().includes(query) ||
+          provider.specialty.toLowerCase().includes(query)
+      );
+    }
 
-  const filteredProviders = providers.filter(provider => {
-    const matchesSearch = provider.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         provider.specialty.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesCategory = selectedCategory === 'All' || provider.category === selectedCategory;
-    const matchesSpecialty = selectedSpecialty === 'All' || provider.specialty === selectedSpecialty;
-    
-    return matchesSearch && matchesCategory && matchesSpecialty;
-  });
+    if (selectedCategory !== 'All') {
+      filtered = filtered.filter((provider) => provider.category === selectedCategory);
+    }
 
-  // Show loading state while fetching from Firebase
+    if (selectedSpecialty !== 'All') {
+      filtered = filtered.filter((provider) => provider.specialty === selectedSpecialty);
+    }
+
+    console.log('✅ Loaded providers:', filtered.length);
+    setFilteredProviders(filtered);
+  };
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setSelectedCategory('All');
+    setSelectedSpecialty('All');
+  };
+
+  const renderProvider = ({ item, index }: { item: Provider; index: number }) => (
+    <Animated.View entering={SlideInRight.delay(index * 50).duration(500).springify()}>
+      <TouchableOpacity
+        style={[styles.providerCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+        onPress={() => router.push(`/provider/${item.id}` as any)}
+        activeOpacity={0.7}
+      >
+        <View style={[styles.providerAvatar, { backgroundColor: colors.primary }]}>
+          <Text style={styles.avatarText}>
+            {item.name
+              .split(' ')
+              .map((n) => n[0])
+              .join('')
+              .slice(0, 2)}
+          </Text>
+        </View>
+
+        <View style={styles.providerInfo}>
+          <Text style={[styles.providerName, { color: colors.text }]} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <Text style={[styles.providerSpecialty, { color: colors.primary }]} numberOfLines={1}>
+            {item.specialty}
+          </Text>
+
+          <View style={styles.providerMeta}>
+            <View style={styles.ratingContainer}>
+              <Text style={styles.ratingIcon}>⭐</Text>
+              <Text style={[styles.rating, { color: colors.text }]}>{item.rating}</Text>
+              {item.reviewCount > 0 && (
+                <Text style={[styles.reviewCount, { color: colors.subtext }]}>
+                  ({item.reviewCount})
+                </Text>
+              )}
+            </View>
+          </View>
+
+          {/* SoonerCare Badge */}
+          <View style={[styles.soonerCareBadge, { backgroundColor: colors.success }]}>
+            <Text style={styles.badgeIcon}>✅</Text>
+            <Text style={styles.badgeText}>SoonerCare</Text>
+          </View>
+        </View>
+
+        <View style={styles.providerAction}>
+          <Text style={[styles.viewDetails, { color: colors.primary }]}>View Details →</Text>
+        </View>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+
   if (loading) {
     return (
       <View style={[styles.container, styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.primary} />
         <Text style={[styles.loadingText, { color: colors.text }]}>Loading providers...</Text>
-        <Text style={[styles.loadingSubtext, { color: colors.subtext }]}>
-          Fetching real Oklahoma providers from Firebase
-        </Text>
       </View>
     );
   }
-
-  const renderProvider = ({ item }: { item: Provider }) => (
-    <TouchableOpacity 
-      style={[styles.providerCard, { backgroundColor: colors.background, borderColor: colors.border }]}
-      onPress={() => router.push(`/provider/${item.id}` as any)}
-      activeOpacity={0.7}
-    >
-      <View style={[styles.categoryBadge, { backgroundColor: colors.card, borderColor: colors.primary }]}>
-        <Text style={[styles.categoryText, { color: colors.primary }]}>{item.category}</Text>
-      </View>
-      
-      <View style={styles.providerHeader}>
-        <View style={[styles.providerAvatar, { backgroundColor: colors.primary }]}>
-          <Text style={styles.providerAvatarText}>
-            {item.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-          </Text>
-        </View>
-        <View style={styles.providerInfo}>
-          <Text style={[styles.providerName, { color: colors.text }]}>{item.name}</Text>
-          <Text style={[styles.providerSpecialty, { color: colors.primary }]}>{item.specialty}</Text>
-        </View>
-        <View style={[
-          styles.availableBadge, 
-          !item.available && styles.unavailableBadge
-        ]}>
-          <Text style={styles.badgeText}>
-            {item.available ? 'Available' : 'Unavailable'}
-          </Text>
-        </View>
-      </View>
-      
-      <View style={styles.providerDetails}>
-        <View style={styles.detailItem}>
-          <Text style={styles.detailIcon}>📍</Text>
-          <Text style={[styles.detailText, { color: colors.subtext }]}>
-            {item.distance > 0 ? `${item.distance} miles` : 'Location available'}
-          </Text>
-        </View>
-        <View style={styles.detailItem}>
-          <Text style={styles.detailIcon}>⭐</Text>
-          <Text style={[styles.detailText, { color: colors.subtext }]}>{item.rating}</Text>
-        </View>
-      </View>
-      
-      <View style={[styles.viewDetailsButton, { backgroundColor: colors.card }]}>
-        <Text style={[styles.viewDetailsText, { color: colors.primary }]}>View Details →</Text>
-      </View>
-    </TouchableOpacity>
-  );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.card }]}>
         <Text style={[styles.title, { color: colors.primary }]}>🤰 Find Your Provider</Text>
         <Text style={[styles.subtitle, { color: colors.subtext }]}>
-          {providers.length} real Oklahoma providers
+          {filteredProviders.length} Oklahoma providers ready to help
         </Text>
       </View>
-      
-      <TextInput
-        style={[styles.searchBar, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
-        placeholder="Search by name or specialty..."
-        placeholderTextColor={colors.subtext}
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-      />
-      
+
+      {/* SoonerCare Quick Access Banner */}
+      <View style={[styles.soonerCareBanner, { backgroundColor: colors.primary }]}>
+        <View style={styles.soonerCareContent}>
+          <Text style={styles.soonerCareIcon}>✅</Text>
+          <View style={styles.soonerCareText}>
+            <Text style={styles.soonerCareTitle}>All Providers Accept SoonerCare</Text>
+            <Text style={styles.soonerCareSubtitle}>
+              Find care you can afford - 199 providers ready to help
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={[
+            styles.searchBar,
+            { backgroundColor: colors.card, color: colors.text, borderColor: colors.border },
+          ]}
+          placeholder="Search by name or specialty..."
+          placeholderTextColor={colors.subtext}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+      </View>
+
       <View style={styles.filterSection}>
-        <Text style={[styles.filterLabel, { color: colors.text }]}>Category</Text>
+        <View style={styles.filterHeader}>
+          <Text style={[styles.filterLabel, { color: colors.text }]}>Category</Text>
+          {(selectedCategory !== 'All' || selectedSpecialty !== 'All' || searchQuery) && (
+            <TouchableOpacity onPress={clearFilters}>
+              <Text style={[styles.clearFilters, { color: colors.primary }]}>Clear All</Text>
+            </TouchableOpacity>
+          )}
+        </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
-          {categories.map(category => (
+          {categories.map((category) => (
             <TouchableOpacity
               key={category}
               style={[
                 styles.filterChip,
                 { borderColor: colors.primary, backgroundColor: colors.background },
-                selectedCategory === category && { backgroundColor: colors.primary }
+                selectedCategory === category && { backgroundColor: colors.primary },
               ]}
               onPress={() => {
                 setSelectedCategory(category);
@@ -165,10 +256,12 @@ export default function HomeScreen() {
               }}
               activeOpacity={0.7}
             >
-              <Text style={[
-                styles.filterText,
-                { color: selectedCategory === category ? '#fff' : colors.primary }
-              ]}>
+              <Text
+                style={[
+                  styles.filterText,
+                  { color: selectedCategory === category ? '#fff' : colors.primary },
+                ]}
+              >
                 {category}
               </Text>
             </TouchableOpacity>
@@ -179,56 +272,48 @@ export default function HomeScreen() {
       <View style={styles.filterSection}>
         <Text style={[styles.filterLabel, { color: colors.text }]}>Specialty</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
-          {availableSpecialties.map(specialty => (
+          {availableSpecialties.map((specialty) => (
             <TouchableOpacity
               key={specialty}
               style={[
                 styles.filterChip,
                 { borderColor: colors.primary, backgroundColor: colors.background },
-                selectedSpecialty === specialty && { backgroundColor: colors.primary }
+                selectedSpecialty === specialty && { backgroundColor: colors.primary },
               ]}
               onPress={() => setSelectedSpecialty(specialty)}
               activeOpacity={0.7}
             >
-              <Text style={[
-                styles.filterText,
-                { color: selectedSpecialty === specialty ? '#fff' : colors.primary }
-              ]}>
+              <Text
+                style={[
+                  styles.filterText,
+                  { color: selectedSpecialty === specialty ? '#fff' : colors.primary },
+                ]}
+              >
                 {specialty}
               </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
-      
-      <View style={styles.resultsHeader}>
-        <Text style={[styles.resultsText, { color: colors.subtext }]}>
-          {filteredProviders.length} provider{filteredProviders.length !== 1 ? 's' : ''} found
-        </Text>
-        {(searchQuery || selectedCategory !== 'All' || selectedSpecialty !== 'All') && (
-          <TouchableOpacity onPress={() => {
-            setSearchQuery('');
-            setSelectedCategory('All');
-            setSelectedSpecialty('All');
-          }}>
-            <Text style={[styles.clearText, { color: colors.primary }]}>Clear All</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-      
+
       <FlatList
         data={filteredProviders}
         renderItem={renderProvider}
-        keyExtractor={item => item.id}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.list}
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>🔍</Text>
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>No providers found</Text>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>No Providers Found</Text>
             <Text style={[styles.emptyText, { color: colors.subtext }]}>
               Try adjusting your search or filters
             </Text>
+            <TouchableOpacity
+              style={[styles.clearButton, { backgroundColor: colors.primary }]}
+              onPress={clearFilters}
+            >
+              <Text style={styles.clearButtonText}>Clear Filters</Text>
+            </TouchableOpacity>
           </View>
         }
       />
@@ -237,61 +322,97 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1 
+  container: {
+    flex: 1,
   },
   loadingContainer: {
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
   },
   loadingText: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginTop: 20,
-  },
-  loadingSubtext: {
-    fontSize: 14,
-    marginTop: 8,
-    textAlign: 'center',
+    marginTop: 16,
+    fontSize: 16,
   },
   header: {
-    paddingHorizontal: 20,
     paddingTop: 60,
     paddingBottom: 20,
+    paddingHorizontal: 20,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 5,
+    marginBottom: 8,
   },
   subtitle: {
     fontSize: 14,
   },
+  soonerCareBanner: {
+    margin: 16,
+    marginTop: 0,
+    padding: 20,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  soonerCareContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  soonerCareIcon: {
+    fontSize: 40,
+    marginRight: 16,
+  },
+  soonerCareText: {
+    flex: 1,
+  },
+  soonerCareTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  soonerCareSubtitle: {
+    color: '#fff',
+    fontSize: 13,
+    opacity: 0.95,
+  },
+  searchContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
   searchBar: {
-    marginHorizontal: 20,
-    marginTop: 20,
-    marginBottom: 15,
-    padding: 15,
-    borderWidth: 2,
+    padding: 14,
     borderRadius: 12,
     fontSize: 16,
+    borderWidth: 1,
   },
   filterSection: {
-    marginBottom: 15,
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  filterHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   filterLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  clearFilters: {
     fontSize: 14,
     fontWeight: '600',
-    paddingHorizontal: 20,
-    marginBottom: 8,
   },
   filterScroll: {
-    paddingHorizontal: 20,
+    marginTop: 8,
   },
   filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
     borderRadius: 20,
     borderWidth: 2,
     marginRight: 10,
@@ -300,52 +421,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  resultsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 10,
-  },
-  resultsText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  clearText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+  list: {
+    padding: 16,
+    paddingTop: 0,
   },
   providerCard: {
-    borderRadius: 15,
-    padding: 15,
-    marginBottom: 15,
-    borderWidth: 2,
+    flexDirection: 'row',
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 16,
+    borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
-  },
-  categoryBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginBottom: 10,
-    borderWidth: 1,
-  },
-  categoryText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  providerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
+    elevation: 2,
   },
   providerAvatar: {
     width: 50,
@@ -355,78 +445,100 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
   },
-  providerAvatarText: {
+  avatarText: {
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
   },
   providerInfo: {
     flex: 1,
+    justifyContent: 'center',
   },
   providerName: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: 'bold',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   providerSpecialty: {
     fontSize: 14,
     fontWeight: '600',
+    marginBottom: 6,
   },
-  availableBadge: {
-    backgroundColor: '#4caf50',
+  providerMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  ratingIcon: {
+    fontSize: 14,
+    marginRight: 4,
+  },
+  rating: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginRight: 4,
+  },
+  reviewCount: {
+    fontSize: 12,
+  },
+  soonerCareBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginTop: 4,
   },
-  unavailableBadge: {
-    backgroundColor: '#999',
+  badgeIcon: {
+    fontSize: 12,
+    marginRight: 4,
   },
   badgeText: {
     color: '#fff',
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
   },
-  providerDetails: {
-    flexDirection: 'row',
-    gap: 20,
-    marginBottom: 10,
-  },
-  detailItem: {
-    flexDirection: 'row',
+  providerAction: {
+    justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: 8,
   },
-  detailIcon: {
-    fontSize: 14,
-    marginRight: 5,
-  },
-  detailText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  viewDetailsButton: {
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  viewDetailsText: {
+  viewDetails: {
+    fontSize: 13,
     fontWeight: '600',
-    fontSize: 14,
   },
   emptyState: {
     alignItems: 'center',
-    paddingVertical: 60,
+    paddingTop: 60,
+    paddingHorizontal: 40,
   },
   emptyIcon: {
-    fontSize: 60,
-    marginBottom: 15,
+    fontSize: 80,
+    marginBottom: 16,
   },
   emptyTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 8,
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: 16,
     textAlign: 'center',
+    marginBottom: 24,
+  },
+  clearButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+  },
+  clearButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

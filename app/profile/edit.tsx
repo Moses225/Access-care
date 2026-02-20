@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { doc, setDoc } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { auth, db, storage } from '../../firebase';
 
@@ -96,21 +96,15 @@ export default function EditProfileScreen() {
     setUploading(true);
 
     try {
-      // Convert image to blob
       const response = await fetch(selectedImage);
       const blob = await response.blob();
 
-      // Create unique filename
       const filename = `profile-${uid}-${Date.now()}.jpg`;
       const storageRef = ref(storage, `profile-images/${uid}/${filename}`);
 
-      // Upload to Firebase Storage
       await uploadBytes(storageRef, blob);
-
-      // Get download URL
       const downloadURL = await getDownloadURL(storageRef);
 
-      // Save URL to Firestore
       await setDoc(doc(db, 'users', uid), { profileImage: downloadURL }, { merge: true });
 
       Alert.alert('Success', 'Profile picture updated!', [
@@ -126,66 +120,99 @@ export default function EditProfileScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Text style={[styles.title, { color: colors.text }]}>Edit Profile Picture</Text>
-
-      <View style={styles.imageContainer}>
-        {selectedImage ? (
-          <Image source={{ uri: selectedImage }} style={styles.image} />
-        ) : (
-          <View style={[styles.placeholder, { backgroundColor: colors.card }]}>
-            <Text style={[styles.placeholderText, { color: colors.subtext }]}>No image selected</Text>
-          </View>
-        )}
+      {/* Header */}
+      <View style={[styles.header, { backgroundColor: colors.card }]}>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Text style={[styles.backText, { color: colors.primary }]}>← Back</Text>
+        </TouchableOpacity>
+        <Text style={[styles.title, { color: colors.text }]}>Edit Profile Picture</Text>
       </View>
 
-      <TouchableOpacity 
-        style={[styles.button, { backgroundColor: colors.primary }]}
-        onPress={pickImageFromGallery}
-        disabled={uploading}
-      >
-        <Text style={styles.buttonText}>📷 Choose from Gallery</Text>
-      </TouchableOpacity>
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.imageContainer}>
+          {selectedImage ? (
+            <Image source={{ uri: selectedImage }} style={styles.image} />
+          ) : (
+            <View style={[styles.placeholder, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.placeholderText, { color: colors.subtext }]}>No image selected</Text>
+            </View>
+          )}
+        </View>
 
-      <TouchableOpacity 
-        style={[styles.button, { backgroundColor: colors.primary }]}
-        onPress={takePhoto}
-        disabled={uploading}
-      >
-        <Text style={styles.buttonText}>📸 Take Photo</Text>
-      </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.button, { backgroundColor: colors.primary }]}
+          onPress={pickImageFromGallery}
+          disabled={uploading}
+        >
+          <Text style={styles.buttonText}>📷 Choose from Gallery</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity 
-        style={[
-          styles.saveButton, 
-          { backgroundColor: colors.success },
-          uploading && { backgroundColor: colors.border }
-        ]}
-        onPress={uploadImage}
-        disabled={uploading || !selectedImage}
-      >
-        {uploading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>
-            {selectedImage ? '✅ Save Picture' : 'Select an image first'}
+        <TouchableOpacity 
+          style={[styles.button, { backgroundColor: colors.primary }]}
+          onPress={takePhoto}
+          disabled={uploading}
+        >
+          <Text style={styles.buttonText}>📸 Take Photo</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[
+            styles.saveButton, 
+            { backgroundColor: colors.success },
+            (uploading || !selectedImage) && { backgroundColor: colors.border }
+          ]}
+          onPress={uploadImage}
+          disabled={uploading || !selectedImage}
+        >
+          {uploading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>
+              {selectedImage ? '✅ Save Picture' : 'Select an image first'}
+            </Text>
+          )}
+        </TouchableOpacity>
+
+        {uploading && (
+          <Text style={[styles.uploadingText, { color: colors.subtext }]}>
+            Uploading... Please wait
           </Text>
         )}
-      </TouchableOpacity>
-
-      {uploading && (
-        <Text style={[styles.uploadingText, { color: colors.subtext }]}>
-          Uploading... Please wait
-        </Text>
-      )}
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20 },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 30, textAlign: 'center' },
-  imageContainer: { alignItems: 'center', marginBottom: 30 },
-  image: { width: 200, height: 200, borderRadius: 100, borderWidth: 3, borderColor: '#667eea' },
+  container: { flex: 1 },
+  header: {
+    paddingTop: 60,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+  },
+  backText: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 10,
+  },
+  title: { 
+    fontSize: 28, 
+    fontWeight: 'bold',
+  },
+  content: {
+    padding: 20,
+  },
+  imageContainer: { 
+    alignItems: 'center', 
+    marginBottom: 30,
+  },
+  image: { 
+    width: 200, 
+    height: 200, 
+    borderRadius: 100, 
+    borderWidth: 3, 
+    borderColor: '#667eea',
+  },
   placeholder: { 
     width: 200, 
     height: 200, 
@@ -193,7 +220,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center', 
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#e0e0e0',
     borderStyle: 'dashed',
   },
   placeholderText: { fontSize: 14 },
@@ -201,15 +227,19 @@ const styles = StyleSheet.create({
     padding: 18, 
     borderRadius: 12, 
     alignItems: 'center', 
-    marginBottom: 15 
+    marginBottom: 15,
   },
   saveButton: { 
     padding: 18, 
     borderRadius: 12, 
     alignItems: 'center', 
-    marginTop: 10 
+    marginTop: 10,
   },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  buttonText: { 
+    color: '#fff', 
+    fontSize: 16, 
+    fontWeight: 'bold',
+  },
   uploadingText: { 
     textAlign: 'center', 
     marginTop: 10, 
