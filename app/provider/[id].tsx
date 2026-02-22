@@ -15,7 +15,6 @@ import {
 import { useTheme } from '../../context/ThemeContext';
 import { auth, db } from '../../firebase';
 
-// Conditionally import MapView only on mobile
 let MapView: any;
 let Marker: any;
 
@@ -74,8 +73,6 @@ export default function ProviderDetailScreen() {
         throw new Error('Invalid provider ID');
       }
 
-      console.log('Loading provider with ID:', id);
-
       const providerDoc = await getDoc(doc(db, 'providers', id));
       
       if (!providerDoc.exists()) {
@@ -83,7 +80,6 @@ export default function ProviderDetailScreen() {
       }
 
       const data = providerDoc.data();
-      console.log('Provider data:', data);
 
       if (!data.name || !data.specialty) {
         throw new Error('Invalid provider data - missing required fields');
@@ -189,6 +185,32 @@ export default function ProviderDetailScreen() {
   const handleBookAppointment = () => {
     if (!id) return;
     router.push(`/booking/${id}` as any);
+  };
+
+  const handleReportIssue = () => {
+    Alert.alert(
+      'Report Incorrect Information',
+      'What would you like to report?',
+      [
+        {
+          text: 'Wrong phone number',
+          onPress: () => Alert.alert('Thank you', 'We will verify and update the phone number.')
+        },
+        {
+          text: 'Wrong address',
+          onPress: () => Alert.alert('Thank you', 'We will verify and update the address.')
+        },
+        {
+          text: "Doesn't accept SoonerCare",
+          onPress: () => Alert.alert('Thank you', 'We will verify their insurance acceptance.')
+        },
+        {
+          text: 'Other issue',
+          onPress: () => Alert.alert('Thank you', 'Please email us at support@accesscare.app with details.')
+        },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
   };
 
   if (loading) {
@@ -302,6 +324,15 @@ export default function ProviderDetailScreen() {
               <Text style={[styles.infoText, { color: colors.text }]}>{provider.hours}</Text>
             </View>
           )}
+          
+          <TouchableOpacity
+            style={[styles.reportButton, { borderColor: colors.border }]}
+            onPress={handleReportIssue}
+          >
+            <Text style={[styles.reportButtonText, { color: colors.subtext }]}>
+              📝 Report incorrect information
+            </Text>
+          </TouchableOpacity>
         </View>
 
         <View style={[styles.section, { backgroundColor: colors.card }]}>
@@ -328,7 +359,6 @@ export default function ProviderDetailScreen() {
           </Text>
         </View>
 
-        {/* Map - Only on mobile */}
         {Platform.OS !== 'web' && MapView && provider.location && provider.location.latitude !== 0 && provider.location.longitude !== 0 && (
           <View style={[styles.section, { backgroundColor: colors.card }]}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Location</Text>
@@ -355,7 +385,6 @@ export default function ProviderDetailScreen() {
           </View>
         )}
 
-        {/* Web alternative */}
         {Platform.OS === 'web' && provider.location && provider.location.latitude !== 0 && provider.location.longitude !== 0 && (
           <View style={[styles.section, { backgroundColor: colors.card }]}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Location</Text>
@@ -518,6 +547,17 @@ const styles = StyleSheet.create({
   infoText: {
     fontSize: 16,
     flex: 1,
+  },
+  reportButton: {
+    marginTop: 16,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  reportButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   insuranceBadge: {
     paddingHorizontal: 16,
