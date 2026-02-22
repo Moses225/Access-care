@@ -1,7 +1,13 @@
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
-import { Alert, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { auth, db } from '../../firebase';
 
@@ -9,113 +15,148 @@ export default function NotificationsScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const [appointmentReminders, setAppointmentReminders] = useState(true);
-  const [generalUpdates, setGeneralUpdates] = useState(true);
+  const [generalUpdates, setGeneralUpdates] = useState(false);
 
   useEffect(() => {
-    loadSettings();
+    loadNotificationSettings();
   }, []);
 
-  const loadSettings = async () => {
-    const uid = auth.currentUser?.uid;
-    if (!uid) return;
-
+  const loadNotificationSettings = async () => {
     try {
-      const ref = doc(db, 'notifications', uid);
-      const snapshot = await getDoc(ref);
-      if (snapshot.exists()) {
-        const data = snapshot.data();
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const notifDoc = await getDoc(doc(db, 'notifications', user.uid));
+      if (notifDoc.exists()) {
+        const data = notifDoc.data();
         setAppointmentReminders(data.appointmentReminders ?? true);
-        setGeneralUpdates(data.generalUpdates ?? true);
+        setGeneralUpdates(data.generalUpdates ?? false);
       }
     } catch (error) {
-      console.log('Error loading notification settings:', error);
+      console.error('Error loading notifications:', error);
     }
   };
 
-  const updateSetting = async (field: string, value: boolean) => {
-    const uid = auth.currentUser?.uid;
-    if (!uid) return;
+  const handleToggleReminders = async (value: boolean) => {
+    setAppointmentReminders(value);
+    await saveSettings({ appointmentReminders: value, generalUpdates });
+  };
 
+  const handleToggleUpdates = async (value: boolean) => {
+    setGeneralUpdates(value);
+    await saveSettings({ appointmentReminders, generalUpdates: value });
+  };
+
+  const saveSettings = async (settings: any) => {
     try {
-      await setDoc(
-        doc(db, 'notifications', uid),
-        { [field]: value },
-        { merge: true }
-      );
-      Alert.alert('Updated', 'Notification preferences saved.');
+      const user = auth.currentUser;
+      if (!user) return;
+
+      await setDoc(doc(db, 'notifications', user.uid), {
+        ...settings,
+        updatedAt: new Date(),
+      });
     } catch (error) {
-      Alert.alert('Error', 'Failed to save settings');
+      console.error('Error saving notification settings:', error);
     }
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.card }]}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={[styles.backText, { color: colors.primary }]}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]}>Notifications</Text>
-      </View>
-
-      {/* Content */}
-      <View style={styles.content}>
-        <View style={[styles.row, { borderBottomColor: colors.border }]}>
-          <Text style={[styles.label, { color: colors.text }]}>Appointment Reminders</Text>
-          <Switch
-            value={appointmentReminders}
-            onValueChange={(val) => {
-              setAppointmentReminders(val);
-              updateSetting('appointmentReminders', val);
-            }}
-            trackColor={{ false: colors.border, true: colors.primary }}
-            thumbColor={appointmentReminders ? '#fff' : '#f4f3f4'}
-          />
+    <>
+      <Stack.Screen options={{ headerShown: false }} />
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { backgroundColor: colors.card }]}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Text style={[styles.backText, { color: colors.primary }]}>← Back</Text>
+          </TouchableOpacity>
         </View>
 
-        <View style={[styles.row, { borderBottomColor: colors.border }]}>
-          <Text style={[styles.label, { color: colors.text }]}>General Updates</Text>
-          <Switch
-            value={generalUpdates}
-            onValueChange={(val) => {
-              setGeneralUpdates(val);
-              updateSetting('generalUpdates', val);
-            }}
-            trackColor={{ false: colors.border, true: colors.primary }}
-            thumbColor={generalUpdates ? '#fff' : '#f4f3f4'}
-          />
+        <View style={styles.content}>
+          <Text style={[styles.title, { color: colors.text }]}>Notifications</Text>
+          <Text style={[styles.subtitle, { color: colors.subtext }]}>
+            Manage how you receive updates
+          </Text>
+
+          <View style={[styles.settingRow, { backgroundColor: colors.card }]}>
+            <View style={styles.settingInfo}>
+              <Text style={[styles.settingTitle, { color: colors.text }]}>
+                Appointment Reminders
+              </Text>
+              <Text style={[styles.settingDescription, { color: colors.subtext }]}>
+                Get notified before your appointments
+              </Text>
+            </View>
+            <Switch
+              value={appointmentReminders}
+              onValueChange={handleToggleReminders}
+              trackColor={{ false: '#ccc', true: colors.primary }}
+            />
+          </View>
+
+          <View style={[styles.settingRow, { backgroundColor: colors.card }]}>
+            <View style={styles.settingInfo}>
+              <Text style={[styles.settingTitle, { color: colors.text }]}>
+                General Updates
+              </Text>
+              <Text style={[styles.settingDescription, { color: colors.subtext }]}>
+                News, features, and tips
+              </Text>
+            </View>
+            <Switch
+              value={generalUpdates}
+              onValueChange={handleToggleUpdates}
+              trackColor={{ false: '#ccc', true: colors.primary }}
+            />
+          </View>
         </View>
       </View>
-    </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: {
+    flex: 1,
+  },
   header: {
     paddingTop: 60,
-    paddingBottom: 20,
+    paddingBottom: 16,
     paddingHorizontal: 20,
   },
   backText: {
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 10,
+  },
+  content: {
+    flex: 1,
+    padding: 20,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
+    marginBottom: 8,
   },
-  content: {
+  subtitle: {
+    fontSize: 14,
+    marginBottom: 32,
+  },
+  settingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     padding: 20,
+    borderRadius: 12,
+    marginBottom: 12,
   },
-  row: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    marginBottom: 10,
+  settingInfo: {
+    flex: 1,
   },
-  label: { fontSize: 16 },
+  settingTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  settingDescription: {
+    fontSize: 13,
+  },
 });

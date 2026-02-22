@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -11,186 +11,228 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import Animated, { SlideInRight } from 'react-native-reanimated';
 import { useTheme } from '../../context/ThemeContext';
-import { db } from '../../firebase';
+import { auth, db } from '../../firebase';
 
 interface Provider {
   id: string;
   name: string;
   specialty: string;
-  category: string;
   address: string;
-  city: string;
-  state: string;
-  zip: string;
   phone: string;
   rating: number;
-  reviewCount: number;
-  acceptingNewPatients: boolean;
+  acceptsNewPatients?: boolean;
+  acceptingNewPatients?: boolean;
+  location?: {
+    latitude: number;
+    longitude: number;
+  };
+  latitude?: number;
+  longitude?: number;
+  insuranceAccepted: string[];
+  category?: string;
+  categories?: string[];
+  city?: string;
+  state?: string;
 }
 
 export default function HomeScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  
   const [providers, setProviders] = useState<Provider[]>([]);
   const [filteredProviders, setFilteredProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
-  const [selectedSpecialty, setSelectedSpecialty] = useState<string>('All');
-
-  const categories = ['All', 'Core', 'Extended', 'Rare'];
-
-  const specialtyMap: { [key: string]: string[] } = {
-    All: ['All'],
-    Core: ['All', 'OB/GYN', 'Pediatrics', 'Family Medicine'],
-    Extended: [
-      'All',
-      'Doula Services',
-      'Mental Health Counselor',
-      'Dietitian',
-      'Home Health Agency',
-      'Lactation Consultant',
-      'Physical Therapy',
-      'Chiropractic',
-      'Midwifery',
-      'Dermatology',
-    ],
-    Rare: ['All', 'Reproductive Endocrinology', 'Genetic Counseling', 'Neonatology'],
-  };
-
-  const availableSpecialties = specialtyMap[selectedCategory] || ['All'];
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [showInsuranceFilter, setShowInsuranceFilter] = useState(false);
+  const [userName, setUserName] = useState('');
+  const [availableCategories, setAvailableCategories] = useState<string[]>(['all']);
 
   useEffect(() => {
     loadProviders();
+    loadUserName();
   }, []);
 
   useEffect(() => {
     filterProviders();
-  }, [searchQuery, selectedCategory, selectedSpecialty, providers]);
+  }, [providers, searchQuery, selectedCategory, showInsuranceFilter]);
+
+  const loadUserName = async () => {
+    try {
+      const user = auth.currentUser;
+      if (user) {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) {
+          const email = userDoc.data().email || user.email;
+          if (email) {
+            const name = email.split('@')[0];
+            setUserName(name.charAt(0).toUpperCase() + name.slice(1));
+          }
+        }
+      }
+    } catch (error) {
+      console.log('Could not load user name:', error);
+    }
+  };
 
   const loadProviders = async () => {
     try {
-      console.log('🔄 Loading providers...');
-      console.log('🔄 Fetching providers from Firebase...');
-
-      const querySnapshot = await getDocs(collection(db, 'providers'));
-
-      console.log('📊 Found', querySnapshot.size, 'providers in Firebase');
-
-      const providerData = querySnapshot.docs.map((doc) => {
+      setLoading(true);
+      const providersQuery = query(collection(db, 'providers'));
+      const querySnapshot = await getDocs(providersQuery);
+      
+      const providersList: Provider[] = [];
+      const specialtiesSet = new Set<string>();
+      
+      querySnapshot.forEach((doc) => {
         const data = doc.data();
-        return {
-          id: doc.id,
-          name: data.name || 'Unknown Provider',
-          specialty: data.specialty || 'Unknown',
-          category: data.category || 'Extended',
-          address: data.address || '',
-          city: data.city || '',
-          state: data.state || 'OK',
-          zip: data.zip || '',
-          phone: data.phone || '',
-          rating: data.rating || 4.5,
-          reviewCount: data.reviewCount || 0,
-          acceptingNewPatients: data.acceptingNewPatients !== false,
-        };
+        
+        if (data.name && data.specialty) {
+          providersList.push({
+            id: doc.id,
+            name: data.name,
+            specialty: data.specialty,
+            address: data.address || '',
+            phone: data.phone || '',
+            rating: data.rating || 0,
+            acceptsNewPatients: data.acceptingNewPatients ?? data.acceptsNewPatients ?? true,
+            location: data.latitude && data.longitude 
+              ? { latitude: data.latitude, longitude: data.longitude }
+              : undefined,
+            latitude: data.latitude,
+            longitude: data.longitude,
+            insuranceAccepted: Array.isArray(data.insuranceAccepted) ? data.insuranceAccepted : [],
+            category: data.category || '',
+            categories: Array.isArray(data.categories) ? data.categories : (data.category ? [data.category] : []),
+            city: data.city || '',
+            state: data.state || 'Oklahoma',
+          });
+          
+          // Collect unique specialties
+          if (data.specialty) {
+            specialtiesSet.add(data.specialty);
+          }
+        }
       });
-
-      console.log('✅ Successfully loaded providers:', providerData.length);
-      setProviders(providerData);
-      setFilteredProviders(providerData);
+      
+      setProviders(providersList);
+      
+      // Set available categories from actual data
+      const cats = ['all', ...Array.from(specialtiesSet)].slice(0, 6);
+      setAvailableCategories(cats);
+      
+      console.log(`Loaded ${providersList.length} providers with specialties:`, Array.from(specialtiesSet));
     } catch (error) {
-      console.error('❌ Error loading providers:', error);
+      console.error('Error loading providers:', error);
     } finally {
       setLoading(false);
     }
   };
 
   const filterProviders = () => {
+    if (!providers) return;
+
     let filtered = [...providers];
 
+    // Search by name, specialty, address, or city
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
-        (provider) =>
-          provider.name.toLowerCase().includes(query) ||
-          provider.specialty.toLowerCase().includes(query)
+        (p) =>
+          (p.name && p.name.toLowerCase().includes(query)) ||
+          (p.specialty && p.specialty.toLowerCase().includes(query)) ||
+          (p.address && p.address.toLowerCase().includes(query)) ||
+          (p.city && p.city.toLowerCase().includes(query))
       );
     }
 
-    if (selectedCategory !== 'All') {
-      filtered = filtered.filter((provider) => provider.category === selectedCategory);
+    // Filter by category (specialty)
+    if (selectedCategory && selectedCategory !== 'all') {
+      filtered = filtered.filter(
+        (p) =>
+          p.category === selectedCategory ||
+          (p.categories && p.categories.includes(selectedCategory)) ||
+          (p.specialty && p.specialty.toLowerCase().includes(selectedCategory.toLowerCase()))
+      );
     }
 
-    if (selectedSpecialty !== 'All') {
-      filtered = filtered.filter((provider) => provider.specialty === selectedSpecialty);
+    // Filter by insurance if toggle is on
+    if (showInsuranceFilter) {
+      filtered = filtered.filter(
+        (p) =>
+          p.insuranceAccepted &&
+          (p.insuranceAccepted.includes('SoonerCare') ||
+            p.insuranceAccepted.includes('Medicaid'))
+      );
     }
 
-    console.log('✅ Loaded providers:', filtered.length);
     setFilteredProviders(filtered);
   };
 
-  const clearFilters = () => {
-    setSearchQuery('');
-    setSelectedCategory('All');
-    setSelectedSpecialty('All');
+  const handleProviderPress = (providerId: string) => {
+    router.push(`/provider/${providerId}` as any);
   };
 
-  const renderProvider = ({ item, index }: { item: Provider; index: number }) => (
-    <Animated.View entering={SlideInRight.delay(index * 50).duration(500).springify()}>
+  const handleQuickSearch = (search: string) => {
+    setSearchQuery(search);
+  };
+
+  const renderProviderCard = ({ item }: { item: Provider }) => {
+    const hasSoonerCare = item.insuranceAccepted.includes('SoonerCare') || 
+                          item.insuranceAccepted.includes('Medicaid');
+    const acceptingPatients = item.acceptsNewPatients ?? item.acceptingNewPatients ?? true;
+    
+    return (
       <TouchableOpacity
         style={[styles.providerCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-        onPress={() => router.push(`/provider/${item.id}` as any)}
+        onPress={() => handleProviderPress(item.id)}
         activeOpacity={0.7}
       >
-        <View style={[styles.providerAvatar, { backgroundColor: colors.primary }]}>
-          <Text style={styles.avatarText}>
-            {item.name
-              .split(' ')
-              .map((n) => n[0])
-              .join('')
-              .slice(0, 2)}
-          </Text>
-        </View>
-
-        <View style={styles.providerInfo}>
-          <Text style={[styles.providerName, { color: colors.text }]} numberOfLines={1}>
-            {item.name}
-          </Text>
-          <Text style={[styles.providerSpecialty, { color: colors.primary }]} numberOfLines={1}>
-            {item.specialty}
-          </Text>
-
-          <View style={styles.providerMeta}>
-            <View style={styles.ratingContainer}>
-              <Text style={styles.ratingIcon}>⭐</Text>
-              <Text style={[styles.rating, { color: colors.text }]}>{item.rating}</Text>
-              {item.reviewCount > 0 && (
-                <Text style={[styles.reviewCount, { color: colors.subtext }]}>
-                  ({item.reviewCount})
-                </Text>
-              )}
+        <View style={styles.cardHeader}>
+          <View style={styles.cardLeft}>
+            <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
+              <Text style={styles.avatarText}>{item.name.charAt(0)}</Text>
             </View>
           </View>
-
-          {/* SoonerCare Badge */}
-          <View style={[styles.soonerCareBadge, { backgroundColor: colors.success }]}>
-            <Text style={styles.badgeIcon}>✅</Text>
-            <Text style={styles.badgeText}>SoonerCare</Text>
+          
+          <View style={styles.cardContent}>
+            <Text style={[styles.providerName, { color: colors.text }]} numberOfLines={1}>
+              {item.name}
+            </Text>
+            <Text style={[styles.specialty, { color: colors.primary }]} numberOfLines={1}>
+              {item.specialty}
+            </Text>
+            
+            {/* Availability Badge */}
+            {acceptingPatients && (
+              <View style={[styles.availableBadge, { backgroundColor: colors.success }]}>
+                <Text style={styles.availableText}>✅ Accepting patients</Text>
+              </View>
+            )}
+            
+            {/* SoonerCare Badge */}
+            {hasSoonerCare && (
+              <View style={[styles.soonerCareBadge, { backgroundColor: '#E8F5E9' }]}>
+                <Text style={[styles.soonerCareText, { color: colors.success }]}>💊 SoonerCare</Text>
+              </View>
+            )}
+            
+            <View style={styles.ratingRow}>
+              <Text style={styles.star}>⭐</Text>
+              <Text style={[styles.rating, { color: colors.text }]}>{item.rating.toFixed(1)}</Text>
+            </View>
           </View>
-        </View>
-
-        <View style={styles.providerAction}>
-          <Text style={[styles.viewDetails, { color: colors.primary }]}>View Details →</Text>
+          
+          <Text style={[styles.chevron, { color: colors.subtext }]}>›</Text>
         </View>
       </TouchableOpacity>
-    </Animated.View>
-  );
+    );
+  };
 
   if (loading) {
     return (
-      <View style={[styles.container, styles.loadingContainer, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, styles.centerContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.primary} />
         <Text style={[styles.loadingText, { color: colors.text }]}>Loading providers...</Text>
       </View>
@@ -199,120 +241,179 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Header with Personalized Greeting */}
       <View style={[styles.header, { backgroundColor: colors.card }]}>
-        <Text style={[styles.title, { color: colors.primary }]}>🤰 Find Your Provider</Text>
+        <Text style={[styles.title, { color: colors.text }]}>
+          {userName ? `Hi ${userName}` : 'Find Care'}
+        </Text>
         <Text style={[styles.subtitle, { color: colors.subtext }]}>
-          {filteredProviders.length} Oklahoma providers ready to help
+          {providers.length} providers and counting...
         </Text>
       </View>
 
-      {/* SoonerCare Quick Access Banner */}
-      <View style={[styles.soonerCareBanner, { backgroundColor: colors.primary }]}>
-        <View style={styles.soonerCareContent}>
-          <Text style={styles.soonerCareIcon}>✅</Text>
-          <View style={styles.soonerCareText}>
-            <Text style={styles.soonerCareTitle}>All Providers Accept SoonerCare</Text>
-            <Text style={styles.soonerCareSubtitle}>
-              Find care you can afford - 199 providers ready to help
+      {/* Insurance Banner */}
+      <View style={[styles.insuranceBanner, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={styles.insuranceContent}>
+          <Text style={styles.insuranceIcon}>💊</Text>
+          <View style={styles.insuranceTextContainer}>
+            <Text style={[styles.insuranceTitle, { color: colors.text }]}>
+              Have SoonerCare or Medicaid?
+            </Text>
+            <Text style={[styles.insuranceSubtitle, { color: colors.subtext }]}>
+              {showInsuranceFilter 
+                ? 'Showing only providers who accept your coverage'
+                : 'Tap to filter providers by your coverage'
+              }
             </Text>
           </View>
         </View>
-      </View>
-
-      <View style={styles.searchContainer}>
-        <TextInput
+        <TouchableOpacity
           style={[
-            styles.searchBar,
-            { backgroundColor: colors.card, color: colors.text, borderColor: colors.border },
+            styles.filterButton, 
+            { backgroundColor: showInsuranceFilter ? colors.success : colors.primary }
           ]}
-          placeholder="Search by name or specialty..."
-          placeholderTextColor={colors.subtext}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
+          onPress={() => setShowInsuranceFilter(!showInsuranceFilter)}
+        >
+          <Text style={styles.filterButtonText}>
+            {showInsuranceFilter ? '✓ Active' : 'Filter'}
+          </Text>
+        </TouchableOpacity>
       </View>
 
-      <View style={styles.filterSection}>
-        <View style={styles.filterHeader}>
-          <Text style={[styles.filterLabel, { color: colors.text }]}>Category</Text>
-          {(selectedCategory !== 'All' || selectedSpecialty !== 'All' || searchQuery) && (
-            <TouchableOpacity onPress={clearFilters}>
-              <Text style={[styles.clearFilters, { color: colors.primary }]}>Clear All</Text>
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={styles.searchIcon}>🔍</Text>
+          <TextInput
+            style={[styles.searchInput, { color: colors.text }]}
+            placeholder="Search providers, specialties..."
+            placeholderTextColor={colors.subtext}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Text style={styles.clearIcon}>✕</Text>
             </TouchableOpacity>
           )}
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
-          {categories.map((category) => (
+      </View>
+
+      {/* Quick Searches - Based on Actual Data */}
+      {!searchQuery && (
+        <View style={styles.quickSearches}>
+          <Text style={[styles.quickSearchTitle, { color: colors.subtext }]}>
+            Common searches:
+          </Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.quickSearchScroll}>
+            <TouchableOpacity
+              style={[styles.quickSearchChip, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => handleQuickSearch('internal medicine')}
+            >
+              <Text style={[styles.quickSearchText, { color: colors.text }]}>
+                🩺 Internal Medicine
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickSearchChip, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => handleQuickSearch('oklahoma city')}
+            >
+              <Text style={[styles.quickSearchText, { color: colors.text }]}>
+                📍 Oklahoma City
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickSearchChip, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => handleQuickSearch('family')}
+            >
+              <Text style={[styles.quickSearchText, { color: colors.text }]}>
+                👨‍👩‍👧 Family Medicine
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickSearchChip, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => handleQuickSearch('pediatric')}
+            >
+              <Text style={[styles.quickSearchText, { color: colors.text }]}>
+                👶 Pediatrics
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      )}
+
+      {/* Category Filters - From Actual Data */}
+      <View style={styles.filtersContainer}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersScroll}>
+          {availableCategories.map((category) => (
             <TouchableOpacity
               key={category}
               style={[
                 styles.filterChip,
-                { borderColor: colors.primary, backgroundColor: colors.background },
-                selectedCategory === category && { backgroundColor: colors.primary },
+                { 
+                  backgroundColor: selectedCategory === category ? colors.primary : colors.card,
+                  borderColor: colors.border 
+                }
               ]}
-              onPress={() => {
-                setSelectedCategory(category);
-                setSelectedSpecialty('All');
-              }}
-              activeOpacity={0.7}
+              onPress={() => setSelectedCategory(category)}
             >
-              <Text
-                style={[
-                  styles.filterText,
-                  { color: selectedCategory === category ? '#fff' : colors.primary },
-                ]}
-              >
-                {category}
+              <Text style={[
+                styles.filterChipText,
+                { color: selectedCategory === category ? '#fff' : colors.text }
+              ]}>
+                {category === 'all' ? 'All Specialties' : category}
               </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
 
-      <View style={styles.filterSection}>
-        <Text style={[styles.filterLabel, { color: colors.text }]}>Specialty</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
-          {availableSpecialties.map((specialty) => (
-            <TouchableOpacity
-              key={specialty}
-              style={[
-                styles.filterChip,
-                { borderColor: colors.primary, backgroundColor: colors.background },
-                selectedSpecialty === specialty && { backgroundColor: colors.primary },
-              ]}
-              onPress={() => setSelectedSpecialty(specialty)}
-              activeOpacity={0.7}
-            >
-              <Text
-                style={[
-                  styles.filterText,
-                  { color: selectedSpecialty === specialty ? '#fff' : colors.primary },
-                ]}
-              >
-                {specialty}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
+      {/* Provider List */}
       <FlatList
         data={filteredProviders}
-        renderItem={renderProvider}
+        renderItem={renderProviderCard}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>🔍</Text>
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>No Providers Found</Text>
-            <Text style={[styles.emptyText, { color: colors.subtext }]}>
-              Try adjusting your search or filters
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>
+              No Providers Found
             </Text>
+            <Text style={[styles.emptyText, { color: colors.subtext }]}>
+              {searchQuery 
+                ? `No providers found for "${searchQuery}"`
+                : 'Try adjusting your search or filters'
+              }
+            </Text>
+            
+            {searchQuery && (
+              <View style={[styles.suggestionBox, { backgroundColor: colors.card }]}>
+                <Text style={[styles.suggestionTitle, { color: colors.text }]}>
+                  💡 Try searching for:
+                </Text>
+                <Text style={[styles.suggestionItem, { color: colors.subtext }]}>
+                  • Internal Medicine
+                </Text>
+                <Text style={[styles.suggestionItem, { color: colors.subtext }]}>
+                  • Oklahoma City
+                </Text>
+                <Text style={[styles.suggestionItem, { color: colors.subtext }]}>
+                  • Family Medicine
+                </Text>
+              </View>
+            )}
+            
             <TouchableOpacity
               style={[styles.clearButton, { backgroundColor: colors.primary }]}
-              onPress={clearFilters}
+              onPress={() => {
+                setSearchQuery('');
+                setSelectedCategory('all');
+                setShowInsuranceFilter(false);
+              }}
             >
-              <Text style={styles.clearButtonText}>Clear Filters</Text>
+              <Text style={styles.clearButtonText}>Clear All Filters</Text>
             </TouchableOpacity>
           </View>
         }
@@ -325,7 +426,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  loadingContainer: {
+  centerContainer: {
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -335,89 +436,120 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingTop: 60,
-    paddingBottom: 20,
+    paddingBottom: 16,
     paddingHorizontal: 20,
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: 'bold',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   subtitle: {
     fontSize: 14,
   },
-  soonerCareBanner: {
-    margin: 16,
-    marginTop: 0,
-    padding: 20,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  soonerCareContent: {
+  insuranceBanner: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  soonerCareIcon: {
-    fontSize: 40,
-    marginRight: 16,
-  },
-  soonerCareText: {
+  insuranceContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flex: 1,
   },
-  soonerCareTitle: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 4,
+  insuranceIcon: {
+    fontSize: 32,
+    marginRight: 12,
   },
-  soonerCareSubtitle: {
-    color: '#fff',
-    fontSize: 13,
-    opacity: 0.95,
+  insuranceTextContainer: {
+    flex: 1,
   },
-  searchContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 16,
-  },
-  searchBar: {
-    padding: 14,
-    borderRadius: 12,
-    fontSize: 16,
-    borderWidth: 1,
-  },
-  filterSection: {
-    paddingHorizontal: 20,
-    marginBottom: 16,
-  },
-  filterHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  filterLabel: {
-    fontSize: 16,
+  insuranceTitle: {
+    fontSize: 15,
     fontWeight: '600',
+    marginBottom: 2,
   },
-  clearFilters: {
-    fontSize: 14,
-    fontWeight: '600',
+  insuranceSubtitle: {
+    fontSize: 12,
+    lineHeight: 16,
   },
-  filterScroll: {
-    marginTop: 8,
-  },
-  filterChip: {
-    paddingHorizontal: 18,
+  filterButton: {
+    paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
-    borderWidth: 2,
-    marginRight: 10,
+    marginLeft: 12,
   },
-  filterText: {
+  filterButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  searchContainer: {
+    paddingHorizontal: 16,
+    marginBottom: 12,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  searchIcon: {
+    fontSize: 20,
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+  },
+  clearIcon: {
+    fontSize: 20,
+    color: '#999',
+    padding: 4,
+  },
+  quickSearches: {
+    paddingHorizontal: 16,
+    marginBottom: 12,
+  },
+  quickSearchTitle: {
+    fontSize: 13,
+    marginBottom: 8,
+  },
+  quickSearchScroll: {
+    flexDirection: 'row',
+  },
+  quickSearchChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginRight: 8,
+    borderWidth: 1,
+  },
+  quickSearchText: {
+    fontSize: 14,
+  },
+  filtersContainer: {
+    marginBottom: 12,
+  },
+  filtersScroll: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginRight: 8,
+  },
+  filterChipText: {
     fontSize: 14,
     fontWeight: '600',
   },
@@ -426,91 +558,81 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   providerCard: {
-    flexDirection: 'row',
-    padding: 16,
     borderRadius: 16,
-    marginBottom: 16,
+    padding: 16,
+    marginBottom: 12,
     borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
   },
-  providerAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cardLeft: {
+    marginRight: 16,
+  },
+  avatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
   },
   avatarText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: 'bold',
   },
-  providerInfo: {
+  cardContent: {
     flex: 1,
-    justifyContent: 'center',
   },
   providerName: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 4,
   },
-  providerSpecialty: {
+  specialty: {
     fontSize: 14,
     fontWeight: '600',
-    marginBottom: 6,
+    marginBottom: 8,
   },
-  providerMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  ratingIcon: {
-    fontSize: 14,
-    marginRight: 4,
-  },
-  rating: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginRight: 4,
-  },
-  reviewCount: {
-    fontSize: 12,
-  },
-  soonerCareBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  availableBadge: {
     alignSelf: 'flex-start',
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 4,
     borderRadius: 8,
-    marginTop: 4,
+    marginBottom: 6,
   },
-  badgeIcon: {
-    fontSize: 12,
-    marginRight: 4,
-  },
-  badgeText: {
+  availableText: {
     color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: 'bold',
   },
-  providerAction: {
-    justifyContent: 'center',
+  soonerCareBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  soonerCareText: {
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+  ratingRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: 8,
+    gap: 4,
   },
-  viewDetails: {
-    fontSize: 13,
+  star: {
+    fontSize: 16,
+  },
+  rating: {
+    fontSize: 16,
     fontWeight: '600',
+  },
+  chevron: {
+    fontSize: 28,
+    marginLeft: 8,
   },
   emptyState: {
     alignItems: 'center',
@@ -518,27 +640,45 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   emptyIcon: {
-    fontSize: 80,
+    fontSize: 64,
     marginBottom: 16,
   },
   emptyTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 8,
   },
   emptyText: {
     fontSize: 16,
     textAlign: 'center',
+    lineHeight: 24,
     marginBottom: 24,
   },
-  clearButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 14,
+  suggestionBox: {
+    marginTop: 20,
+    padding: 16,
     borderRadius: 12,
+    width: '100%',
+  },
+  suggestionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  suggestionItem: {
+    fontSize: 14,
+    marginBottom: 6,
+    paddingLeft: 8,
+  },
+  clearButton: {
+    marginTop: 20,
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    borderRadius: 8,
   },
   clearButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
 });

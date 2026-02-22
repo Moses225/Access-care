@@ -1,8 +1,9 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { arrayRemove, arrayUnion, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Linking,
   Platform,
   ScrollView,
@@ -11,165 +12,182 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
 import { useTheme } from '../../context/ThemeContext';
 import { auth, db } from '../../firebase';
 
-interface ProviderData {
+// Conditionally import MapView only on mobile
+let MapView: any;
+let Marker: any;
+
+if (Platform.OS !== 'web') {
+  try {
+    const Maps = require('react-native-maps');
+    MapView = Maps.default;
+    Marker = Maps.Marker;
+  } catch (e) {
+    console.log('MapView not available');
+  }
+}
+
+interface Provider {
   id: string;
   name: string;
   specialty: string;
-  category: string;
   address: string;
-  city: string;
-  state: string;
-  zip: string;
   phone: string;
-  website?: string;
   rating: number;
-  reviewCount: number;
-  latitude: number;
-  longitude: number;
-  acceptingNewPatients: boolean;
-  telehealthAvailable: boolean;
+  acceptsNewPatients: boolean;
+  location: {
+    latitude: number;
+    longitude: number;
+  };
   insuranceAccepted: string[];
-  languages: string[];
+  categories?: string[];
+  category?: string;
+  hours?: string;
+  website?: string;
+  city?: string;
+  state?: string;
 }
 
 export default function ProviderDetailScreen() {
+  const { id } = useLocalSearchParams();
   const router = useRouter();
   const { colors } = useTheme();
-  const { id } = useLocalSearchParams<{ id: string }>();
   
-  const [provider, setProvider] = useState<ProviderData | null>(null);
+  const [provider, setProvider] = useState<Provider | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadProvider();
-    loadFavoriteStatus();
+    checkIfFavorite();
   }, [id]);
 
   const loadProvider = async () => {
-    if (!id) {
-      console.error('No provider ID provided');
-      setLoading(false);
-      return;
-    }
-
     try {
-      console.log('🔄 Loading provider:', id);
-      
+      setLoading(true);
+      setError(null);
+
+      if (!id || typeof id !== 'string') {
+        throw new Error('Invalid provider ID');
+      }
+
+      console.log('Loading provider with ID:', id);
+
       const providerDoc = await getDoc(doc(db, 'providers', id));
       
-      if (providerDoc.exists()) {
-        const data = providerDoc.data();
-        console.log('✅ Provider found:', data.name);
-        
-        setProvider({
-          id: providerDoc.id,
-          name: data.name || 'Unknown Provider',
-          specialty: data.specialty || 'Unknown',
-          category: data.category || 'Extended',
-          address: data.address || '',
-          city: data.city || '',
-          state: data.state || 'OK',
-          zip: data.zip || '',
-          phone: data.phone || '',
-          website: data.website || '',
-          rating: data.rating || 4.5,
-          reviewCount: data.reviewCount || 0,
-          latitude: data.latitude || 0,
-          longitude: data.longitude || 0,
-          acceptingNewPatients: data.acceptingNewPatients !== false,
-          telehealthAvailable: data.telehealthAvailable === true,
-          insuranceAccepted: data.insuranceAccepted || ['SoonerCare'],
-          languages: data.languages || ['English'],
-        });
-      } else {
-        console.error('❌ Provider not found in Firebase');
+      if (!providerDoc.exists()) {
+        throw new Error('Provider not found');
       }
-    } catch (error) {
-      console.error('❌ Error loading provider:', error);
+
+      const data = providerDoc.data();
+      console.log('Provider data:', data);
+
+      if (!data.name || !data.specialty) {
+        throw new Error('Invalid provider data - missing required fields');
+      }
+
+      setProvider({
+        id: providerDoc.id,
+        name: data.name || 'Unknown Provider',
+        specialty: data.specialty || 'General',
+        address: data.address || 'Address not available',
+        phone: data.phone || 'Phone not available',
+        rating: data.rating || 0,
+        acceptsNewPatients: data.acceptingNewPatients ?? true,
+        location: {
+          latitude: data.latitude || 35.4676,
+          longitude: data.longitude || -97.5164
+        },
+        insuranceAccepted: Array.isArray(data.insuranceAccepted) ? data.insuranceAccepted : [],
+        categories: Array.isArray(data.categories) ? data.categories : (data.category ? [data.category] : []),
+        category: data.category || '',
+        hours: data.hours || 'Hours not available',
+        website: data.website || '',
+        city: data.city || '',
+        state: data.state || 'Oklahoma',
+      });
+
+    } catch (err: any) {
+      console.error('Error loading provider:', err);
+      setError(err.message || 'Failed to load provider');
+      Alert.alert(
+        'Error Loading Provider',
+        'Could not load provider details. Please try again.',
+        [
+          { text: 'Go Back', onPress: () => router.back() },
+          { text: 'Retry', onPress: () => loadProvider() }
+        ]
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const loadFavoriteStatus = async () => {
-    const user = auth.currentUser;
-    if (!user || !id) return;
-
+  const checkIfFavorite = async () => {
     try {
+      const user = auth.currentUser;
+      if (!user || !id) return;
+
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       if (userDoc.exists()) {
         const favorites = userDoc.data().favorites || [];
         setIsFavorite(favorites.includes(id));
       }
-    } catch (error) {
-      console.error('Error loading favorite status:', error);
+    } catch (err) {
+      console.error('Error checking favorite status:', err);
     }
   };
 
   const handleToggleFavorite = async () => {
-    if (!id) return;
-    const user = auth.currentUser;
-    if (!user) return;
-
     try {
-      const userRef = doc(db, 'users', user.uid);
-      
-      if (isFavorite) {
-        await updateDoc(userRef, {
-          favorites: arrayRemove(id)
-        });
-        console.log('❤️ Removed from favorites');
-      } else {
-        await setDoc(userRef, {
-          favorites: arrayUnion(id),
-          userId: user.uid,
-          email: user.email,
-          updatedAt: new Date().toISOString(),
-        }, { merge: true });
-        console.log('💙 Added to favorites');
+      const user = auth.currentUser;
+      if (!user) {
+        Alert.alert('Not Logged In', 'Please log in to save favorites');
+        return;
       }
-      
-      setIsFavorite(!isFavorite);
-    } catch (error) {
-      console.error('Error toggling favorite:', error);
+
+      const userRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userRef);
+      const favorites = userDoc.exists() ? (userDoc.data().favorites || []) : [];
+
+      if (isFavorite) {
+        const updatedFavorites = favorites.filter((fav: string) => fav !== id);
+        await setDoc(userRef, { favorites: updatedFavorites }, { merge: true });
+        setIsFavorite(false);
+      } else {
+        const updatedFavorites = [...favorites, id];
+        await setDoc(userRef, { favorites: updatedFavorites }, { merge: true });
+        setIsFavorite(true);
+      }
+    } catch (err) {
+      console.error('Error toggling favorite:', err);
+      Alert.alert('Error', 'Failed to update favorites');
     }
   };
 
   const handleCall = () => {
-    if (!provider?.phone) return;
-    const phoneNumber = provider.phone.replace(/[^0-9]/g, '');
-    Linking.openURL(`tel:${phoneNumber}`);
+    if (!provider?.phone || provider.phone === 'Phone not available') {
+      Alert.alert('No Phone Number', 'Phone number not available for this provider');
+      return;
+    }
+    Linking.openURL(`tel:${provider.phone}`);
   };
 
   const handleDirections = () => {
-    if (!provider) return;
-    const address = `${provider.address}, ${provider.city}, ${provider.state} ${provider.zip}`;
-    const url = Platform.select({
-      ios: `maps:0,0?q=${encodeURIComponent(address)}`,
-      android: `geo:0,0?q=${encodeURIComponent(address)}`,
-    });
-    if (url) {
-      Linking.openURL(url);
+    if (!provider?.location) {
+      Alert.alert('No Location', 'Location not available for this provider');
+      return;
     }
-  };
-
-  const handleWebsite = () => {
-    if (!provider?.website) return;
-    let url = provider.website;
-    if (!url.startsWith('http')) {
-      url = 'https://' + url;
-    }
+    const { latitude, longitude } = provider.location;
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
     Linking.openURL(url);
   };
 
   const handleBookAppointment = () => {
     if (!id) return;
-    console.log('📅 Navigating to booking page for provider:', id);
     router.push(`/booking/${id}` as any);
   };
 
@@ -182,22 +200,24 @@ export default function ProviderDetailScreen() {
     );
   }
 
-  if (!provider) {
+  if (error || !provider) {
     return (
       <View style={[styles.container, styles.centerContainer, { backgroundColor: colors.background }]}>
-        <Text style={styles.errorIcon}>❌</Text>
-        <Text style={[styles.errorTitle, { color: colors.text }]}>Provider Not Found</Text>
-        <TouchableOpacity 
-          style={[styles.backButton, { backgroundColor: colors.primary }]}
+        <Text style={[styles.errorIcon, { color: colors.error }]}>⚠️</Text>
+        <Text style={[styles.errorTitle, { color: colors.text }]}>Oops!</Text>
+        <Text style={[styles.errorMessage, { color: colors.subtext }]}>
+          {error || 'Provider not found'}
+        </Text>
+        <TouchableOpacity
+          style={[styles.errorButton, { backgroundColor: colors.primary }]}
           onPress={() => router.back()}
         >
-          <Text style={styles.backButtonText}>← Go Back</Text>
+          <Text style={styles.errorButtonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  const hasValidLocation = provider.latitude !== 0 && provider.longitude !== 0;
   const hasSoonerCare = provider.insuranceAccepted.includes('SoonerCare') || 
                         provider.insuranceAccepted.includes('Medicaid');
   const otherInsurances = provider.insuranceAccepted.filter(
@@ -206,211 +226,159 @@ export default function ProviderDetailScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.card }]}>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Text style={[styles.backText, { color: colors.primary }]}>← Back</Text>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={[styles.header, { backgroundColor: colors.card }]}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <Text style={[styles.backBtnText, { color: colors.primary }]}>← Back</Text>
-          </TouchableOpacity>
-          
-          <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
-            <Text style={styles.avatarText}>
-              {provider.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-            </Text>
-          </View>
-          
-          <Text style={[styles.name, { color: colors.text }]}>{provider.name}</Text>
-          <Text style={[styles.specialty, { color: colors.primary }]}>{provider.specialty}</Text>
-          
-          <View style={styles.ratingContainer}>
-            <Text style={styles.ratingIcon}>⭐</Text>
-            <Text style={[styles.rating, { color: colors.text }]}>{provider.rating}</Text>
-            {provider.reviewCount > 0 && (
-              <Text style={[styles.reviewCount, { color: colors.subtext }]}>
-                ({provider.reviewCount} reviews)
-              </Text>
-            )}
-          </View>
-
-          <View style={styles.badges}>
-            <View style={[styles.badge, { backgroundColor: colors.background, borderColor: colors.primary }]}>
-              <Text style={[styles.badgeText, { color: colors.primary }]}>{provider.category}</Text>
-            </View>
-            {provider.acceptingNewPatients && (
-              <View style={[styles.badge, styles.availableBadge]}>
-                <Text style={styles.badgeText}>Accepting Patients</Text>
-              </View>
-            )}
-            {provider.telehealthAvailable && (
-              <View style={[styles.badge, styles.telehealthBadge]}>
-                <Text style={styles.badgeText}>Telehealth</Text>
-              </View>
-            )}
-            {hasSoonerCare && (
-              <View style={[styles.badge, styles.soonerCareBadge]}>
-                <Text style={styles.badgeText}>✅ Accepts SoonerCare</Text>
-              </View>
-            )}
-          </View>
-        </View>
-
-        {/* Quick Actions */}
         <View style={[styles.section, { backgroundColor: colors.card }]}>
-          <View style={styles.quickActions}>
-            <TouchableOpacity
-              style={[styles.actionButton, { borderColor: colors.primary }]}
-              onPress={handleToggleFavorite}
-            >
-              <Text style={styles.actionIcon}>{isFavorite ? '❤️' : '🤍'}</Text>
-              <Text style={[styles.actionText, { color: colors.text }]}>
-                {isFavorite ? 'Saved' : 'Save'}
+          <View style={styles.headerRow}>
+            <View style={styles.headerLeft}>
+              <Text style={[styles.providerName, { color: colors.text }]} numberOfLines={2}>
+                {provider.name}
               </Text>
+              <Text style={[styles.specialty, { color: colors.primary }]}>{provider.specialty}</Text>
+            </View>
+            <TouchableOpacity onPress={handleToggleFavorite}>
+              <Text style={styles.heartIcon}>{isFavorite ? '❤️' : '🤍'}</Text>
             </TouchableOpacity>
+          </View>
 
-            <TouchableOpacity
-              style={[styles.actionButton, { borderColor: colors.primary }]}
-              onPress={handleCall}
-            >
-              <Text style={styles.actionIcon}>📞</Text>
-              <Text style={[styles.actionText, { color: colors.text }]}>Call</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.actionButton, { borderColor: colors.primary }]}
-              onPress={handleDirections}
-            >
-              <Text style={styles.actionIcon}>🗺️</Text>
-              <Text style={[styles.actionText, { color: colors.text }]}>Directions</Text>
-            </TouchableOpacity>
+          <View style={styles.ratingRow}>
+            <Text style={styles.star}>⭐</Text>
+            <Text style={[styles.rating, { color: colors.text }]}>{provider.rating.toFixed(1)}</Text>
+            <View style={[
+              styles.statusBadge,
+              { backgroundColor: provider.acceptsNewPatients ? colors.success : colors.error }
+            ]}>
+              <Text style={styles.statusText}>
+                {provider.acceptsNewPatients ? 'Accepting Patients' : 'Not Accepting'}
+              </Text>
+            </View>
           </View>
         </View>
 
-        {/* Contact Information */}
+        <View style={styles.actionRow}>
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+            onPress={handleCall}
+          >
+            <Text style={styles.actionIcon}>📞</Text>
+            <Text style={[styles.actionText, { color: colors.text }]}>Call</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+            onPress={handleDirections}
+          >
+            <Text style={styles.actionIcon}>🗺️</Text>
+            <Text style={[styles.actionText, { color: colors.text }]}>Directions</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+            onPress={handleToggleFavorite}
+          >
+            <Text style={styles.actionIcon}>{isFavorite ? '❤️' : '🤍'}</Text>
+            <Text style={[styles.actionText, { color: colors.text }]}>Save</Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={[styles.section, { backgroundColor: colors.card }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Contact Information</Text>
-          
-          <TouchableOpacity style={styles.contactItem} onPress={handleCall}>
-            <Text style={styles.contactIcon}>📞</Text>
-            <View style={styles.contactInfo}>
-              <Text style={[styles.contactLabel, { color: colors.subtext }]}>Phone</Text>
-              <Text style={[styles.contactValue, { color: colors.primary }]}>{provider.phone}</Text>
-            </View>
-          </TouchableOpacity>
-
-          <View style={styles.contactItem}>
-            <Text style={styles.contactIcon}>📍</Text>
-            <View style={styles.contactInfo}>
-              <Text style={[styles.contactLabel, { color: colors.subtext }]}>Address</Text>
-              <Text style={[styles.contactValue, { color: colors.text }]}>{provider.address}</Text>
-              <Text style={[styles.contactValue, { color: colors.text }]}>
-                {provider.city}, {provider.state} {provider.zip}
-              </Text>
-            </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoIcon}>📍</Text>
+            <Text style={[styles.infoText, { color: colors.text }]}>{provider.address}</Text>
           </View>
-
-          {provider.website && (
-            <TouchableOpacity style={styles.contactItem} onPress={handleWebsite}>
-              <Text style={styles.contactIcon}>🌐</Text>
-              <View style={styles.contactInfo}>
-                <Text style={[styles.contactLabel, { color: colors.subtext }]}>Website</Text>
-                <Text style={[styles.contactValue, { color: colors.primary }]} numberOfLines={1}>
-                  {provider.website}
-                </Text>
-              </View>
-            </TouchableOpacity>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoIcon}>📞</Text>
+            <Text style={[styles.infoText, { color: colors.text }]}>{provider.phone}</Text>
+          </View>
+          {provider.hours && provider.hours !== 'Hours not available' && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoIcon}>🕐</Text>
+              <Text style={[styles.infoText, { color: colors.text }]}>{provider.hours}</Text>
+            </View>
           )}
         </View>
 
-        {/* Map */}
-        {hasValidLocation && (
+        <View style={[styles.section, { backgroundColor: colors.card }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Insurance Accepted</Text>
+          
+          {hasSoonerCare && (
+            <View style={[styles.insuranceBadge, { backgroundColor: colors.success }]}>
+              <Text style={styles.insuranceBadgeText}>✅ SoonerCare / Medicaid</Text>
+            </View>
+          )}
+
+          {otherInsurances.length > 0 && (
+            <View style={styles.insuranceList}>
+              {otherInsurances.map((insurance, index) => (
+                <Text key={index} style={[styles.insuranceItem, { color: colors.text }]}>
+                  • {insurance}
+                </Text>
+              ))}
+            </View>
+          )}
+
+          <Text style={[styles.insuranceNote, { color: colors.subtext }]}>
+            💡 Always verify coverage with provider before booking
+          </Text>
+        </View>
+
+        {/* Map - Only on mobile */}
+        {Platform.OS !== 'web' && MapView && provider.location && provider.location.latitude !== 0 && provider.location.longitude !== 0 && (
           <View style={[styles.section, { backgroundColor: colors.card }]}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Location</Text>
             <View style={styles.mapContainer}>
               <MapView
                 style={styles.map}
                 initialRegion={{
-                  latitude: provider.latitude,
-                  longitude: provider.longitude,
+                  latitude: provider.location.latitude,
+                  longitude: provider.location.longitude,
                   latitudeDelta: 0.01,
                   longitudeDelta: 0.01,
                 }}
               >
                 <Marker
                   coordinate={{
-                    latitude: provider.latitude,
-                    longitude: provider.longitude,
+                    latitude: provider.location.latitude,
+                    longitude: provider.location.longitude,
                   }}
                   title={provider.name}
                   description={provider.address}
                 />
               </MapView>
             </View>
-            <TouchableOpacity 
-              style={[styles.directionsButton, { backgroundColor: colors.primary }]}
+          </View>
+        )}
+
+        {/* Web alternative */}
+        {Platform.OS === 'web' && provider.location && provider.location.latitude !== 0 && provider.location.longitude !== 0 && (
+          <View style={[styles.section, { backgroundColor: colors.card }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Location</Text>
+            <TouchableOpacity
+              style={[styles.webMapButton, { backgroundColor: colors.primary }]}
               onPress={handleDirections}
             >
-              <Text style={styles.directionsButtonText}>Get Directions</Text>
+              <Text style={styles.webMapButtonText}>🗺️ Open in Google Maps</Text>
             </TouchableOpacity>
           </View>
         )}
 
-        {/* Insurance & Languages */}
-        <View style={[styles.section, { backgroundColor: colors.card }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Additional Information</Text>
-          
-          <View style={styles.infoItem}>
-            <Text style={[styles.infoLabel, { color: colors.subtext }]}>Languages</Text>
-            <Text style={[styles.infoValue, { color: colors.text }]}>
-              {provider.languages.join(', ')}
-            </Text>
-          </View>
-
-          <View style={styles.infoItem}>
-            <Text style={[styles.infoLabel, { color: colors.subtext }]}>Insurance Accepted</Text>
-            
-            {/* SoonerCare Badge - Prominent if accepted */}
-            {hasSoonerCare && (
-              <View style={[styles.insuranceBadge, { backgroundColor: colors.success }]}>
-                <Text style={styles.insuranceBadgeText}>✅ SoonerCare / Medicaid</Text>
-              </View>
-            )}
-            
-            {/* Other Insurances List */}
-            {otherInsurances.length > 0 && (
-              <View style={styles.insuranceList}>
-                {otherInsurances.map((insurance, index) => (
-                  <Text key={index} style={[styles.insuranceItem, { color: colors.text }]}>
-                    • {insurance}
-                  </Text>
-                ))}
-              </View>
-            )}
-
-            {/* No insurance listed */}
-            {provider.insuranceAccepted.length === 0 && (
-              <Text style={[styles.insuranceItem, { color: colors.subtext }]}>
-                Contact provider for insurance information
-              </Text>
-            )}
-            
-            <Text style={[styles.insuranceNote, { color: colors.subtext }]}>
-              💡 Always verify coverage with provider before booking
-            </Text>
-          </View>
+        <View style={styles.bookingSection}>
+          <TouchableOpacity
+            style={[styles.bookButton, { backgroundColor: colors.primary }]}
+            onPress={handleBookAppointment}
+          >
+            <Text style={styles.bookButtonText}>Book Appointment</Text>
+          </TouchableOpacity>
         </View>
 
-        <View style={{ height: 100 }} />
+        <View style={{ height: 40 }} />
       </ScrollView>
-
-      {/* Book Appointment Button */}
-      <View style={[styles.footer, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
-        <TouchableOpacity 
-          style={[styles.bookButton, { backgroundColor: colors.primary }]}
-          onPress={handleBookAppointment}
-        >
-          <Text style={styles.bookButtonText}>Book Appointment</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 }
@@ -430,218 +398,169 @@ const styles = StyleSheet.create({
   },
   errorIcon: {
     fontSize: 64,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   errorTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: 8,
   },
-  backButton: {
-    paddingHorizontal: 30,
-    paddingVertical: 15,
+  errorMessage: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  errorButton: {
+    paddingHorizontal: 32,
+    paddingVertical: 16,
     borderRadius: 12,
   },
-  backButtonText: {
+  errorButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
   header: {
-    padding: 24,
     paddingTop: 60,
-    alignItems: 'center',
+    paddingBottom: 16,
+    paddingHorizontal: 20,
   },
-  backBtn: {
-    alignSelf: 'flex-start',
-    marginBottom: 20,
-  },
-  backBtnText: {
+  backText: {
     fontSize: 16,
     fontWeight: '600',
-  },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  avatarText: {
-    color: '#fff',
-    fontSize: 32,
-    fontWeight: 'bold',
-  },
-  name: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  specialty: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  ratingIcon: {
-    fontSize: 18,
-    marginRight: 6,
-  },
-  rating: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginRight: 8,
-  },
-  reviewCount: {
-    fontSize: 14,
-  },
-  badges: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    justifyContent: 'center',
-  },
-  badge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  availableBadge: {
-    backgroundColor: '#4caf50',
-    borderColor: '#4caf50',
-  },
-  telehealthBadge: {
-    backgroundColor: '#2196f3',
-    borderColor: '#2196f3',
-  },
-  soonerCareBadge: {
-    backgroundColor: '#10b981',
-    borderColor: '#10b981',
   },
   section: {
     margin: 16,
     padding: 20,
     borderRadius: 16,
   },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  headerLeft: {
+    flex: 1,
+    marginRight: 12,
+  },
+  providerName: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  specialty: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  heartIcon: {
+    fontSize: 32,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  star: {
+    fontSize: 20,
+  },
+  rating: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  statusText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  actionButton: {
+    flex: 1,
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  actionIcon: {
+    fontSize: 24,
+    marginBottom: 4,
+  },
+  actionText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 16,
-  },
-  quickActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  actionButton: {
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    minWidth: 90,
-  },
-  actionIcon: {
-    fontSize: 28,
-    marginBottom: 6,
-  },
-  actionText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  contactItem: {
-    flexDirection: 'row',
-    marginBottom: 16,
-  },
-  contactIcon: {
-    fontSize: 24,
-    marginRight: 12,
-  },
-  contactInfo: {
-    flex: 1,
-  },
-  contactLabel: {
-    fontSize: 12,
-    marginBottom: 4,
-  },
-  contactValue: {
-    fontSize: 16,
-  },
-  mapContainer: {
-    height: 200,
-    borderRadius: 12,
-    overflow: 'hidden',
     marginBottom: 12,
   },
-  map: {
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  infoIcon: {
+    fontSize: 20,
+    marginRight: 12,
+    width: 24,
+  },
+  infoText: {
+    fontSize: 16,
     flex: 1,
-  },
-  directionsButton: {
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  directionsButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  infoItem: {
-    marginBottom: 16,
-  },
-  infoLabel: {
-    fontSize: 12,
-    marginBottom: 8,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  infoValue: {
-    fontSize: 16,
   },
   insuranceBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
     marginBottom: 12,
-    alignSelf: 'flex-start',
   },
   insuranceBadgeText: {
     color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   insuranceList: {
     marginBottom: 12,
   },
   insuranceItem: {
-    fontSize: 15,
-    marginBottom: 6,
-    paddingLeft: 8,
+    fontSize: 16,
+    marginBottom: 8,
   },
   insuranceNote: {
-    fontSize: 12,
+    fontSize: 13,
     fontStyle: 'italic',
-    marginTop: 8,
-    lineHeight: 18,
   },
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+  mapContainer: {
+    height: 200,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  map: {
+    flex: 1,
+  },
+  webMapButton: {
     padding: 16,
-    borderTopWidth: 1,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  webMapButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  bookingSection: {
+    padding: 16,
   },
   bookButton: {
     padding: 18,
