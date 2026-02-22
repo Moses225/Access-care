@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { doc, getDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
@@ -47,12 +47,16 @@ export default function SavedProvidersScreen() {
 
       // Fetch each saved provider
       const providerPromises = favorites.map(async (providerId: string) => {
-        const providerDoc = await getDoc(doc(db, 'providers', providerId));
-        if (providerDoc.exists()) {
-          return {
-            id: providerDoc.id,
-            ...providerDoc.data()
-          };
+        try {
+          const providerDoc = await getDoc(doc(db, 'providers', providerId));
+          if (providerDoc.exists()) {
+            return {
+              id: providerDoc.id,
+              ...providerDoc.data()
+            };
+          }
+        } catch (error) {
+          console.error(`Error loading provider ${providerId}:`, error);
         }
         return null;
       });
@@ -99,49 +103,55 @@ export default function SavedProvidersScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, styles.centerContainer, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={[styles.loadingText, { color: colors.text }]}>Loading saved providers...</Text>
-      </View>
+      <>
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={[styles.container, styles.centerContainer, { backgroundColor: colors.background }]}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.text }]}>Loading saved providers...</Text>
+        </View>
+      </>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.card }]}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={[styles.backText, { color: colors.primary }]}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]}>Saved Providers</Text>
-        <Text style={[styles.subtitle, { color: colors.subtext }]}>
-          {savedProviders.length} saved provider{savedProviders.length !== 1 ? 's' : ''}
-        </Text>
-      </View>
+    <>
+      <Stack.Screen options={{ headerShown: false }} />
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { backgroundColor: colors.card }]}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Text style={[styles.backText, { color: colors.primary }]}>← Back</Text>
+          </TouchableOpacity>
+          <Text style={[styles.title, { color: colors.text }]}>Saved Providers</Text>
+          <Text style={[styles.subtitle, { color: colors.subtext }]}>
+            {savedProviders.length} saved provider{savedProviders.length !== 1 ? 's' : ''}
+          </Text>
+        </View>
 
-      <FlatList
-        data={savedProviders}
-        renderItem={renderProvider}
-        keyExtractor={item => item.id}
-        contentContainerStyle={styles.list}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>❤️</Text>
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>
-              No Saved Providers Yet
-            </Text>
-            <Text style={[styles.emptyText, { color: colors.subtext }]}>
-              Tap the heart icon on provider pages to save your favorites!
-            </Text>
-            <TouchableOpacity
-              style={[styles.browseButton, { backgroundColor: colors.primary }]}
-              onPress={() => router.push('/(tabs)' as any)}
-            >
-              <Text style={styles.browseButtonText}>Browse Providers</Text>
-            </TouchableOpacity>
-          </View>
-        }
-      />
-    </View>
+        <FlatList
+          data={savedProviders}
+          renderItem={renderProvider}
+          keyExtractor={item => item.id}
+          contentContainerStyle={styles.list}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyIcon}>❤️</Text>
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                No Saved Providers Yet
+              </Text>
+              <Text style={[styles.emptyText, { color: colors.subtext }]}>
+                Tap the heart icon on provider pages to save your favorites!
+              </Text>
+              <TouchableOpacity
+                style={[styles.browseButton, { backgroundColor: colors.primary }]}
+                onPress={() => router.push('/(tabs)/' as any)}
+              >
+                <Text style={styles.browseButtonText}>Browse Providers</Text>
+              </TouchableOpacity>
+            </View>
+          }
+        />
+      </View>
+    </>
   );
 }
 

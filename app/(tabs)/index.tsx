@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { DataDisclaimer } from '../../components/DataDisclaimer';
 import { useTheme } from '../../context/ThemeContext';
 import { auth, db } from '../../firebase';
 
@@ -34,6 +35,7 @@ interface Provider {
   categories?: string[];
   city?: string;
   state?: string;
+  verified?: boolean;
 }
 
 export default function HomeScreen() {
@@ -107,9 +109,9 @@ export default function HomeScreen() {
             categories: Array.isArray(data.categories) ? data.categories : (data.category ? [data.category] : []),
             city: data.city || '',
             state: data.state || 'Oklahoma',
+            verified: data.verified ?? false,
           });
           
-          // Collect unique specialties
           if (data.specialty) {
             specialtiesSet.add(data.specialty);
           }
@@ -118,7 +120,6 @@ export default function HomeScreen() {
       
       setProviders(providersList);
       
-      // Set available categories from actual data
       const cats = ['all', ...Array.from(specialtiesSet)].slice(0, 6);
       setAvailableCategories(cats);
       
@@ -135,7 +136,6 @@ export default function HomeScreen() {
 
     let filtered = [...providers];
 
-    // Search by name, specialty, address, or city
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
@@ -147,7 +147,6 @@ export default function HomeScreen() {
       );
     }
 
-    // Filter by category (specialty)
     if (selectedCategory && selectedCategory !== 'all') {
       filtered = filtered.filter(
         (p) =>
@@ -157,7 +156,6 @@ export default function HomeScreen() {
       );
     }
 
-    // Filter by insurance if toggle is on
     if (showInsuranceFilter) {
       filtered = filtered.filter(
         (p) =>
@@ -182,6 +180,7 @@ export default function HomeScreen() {
     const hasSoonerCare = item.insuranceAccepted.includes('SoonerCare') || 
                           item.insuranceAccepted.includes('Medicaid');
     const acceptingPatients = item.acceptsNewPatients ?? item.acceptingNewPatients ?? true;
+    const isVerified = item.verified ?? false;
     
     return (
       <TouchableOpacity
@@ -197,21 +196,27 @@ export default function HomeScreen() {
           </View>
           
           <View style={styles.cardContent}>
-            <Text style={[styles.providerName, { color: colors.text }]} numberOfLines={1}>
-              {item.name}
-            </Text>
+            <View style={styles.nameRow}>
+              <Text style={[styles.providerName, { color: colors.text }]} numberOfLines={1}>
+                {item.name}
+              </Text>
+              {isVerified && (
+                <View style={[styles.verifiedBadge, { backgroundColor: colors.success }]}>
+                  <Text style={styles.verifiedBadgeText}>✓</Text>
+                </View>
+              )}
+            </View>
+            
             <Text style={[styles.specialty, { color: colors.primary }]} numberOfLines={1}>
               {item.specialty}
             </Text>
             
-            {/* Availability Badge */}
             {acceptingPatients && (
               <View style={[styles.availableBadge, { backgroundColor: colors.success }]}>
                 <Text style={styles.availableText}>✅ Accepting patients</Text>
               </View>
             )}
             
-            {/* SoonerCare Badge */}
             {hasSoonerCare && (
               <View style={[styles.soonerCareBadge, { backgroundColor: '#E8F5E9' }]}>
                 <Text style={[styles.soonerCareText, { color: colors.success }]}>💊 SoonerCare</Text>
@@ -241,17 +246,15 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header with Personalized Greeting */}
       <View style={[styles.header, { backgroundColor: colors.card }]}>
         <Text style={[styles.title, { color: colors.text }]}>
           {userName ? `Hi ${userName}` : 'Find Care'}
         </Text>
         <Text style={[styles.subtitle, { color: colors.subtext }]}>
-          {providers.length} providers and counting...
+          {providers.length}+ verified Oklahoma providers
         </Text>
       </View>
 
-      {/* Insurance Banner */}
       <View style={[styles.insuranceBanner, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={styles.insuranceContent}>
           <Text style={styles.insuranceIcon}>💊</Text>
@@ -280,7 +283,6 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Search Bar */}
       <View style={styles.searchContainer}>
         <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={styles.searchIcon}>🔍</Text>
@@ -299,7 +301,8 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* Quick Searches - Based on Actual Data */}
+      <DataDisclaimer />
+
       {!searchQuery && (
         <View style={styles.quickSearches}>
           <Text style={[styles.quickSearchTitle, { color: colors.subtext }]}>
@@ -342,7 +345,6 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {/* Category Filters - From Actual Data */}
       <View style={styles.filtersContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersScroll}>
           {availableCategories.map((category) => (
@@ -368,7 +370,6 @@ export default function HomeScreen() {
         </ScrollView>
       </View>
 
-      {/* Provider List */}
       <FlatList
         data={filteredProviders}
         renderItem={renderProviderCard}
@@ -585,10 +586,28 @@ const styles = StyleSheet.create({
   cardContent: {
     flex: 1,
   },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
   providerName: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 4,
+    flex: 1,
+  },
+  verifiedBadge: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  verifiedBadgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   specialty: {
     fontSize: 14,
