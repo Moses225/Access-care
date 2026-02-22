@@ -1,7 +1,13 @@
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
-import { Alert, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { auth, db } from '../../firebase';
 
@@ -12,95 +18,147 @@ export default function PrivacyScreen() {
   const [twoFactorAuth, setTwoFactorAuth] = useState(false);
 
   useEffect(() => {
-    const uid = auth.currentUser?.uid;
-    if (!uid) return;
+    loadPrivacySettings();
+  }, []);
 
-    const fetchPrivacy = async () => {
-      const ref = doc(db, 'privacy', uid);
-      const snapshot = await getDoc(ref);
-      if (snapshot.exists()) {
-        const data = snapshot.data();
+  const loadPrivacySettings = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const privacyDoc = await getDoc(doc(db, 'privacy', user.uid));
+      if (privacyDoc.exists()) {
+        const data = privacyDoc.data();
         setShareData(data.shareData ?? false);
         setTwoFactorAuth(data.twoFactorAuth ?? false);
       }
-    };
-    fetchPrivacy();
-  }, []);
+    } catch (error) {
+      console.error('Error loading privacy settings:', error);
+    }
+  };
 
-  const updatePrivacy = async (field: string, value: boolean) => {
-    if (!auth.currentUser?.uid) return;
-    await setDoc(doc(db, 'privacy', auth.currentUser.uid), { [field]: value }, { merge: true });
-    Alert.alert('Updated', 'Privacy settings saved.');
+  const handleToggleShare = async (value: boolean) => {
+    setShareData(value);
+    await saveSettings({ shareData: value, twoFactorAuth });
+  };
+
+  const handleToggle2FA = async (value: boolean) => {
+    setTwoFactorAuth(value);
+    await saveSettings({ shareData, twoFactorAuth: value });
+  };
+
+  const saveSettings = async (settings: any) => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      await setDoc(doc(db, 'privacy', user.uid), {
+        ...settings,
+        updatedAt: new Date(),
+      });
+    } catch (error) {
+      console.error('Error saving privacy settings:', error);
+    }
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.card }]}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={[styles.backText, { color: colors.primary }]}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]}>Privacy & Security</Text>
-      </View>
-
-      {/* Content */}
-      <View style={styles.content}>
-        <View style={[styles.row, { borderBottomColor: colors.border }]}>
-          <Text style={[styles.label, { color: colors.text }]}>Share Data with Providers</Text>
-          <Switch
-            value={shareData}
-            onValueChange={(val) => {
-              setShareData(val);
-              updatePrivacy('shareData', val);
-            }}
-            trackColor={{ false: colors.border, true: colors.primary }}
-            thumbColor={shareData ? '#fff' : '#f4f3f4'}
-          />
+    <>
+      <Stack.Screen options={{ headerShown: false }} />
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { backgroundColor: colors.card }]}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Text style={[styles.backText, { color: colors.primary }]}>← Back</Text>
+          </TouchableOpacity>
         </View>
 
-        <View style={[styles.row, { borderBottomColor: colors.border }]}>
-          <Text style={[styles.label, { color: colors.text }]}>Enable Two-Factor Authentication</Text>
-          <Switch
-            value={twoFactorAuth}
-            onValueChange={(val) => {
-              setTwoFactorAuth(val);
-              updatePrivacy('twoFactorAuth', val);
-            }}
-            trackColor={{ false: colors.border, true: colors.primary }}
-            thumbColor={twoFactorAuth ? '#fff' : '#f4f3f4'}
-          />
+        <View style={styles.content}>
+          <Text style={[styles.title, { color: colors.text }]}>Privacy Settings</Text>
+          <Text style={[styles.subtitle, { color: colors.subtext }]}>
+            Control your data and security
+          </Text>
+
+          <View style={[styles.settingRow, { backgroundColor: colors.card }]}>
+            <View style={styles.settingInfo}>
+              <Text style={[styles.settingTitle, { color: colors.text }]}>
+                Share Usage Data
+              </Text>
+              <Text style={[styles.settingDescription, { color: colors.subtext }]}>
+                Help improve the app with anonymous usage data
+              </Text>
+            </View>
+            <Switch
+              value={shareData}
+              onValueChange={handleToggleShare}
+              trackColor={{ false: '#ccc', true: colors.primary }}
+            />
+          </View>
+
+          <View style={[styles.settingRow, { backgroundColor: colors.card }]}>
+            <View style={styles.settingInfo}>
+              <Text style={[styles.settingTitle, { color: colors.text }]}>
+                Two-Factor Authentication
+              </Text>
+              <Text style={[styles.settingDescription, { color: colors.subtext }]}>
+                Add extra security to your account (coming soon)
+              </Text>
+            </View>
+            <Switch
+              value={twoFactorAuth}
+              onValueChange={handleToggle2FA}
+              trackColor={{ false: '#ccc', true: colors.primary }}
+              disabled={true}
+            />
+          </View>
         </View>
       </View>
-    </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: {
+    flex: 1,
+  },
   header: {
     paddingTop: 60,
-    paddingBottom: 20,
+    paddingBottom: 16,
     paddingHorizontal: 20,
   },
   backText: {
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 10,
+  },
+  content: {
+    flex: 1,
+    padding: 20,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
+    marginBottom: 8,
   },
-  content: {
+  subtitle: {
+    fontSize: 14,
+    marginBottom: 32,
+  },
+  settingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     padding: 20,
+    borderRadius: 12,
+    marginBottom: 12,
   },
-  row: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    marginBottom: 10,
+  settingInfo: {
+    flex: 1,
+    marginRight: 12,
   },
-  label: { fontSize: 16, flex: 1, marginRight: 10 },
+  settingTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  settingDescription: {
+    fontSize: 13,
+  },
 });

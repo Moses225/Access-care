@@ -1,7 +1,7 @@
-import { FirebaseApp, initializeApp } from 'firebase/app';
+import { getApp, getApps, initializeApp } from 'firebase/app';
 import { Auth, getAuth } from 'firebase/auth';
-import { Firestore, collection, getFirestore } from 'firebase/firestore';
-import { FirebaseStorage, getStorage } from 'firebase/storage';
+import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAMYBfxhljita9XVqTc_HHahMA7mFVFPn8",
@@ -12,17 +12,10 @@ const firebaseConfig = {
   appId: "1:283308941540:web:e3c57ebf0e16ca9c8f4cf1"
 };
 
-// Initialize Firebase
-const app: FirebaseApp = initializeApp(firebaseConfig);
+// Only initialize if not already initialized
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// Initialize services
-const db: Firestore = getFirestore(app);
-const storage: FirebaseStorage = getStorage(app);
-const auth: Auth = getAuth(app);
-
-// Collection references
-export const providersCollection = collection(db, 'providers');
-export const appointmentsCollection = collection(db, 'appointments');
-
-// Export services
-export { app, auth, db, storage };
+// Initialize services with proper types
+export const auth: Auth = getAuth(app);
+export const db = getFirestore(app);
+export const storage = getStorage(app);
