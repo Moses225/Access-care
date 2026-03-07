@@ -68,7 +68,7 @@ export default function BookingConfirmationScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScrollView 
+      <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
@@ -134,7 +134,7 @@ export default function BookingConfirmationScreen() {
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Next Steps</Text>
           <Text style={[styles.info, { color: colors.subtext }]}>
             • The provider will review your request{'\n'}
-            • You'll receive a confirmation via SMS{'\n'}
+            • You will receive a confirmation via SMS{'\n'}
             • Check your phone for updates{'\n'}
             • Arrive 10 minutes early to your appointment
           </Text>
@@ -144,7 +144,7 @@ export default function BookingConfirmationScreen() {
         <View style={[styles.card, { backgroundColor: colors.card }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Important</Text>
           <Text style={[styles.info, { color: colors.subtext }]}>
-            Please note that this is a booking REQUEST. Your appointment is not 
+            Please note that this is a booking REQUEST. Your appointment is not
             confirmed until you receive a confirmation from the provider.
           </Text>
         </View>

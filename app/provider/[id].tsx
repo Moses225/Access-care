@@ -1,31 +1,32 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Linking,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
   View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Linking,
+  Alert,
+  ActivityIndicator,
+  Image,
 } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { collection, getDocs, query } from 'firebase/firestore';
+import { Ionicons } from '@expo/vector-icons';
+import { db } from '../../firebase';
 import { useTheme } from '../../context/ThemeContext';
-import { auth, db } from '../../firebase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 let MapView: any;
 let Marker: any;
 
-if (Platform.OS !== 'web') {
-  try {
-    const Maps = require('react-native-maps');
-    MapView = Maps.default;
-    Marker = Maps.Marker;
-  } catch (e) {
-    console.log('MapView not available');
-  }
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const ExpoMaps = require('react-native-maps');
+  MapView = ExpoMaps.default;
+  Marker = ExpoMaps.Marker;
+} catch (e) {
+  // Maps not available
 }
 
 interface Provider {
@@ -35,182 +36,254 @@ interface Provider {
   address: string;
   phone: string;
   rating: number;
-  acceptsNewPatients: boolean;
-  location: {
+  acceptsNewPatients?: boolean;
+  acceptingNewPatients?: boolean;
+  insuranceAccepted: string[];
+  location?: {
     latitude: number;
     longitude: number;
   };
-  insuranceAccepted: string[];
-  categories?: string[];
-  category?: string;
-  hours?: string;
-  website?: string;
+  latitude?: number;
+  longitude?: number;
   city?: string;
   state?: string;
+  verified?: boolean;
+  profilePicture?: string;
+  welcomeMessage?: string;
+  aboutMe?: string;
+  specialInterests?: string[];
+  education?: { degree: string; school: string; year: number }[];
+  languagesSpoken?: string[];
+  boardCertifications?: string[];
+  interviewConsult?: {
+    offered: boolean;
+    duration: number;
+    price: number;
+    description: string;
+  };
 }
 
+const PricingEstimateCard = ({ colors }: { colors: any }) => {
+  const [showInfo, setShowInfo] = useState(false);
+
+  return (
+    <View style={[styles.section, { backgroundColor: colors.card }]}>
+      <View style={styles.sectionHeader}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>💰 Pricing Estimate</Text>
+        <TouchableOpacity onPress={() => setShowInfo(!showInfo)}>
+          <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.pricingGrid}>
+        <View style={styles.pricingItem}>
+          <Text style={[styles.pricingLabel, { color: colors.subtext }]}>
+            SoonerCare/Medicaid
+          </Text>
+          <Text style={[styles.pricingValue, { color: colors.success }]}>$0 Copay</Text>
+        </View>
+        <View style={styles.pricingItem}>
+          <Text style={[styles.pricingLabel, { color: colors.subtext }]}>Estimated Range</Text>
+          <Text style={[styles.pricingValue, { color: colors.text }]}>$120 - $200</Text>
+        </View>
+      </View>
+
+      {showInfo && (
+        <View style={[styles.infoBox, { backgroundColor: colors.background }]}>
+          <Text style={[styles.infoBoxText, { color: colors.text }]}>
+            This is an estimate. Actual costs may vary. Always verify with the provider&apos;s office
+            before your appointment.
+          </Text>
+          <TouchableOpacity onPress={() => setShowInfo(false)}>
+            <Text style={[styles.infoClose, { color: colors.primary }]}>Got it</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+  );
+};
+
+const InterviewConsultCard = ({
+  interviewConsult,
+  colors,
+}: {
+  interviewConsult: Provider['interviewConsult'];
+  colors: any;
+}) => {
+  if (!interviewConsult || !interviewConsult.offered) return null;
+
+  return (
+    <View style={[styles.section, { backgroundColor: colors.card }]}>
+      <View style={styles.sectionHeader}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          🤝 Meet & Greet Available
+        </Text>
+      </View>
+
+      <View style={[styles.consultBox, { backgroundColor: colors.background }]}>
+        <View style={styles.consultHeader}>
+          <Text style={[styles.consultPrice, { color: colors.primary }]}>
+            ${interviewConsult.price}
+          </Text>
+          <Text style={[styles.consultDuration, { color: colors.subtext }]}>
+            {interviewConsult.duration} minutes
+          </Text>
+        </View>
+        <Text style={[styles.consultDescription, { color: colors.text }]}>
+          {interviewConsult.description ||
+            'Schedule a brief consultation to meet the provider and discuss your healthcare needs.'}
+        </Text>
+      </View>
+    </View>
+  );
+};
+
 export default function ProviderDetailScreen() {
-  const { id } = useLocalSearchParams();
+  const params = useLocalSearchParams();
   const router = useRouter();
   const { colors } = useTheme();
-  
+
   const [provider, setProvider] = useState<Provider | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
+  const id = Array.isArray(params.id) ? params.id[0] : params.id;
+
+  const loadProvider = useCallback(async () => {
+    try {
+      if (!id || typeof id !== 'string') {
+        Alert.alert('Error', 'Invalid provider ID');
+        router.back();
+        return;
+      }
+
+      setLoading(true);
+
+      const providersRef = collection(db, 'providers');
+      const q = query(providersRef);
+      const querySnapshot = await getDocs(q);
+
+      let foundProvider: Provider | null = null;
+
+      querySnapshot.forEach((docSnap) => {
+        if (docSnap.id === id) {
+          const data = docSnap.data();
+
+          let safeRating = 0;
+          if (typeof data.rating === 'number') {
+            safeRating = data.rating;
+          } else if (typeof data.rating === 'string') {
+            const parsed = parseFloat(data.rating);
+            safeRating = isNaN(parsed) ? 0 : parsed;
+          }
+
+          let safeLatitude = data.latitude || 35.4676;
+          let safeLongitude = data.longitude || -97.5164;
+
+          let safeInsurance: string[] = [];
+          if (Array.isArray(data.insuranceAccepted)) {
+            safeInsurance = data.insuranceAccepted;
+          } else if (typeof data.insuranceAccepted === 'string') {
+            safeInsurance = [data.insuranceAccepted];
+          }
+
+          foundProvider = {
+            id: docSnap.id,
+            name: data.name || 'Unknown Provider',
+            specialty: data.specialty || 'General',
+            address: data.address || '',
+            phone: data.phone || '',
+            rating: safeRating,
+            acceptsNewPatients: data.acceptingNewPatients ?? data.acceptsNewPatients ?? true,
+            insuranceAccepted: safeInsurance,
+            location: {
+              latitude: safeLatitude,
+              longitude: safeLongitude,
+            },
+            latitude: safeLatitude,
+            longitude: safeLongitude,
+            city: data.city || '',
+            state: data.state || 'Oklahoma',
+            verified: data.verified ?? false,
+            profilePicture: data.profilePicture || '',
+            welcomeMessage: data.welcomeMessage || '',
+            aboutMe: data.aboutMe || '',
+            specialInterests: Array.isArray(data.specialInterests) ? data.specialInterests : [],
+            education: Array.isArray(data.education) ? data.education : [],
+            languagesSpoken: Array.isArray(data.languagesSpoken) ? data.languagesSpoken : [],
+            boardCertifications: Array.isArray(data.boardCertifications)
+              ? data.boardCertifications
+              : [],
+            interviewConsult: data.interviewConsult || null,
+          };
+        }
+      });
+
+      if (!foundProvider) {
+        Alert.alert('Provider Not Found', 'This provider could not be loaded.', [
+          { text: 'OK', onPress: () => router.back() },
+        ]);
+        return;
+      }
+
+      setProvider(foundProvider);
+    } catch (error) {
+      console.error('Error loading provider:', error);
+      Alert.alert('Error', 'Could not load provider details', [
+        { text: 'OK', onPress: () => router.back() },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  }, [id, router]);
+
+  const checkIfFavorite = useCallback(async () => {
+    try {
+      const favs = await AsyncStorage.getItem('favorites');
+      if (favs) {
+        const favorites = JSON.parse(favs);
+        setIsFavorite(favorites.includes(id));
+      }
+    } catch (error) {
+      console.log('Error checking favorites:', error);
+    }
+  }, [id]);
 
   useEffect(() => {
     loadProvider();
     checkIfFavorite();
-  }, [id]);
-
-  const loadProvider = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      if (!id || typeof id !== 'string') {
-        throw new Error('Invalid provider ID');
-      }
-
-      const providerDoc = await getDoc(doc(db, 'providers', id));
-      
-      if (!providerDoc.exists()) {
-        throw new Error('Provider not found');
-      }
-
-      const data = providerDoc.data();
-
-      if (!data.name || !data.specialty) {
-        throw new Error('Invalid provider data - missing required fields');
-      }
-
-      setProvider({
-        id: providerDoc.id,
-        name: data.name || 'Unknown Provider',
-        specialty: data.specialty || 'General',
-        address: data.address || 'Address not available',
-        phone: data.phone || 'Phone not available',
-        rating: data.rating || 0,
-        acceptsNewPatients: data.acceptingNewPatients ?? true,
-        location: {
-          latitude: data.latitude || 35.4676,
-          longitude: data.longitude || -97.5164
-        },
-        insuranceAccepted: Array.isArray(data.insuranceAccepted) ? data.insuranceAccepted : [],
-        categories: Array.isArray(data.categories) ? data.categories : (data.category ? [data.category] : []),
-        category: data.category || '',
-        hours: data.hours || 'Hours not available',
-        website: data.website || '',
-        city: data.city || '',
-        state: data.state || 'Oklahoma',
-      });
-
-    } catch (err: any) {
-      console.error('Error loading provider:', err);
-      setError(err.message || 'Failed to load provider');
-      Alert.alert(
-        'Error Loading Provider',
-        'Could not load provider details. Please try again.',
-        [
-          { text: 'Go Back', onPress: () => router.back() },
-          { text: 'Retry', onPress: () => loadProvider() }
-        ]
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const checkIfFavorite = async () => {
-    try {
-      const user = auth.currentUser;
-      if (!user || !id) return;
-
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      if (userDoc.exists()) {
-        const favorites = userDoc.data().favorites || [];
-        setIsFavorite(favorites.includes(id));
-      }
-    } catch (err) {
-      console.error('Error checking favorite status:', err);
-    }
-  };
-
-  const handleToggleFavorite = async () => {
-    try {
-      const user = auth.currentUser;
-      if (!user) {
-        Alert.alert('Not Logged In', 'Please log in to save favorites');
-        return;
-      }
-
-      const userRef = doc(db, 'users', user.uid);
-      const userDoc = await getDoc(userRef);
-      const favorites = userDoc.exists() ? (userDoc.data().favorites || []) : [];
-
-      if (isFavorite) {
-        const updatedFavorites = favorites.filter((fav: string) => fav !== id);
-        await setDoc(userRef, { favorites: updatedFavorites }, { merge: true });
-        setIsFavorite(false);
-      } else {
-        const updatedFavorites = [...favorites, id];
-        await setDoc(userRef, { favorites: updatedFavorites }, { merge: true });
-        setIsFavorite(true);
-      }
-    } catch (err) {
-      console.error('Error toggling favorite:', err);
-      Alert.alert('Error', 'Failed to update favorites');
-    }
-  };
+  }, [loadProvider, checkIfFavorite]);
 
   const handleCall = () => {
-    if (!provider?.phone || provider.phone === 'Phone not available') {
-      Alert.alert('No Phone Number', 'Phone number not available for this provider');
-      return;
+    if (provider?.phone) {
+      Linking.openURL(`tel:${provider.phone}`);
     }
-    Linking.openURL(`tel:${provider.phone}`);
   };
 
   const handleDirections = () => {
-    if (!provider?.location) {
-      Alert.alert('No Location', 'Location not available for this provider');
-      return;
+    if (provider?.location) {
+      const { latitude, longitude } = provider.location;
+      const url = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
+      Linking.openURL(url);
     }
-    const { latitude, longitude } = provider.location;
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
-    Linking.openURL(url);
   };
 
-  const handleBookAppointment = () => {
-    if (!id) return;
-    router.push(`/booking/${id}` as any);
-  };
+  const toggleFavorite = async () => {
+    try {
+      const favs = await AsyncStorage.getItem('favorites');
+      let favorites = favs ? JSON.parse(favs) : [];
 
-  const handleReportIssue = () => {
-    Alert.alert(
-      'Report Incorrect Information',
-      'What would you like to report?',
-      [
-        {
-          text: 'Wrong phone number',
-          onPress: () => Alert.alert('Thank you', 'We will verify and update the phone number.')
-        },
-        {
-          text: 'Wrong address',
-          onPress: () => Alert.alert('Thank you', 'We will verify and update the address.')
-        },
-        {
-          text: "Doesn't accept SoonerCare",
-          onPress: () => Alert.alert('Thank you', 'We will verify their insurance acceptance.')
-        },
-        {
-          text: 'Other issue',
-          onPress: () => Alert.alert('Thank you', 'Please email us at support@accesscare.app with details.')
-        },
-        { text: 'Cancel', style: 'cancel' }
-      ]
-    );
+      if (isFavorite) {
+        favorites = favorites.filter((fav: string) => fav !== id);
+      } else {
+        favorites.push(id);
+      }
+
+      await AsyncStorage.setItem('favorites', JSON.stringify(favorites));
+      setIsFavorite(!isFavorite);
+    } catch (error) {
+      console.log('Error toggling favorite:', error);
+    }
   };
 
   if (loading) {
@@ -222,193 +295,250 @@ export default function ProviderDetailScreen() {
     );
   }
 
-  if (error || !provider) {
+  if (!provider) {
     return (
       <View style={[styles.container, styles.centerContainer, { backgroundColor: colors.background }]}>
-        <Text style={[styles.errorIcon, { color: colors.error }]}>⚠️</Text>
-        <Text style={[styles.errorTitle, { color: colors.text }]}>Oops!</Text>
-        <Text style={[styles.errorMessage, { color: colors.subtext }]}>
-          {error || 'Provider not found'}
-        </Text>
+        <Text style={[styles.errorText, { color: colors.text }]}>Provider not found</Text>
         <TouchableOpacity
-          style={[styles.errorButton, { backgroundColor: colors.primary }]}
+          style={[styles.backButton, { backgroundColor: colors.primary }]}
           onPress={() => router.back()}
         >
-          <Text style={styles.errorButtonText}>Go Back</Text>
+          <Text style={styles.backButtonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  const hasSoonerCare = provider.insuranceAccepted.includes('SoonerCare') || 
-                        provider.insuranceAccepted.includes('Medicaid');
-  const otherInsurances = provider.insuranceAccepted.filter(
-    ins => ins !== 'SoonerCare' && ins !== 'Medicaid'
-  );
+  const hasSoonerCare =
+    provider.insuranceAccepted.includes('SoonerCare') ||
+    provider.insuranceAccepted.includes('Medicaid');
+  const acceptingPatients = provider.acceptsNewPatients ?? provider.acceptingNewPatients ?? true;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.card }]}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={[styles.backText, { color: colors.primary }]}>← Back</Text>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+
+        <View style={styles.headerContent}>
+          {provider.profilePicture && provider.profilePicture.startsWith('http') ? (
+            <Image source={{ uri: provider.profilePicture }} style={styles.profilePic} />
+          ) : (
+            <View style={[styles.placeholderPic, { backgroundColor: colors.primary }]}>
+              <Text style={styles.placeholderText}>{provider.name.charAt(0)}</Text>
+            </View>
+          )}
+
+          <View style={styles.headerText}>
+            <View style={styles.nameRow}>
+              <Text style={[styles.name, { color: colors.text }]} numberOfLines={2}>
+                {provider.name}
+              </Text>
+              {provider.verified && (
+                <View style={[styles.verifiedBadge, { backgroundColor: colors.success }]}>
+                  <Text style={styles.verifiedText}>✓</Text>
+                </View>
+              )}
+            </View>
+            <Text style={[styles.specialty, { color: colors.primary }]}>{provider.specialty}</Text>
+          </View>
+        </View>
+
+        <TouchableOpacity onPress={toggleFavorite} style={styles.favoriteBtn}>
+          <Ionicons
+            name={isFavorite ? 'heart' : 'heart-outline'}
+            size={28}
+            color={isFavorite ? colors.error : colors.text}
+          />
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={[styles.section, { backgroundColor: colors.card }]}>
-          <View style={styles.headerRow}>
-            <View style={styles.headerLeft}>
-              <Text style={[styles.providerName, { color: colors.text }]} numberOfLines={2}>
-                {provider.name}
-              </Text>
-              <Text style={[styles.specialty, { color: colors.primary }]}>{provider.specialty}</Text>
-            </View>
-            <TouchableOpacity onPress={handleToggleFavorite}>
-              <Text style={styles.heartIcon}>{isFavorite ? '❤️' : '🤍'}</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.ratingRow}>
-            <Text style={styles.star}>⭐</Text>
-            <Text style={[styles.rating, { color: colors.text }]}>{provider.rating.toFixed(1)}</Text>
-            <View style={[
-              styles.statusBadge,
-              { backgroundColor: provider.acceptsNewPatients ? colors.success : colors.error }
-            ]}>
-              <Text style={styles.statusText}>
-                {provider.acceptsNewPatients ? 'Accepting Patients' : 'Not Accepting'}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.actionRow}>
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: colors.card, borderColor: colors.border }]}
-            onPress={handleCall}
-          >
-            <Text style={styles.actionIcon}>📞</Text>
-            <Text style={[styles.actionText, { color: colors.text }]}>Call</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: colors.card, borderColor: colors.border }]}
-            onPress={handleDirections}
-          >
-            <Text style={styles.actionIcon}>🗺️</Text>
-            <Text style={[styles.actionText, { color: colors.text }]}>Directions</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: colors.card, borderColor: colors.border }]}
-            onPress={handleToggleFavorite}
-          >
-            <Text style={styles.actionIcon}>{isFavorite ? '❤️' : '🤍'}</Text>
-            <Text style={[styles.actionText, { color: colors.text }]}>Save</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={[styles.section, { backgroundColor: colors.card }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Contact Information</Text>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>📍</Text>
-            <Text style={[styles.infoText, { color: colors.text }]}>{provider.address}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>📞</Text>
-            <Text style={[styles.infoText, { color: colors.text }]}>{provider.phone}</Text>
-          </View>
-          {provider.hours && provider.hours !== 'Hours not available' && (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoIcon}>🕐</Text>
-              <Text style={[styles.infoText, { color: colors.text }]}>{provider.hours}</Text>
-            </View>
-          )}
-          
-          <TouchableOpacity
-            style={[styles.reportButton, { borderColor: colors.border }]}
-            onPress={handleReportIssue}
-          >
-            <Text style={[styles.reportButtonText, { color: colors.subtext }]}>
-              📝 Report incorrect information
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={[styles.section, { backgroundColor: colors.card }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Insurance Accepted</Text>
-          
-          {hasSoonerCare && (
-            <View style={[styles.insuranceBadge, { backgroundColor: colors.success }]}>
-              <Text style={styles.insuranceBadgeText}>✅ SoonerCare / Medicaid</Text>
-            </View>
-          )}
-
-          {otherInsurances.length > 0 && (
-            <View style={styles.insuranceList}>
-              {otherInsurances.map((insurance, index) => (
-                <Text key={index} style={[styles.insuranceItem, { color: colors.text }]}>
-                  • {insurance}
-                </Text>
-              ))}
-            </View>
-          )}
-
-          <Text style={[styles.insuranceNote, { color: colors.subtext }]}>
-            💡 Always verify coverage with provider before booking
+      {/* Welcome Message */}
+      {provider.welcomeMessage && (
+        <View style={[styles.section, { backgroundColor: colors.primary + '20' }]}>
+          <Text style={[styles.welcomeMessage, { color: colors.text }]}>
+            💬 {provider.welcomeMessage}
           </Text>
         </View>
+      )}
 
-        {Platform.OS !== 'web' && MapView && provider.location && provider.location.latitude !== 0 && provider.location.longitude !== 0 && (
-          <View style={[styles.section, { backgroundColor: colors.card }]}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Location</Text>
-            <View style={styles.mapContainer}>
-              <MapView
-                style={styles.map}
-                initialRegion={{
-                  latitude: provider.location.latitude,
-                  longitude: provider.location.longitude,
-                  latitudeDelta: 0.01,
-                  longitudeDelta: 0.01,
-                }}
-              >
-                <Marker
-                  coordinate={{
-                    latitude: provider.location.latitude,
-                    longitude: provider.location.longitude,
-                  }}
-                  title={provider.name}
-                  description={provider.address}
-                />
-              </MapView>
+      {/* About */}
+      {provider.aboutMe && (
+        <View style={[styles.section, { backgroundColor: colors.card }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>About</Text>
+          <Text style={[styles.aboutText, { color: colors.text }]}>{provider.aboutMe}</Text>
+        </View>
+      )}
+
+      {/* Special Interests */}
+      {provider.specialInterests && provider.specialInterests.length > 0 && (
+        <View style={[styles.section, { backgroundColor: colors.card }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Special Interests</Text>
+          <View style={styles.interestsContainer}>
+            {provider.specialInterests.map((interest, index) => (
+              <View key={index} style={[styles.interestChip, { backgroundColor: colors.primary }]}>
+                <Text style={styles.interestText}>{interest}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {/* Education */}
+      {provider.education && provider.education.length > 0 && (
+        <View style={[styles.section, { backgroundColor: colors.card }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>🎓 Education</Text>
+          {provider.education.map((edu, index) => (
+            <View key={index} style={styles.educationItem}>
+              <Text style={[styles.degree, { color: colors.text }]}>{edu.degree}</Text>
+              <Text style={[styles.school, { color: colors.subtext }]}>
+                {edu.school} • {edu.year}
+              </Text>
             </View>
-          </View>
-        )}
+          ))}
+        </View>
+      )}
 
-        {Platform.OS === 'web' && provider.location && provider.location.latitude !== 0 && provider.location.longitude !== 0 && (
-          <View style={[styles.section, { backgroundColor: colors.card }]}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Location</Text>
-            <TouchableOpacity
-              style={[styles.webMapButton, { backgroundColor: colors.primary }]}
-              onPress={handleDirections}
-            >
-              <Text style={styles.webMapButtonText}>🗺️ Open in Google Maps</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+      {/* Languages */}
+      {provider.languagesSpoken && provider.languagesSpoken.length > 1 && (
+        <View style={[styles.section, { backgroundColor: colors.card }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>🌍 Languages Spoken</Text>
+          <Text style={[styles.languages, { color: colors.text }]}>
+            {provider.languagesSpoken.join(', ')}
+          </Text>
+        </View>
+      )}
 
-        <View style={styles.bookingSection}>
-          <TouchableOpacity
-            style={[styles.bookButton, { backgroundColor: colors.primary }]}
-            onPress={handleBookAppointment}
-          >
-            <Text style={styles.bookButtonText}>Book Appointment</Text>
-          </TouchableOpacity>
+      {/* Board Certifications */}
+      {provider.boardCertifications && provider.boardCertifications.length > 0 && (
+        <View style={[styles.section, { backgroundColor: colors.card }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            📜 Board Certifications
+          </Text>
+          {provider.boardCertifications.map((cert, index) => (
+            <Text key={index} style={[styles.certification, { color: colors.text }]}>
+              • {cert}
+            </Text>
+          ))}
+        </View>
+      )}
+
+      {/* Quick Actions */}
+      <View style={styles.actionsContainer}>
+        <TouchableOpacity
+          style={[styles.actionButton, { backgroundColor: colors.primary }]}
+          onPress={handleCall}
+        >
+          <Ionicons name="call" size={20} color="#fff" />
+          <Text style={styles.actionText}>Call</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.actionButton, { backgroundColor: colors.primary }]}
+          onPress={handleDirections}
+        >
+          <Ionicons name="navigate" size={20} color="#fff" />
+          <Text style={styles.actionText}>Directions</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Contact Info */}
+      <View style={[styles.section, { backgroundColor: colors.card }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>📞 Contact Information</Text>
+
+        <View style={styles.infoRow}>
+          <Ionicons name="location" size={20} color={colors.primary} />
+          <Text style={[styles.infoText, { color: colors.text }]}>{provider.address}</Text>
         </View>
 
-        <View style={{ height: 40 }} />
-      </ScrollView>
-    </View>
+        <View style={styles.infoRow}>
+          <Ionicons name="call" size={20} color={colors.primary} />
+          <Text style={[styles.infoText, { color: colors.text }]}>{provider.phone}</Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <Ionicons name="star" size={20} color={colors.primary} />
+          <Text style={[styles.infoText, { color: colors.text }]}>
+            {provider.rating.toFixed(1)} Rating
+          </Text>
+        </View>
+      </View>
+
+      {/* Insurance */}
+      <View style={[styles.section, { backgroundColor: colors.card }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>💳 Insurance Accepted</Text>
+        {hasSoonerCare && (
+          <View style={[styles.soonerCareHighlight, { backgroundColor: colors.success }]}>
+            <Text style={styles.soonerCareText}>✅ Accepts SoonerCare/Medicaid</Text>
+          </View>
+        )}
+        <Text style={[styles.insuranceList, { color: colors.text }]}>
+          {provider.insuranceAccepted.join(', ')}
+        </Text>
+      </View>
+
+      {/* Pricing Estimate */}
+      <PricingEstimateCard colors={colors} />
+
+      {/* Interview Consult */}
+      <InterviewConsultCard interviewConsult={provider.interviewConsult} colors={colors} />
+
+      {/* Accepting Patients Status */}
+      {acceptingPatients && (
+        <View style={[styles.section, { backgroundColor: colors.success + '20' }]}>
+          <Text style={[styles.acceptingText, { color: colors.success }]}>
+            ✅ Currently Accepting New Patients
+          </Text>
+        </View>
+      )}
+
+      {/* Map */}
+      {MapView && provider.location && (
+        <View style={[styles.section, { backgroundColor: colors.card }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>📍 Location</Text>
+          <View style={styles.mapContainer}>
+            <MapView
+              style={styles.map}
+              initialRegion={{
+                latitude: provider.location.latitude,
+                longitude: provider.location.longitude,
+                latitudeDelta: 0.01,
+                longitudeDelta: 0.01,
+              }}
+            >
+              <Marker coordinate={provider.location} title={provider.name} />
+            </MapView>
+          </View>
+        </View>
+      )}
+
+      {/* Book Appointment Button */}
+      <View style={styles.bookContainer}>
+        <TouchableOpacity
+          style={[
+            styles.bookButton,
+            {
+              backgroundColor: acceptingPatients ? colors.primary : colors.border,
+            },
+          ]}
+          disabled={!acceptingPatients}
+          activeOpacity={0.7}
+          onPress={() => {
+            if (acceptingPatients && id) {
+              router.push(`/booking/${id}` as any);
+            }
+          }}
+        >
+          <Text style={styles.bookButtonText}>
+            {acceptingPatients ? '📅 Book Appointment' : 'Not Accepting New Patients'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={{ height: 40 }} />
+    </ScrollView>
   );
 }
 
@@ -419,167 +549,251 @@ const styles = StyleSheet.create({
   centerContainer: {
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
   },
-  errorIcon: {
-    fontSize: 64,
-    marginBottom: 16,
+  errorText: {
+    fontSize: 18,
+    marginBottom: 20,
   },
-  errorTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 8,
+  backButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
   },
-  errorMessage: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  errorButton: {
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 12,
-  },
-  errorButtonText: {
+  backButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
   header: {
     paddingTop: 60,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
-  },
-  backText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  section: {
-    margin: 16,
-    padding: 20,
-    borderRadius: 16,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  headerLeft: {
-    flex: 1,
-    marginRight: 12,
-  },
-  providerName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  specialty: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  heartIcon: {
-    fontSize: 32,
-  },
-  ratingRow: {
+    paddingBottom: 20,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    flexWrap: 'wrap',
   },
-  star: {
-    fontSize: 20,
+  backBtn: {
+    padding: 8,
+    marginRight: 8,
   },
-  rating: {
+  headerContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  profilePic: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    marginRight: 12,
+  },
+  placeholderPic: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  placeholderText: {
+    color: '#fff',
+    fontSize: 28,
+    fontWeight: 'bold',
+  },
+  headerText: {
+    flex: 1,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  name: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: 'bold',
+    flex: 1,
   },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    marginLeft: 8,
+  verifiedBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  statusText: {
+  verifiedText: {
     color: '#fff',
     fontSize: 12,
     fontWeight: 'bold',
   },
-  actionRow: {
+  specialty: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  favoriteBtn: {
+    padding: 8,
+  },
+  section: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 12,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  welcomeMessage: {
+    fontSize: 15,
+    lineHeight: 22,
+    fontStyle: 'italic',
+  },
+  aboutText: {
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  interestsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  interestChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  interestText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  educationItem: {
+    marginBottom: 12,
+  },
+  degree: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  school: {
+    fontSize: 14,
+  },
+  languages: {
+    fontSize: 15,
+  },
+  certification: {
+    fontSize: 14,
+    marginBottom: 6,
+  },
+  actionsContainer: {
     flexDirection: 'row',
     paddingHorizontal: 16,
+    marginTop: 16,
     gap: 12,
   },
   actionButton: {
     flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  actionIcon: {
-    fontSize: 24,
-    marginBottom: 4,
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
   },
   actionText: {
-    fontSize: 12,
+    color: '#fff',
+    fontSize: 15,
     fontWeight: '600',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 12,
   },
   infoRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: 12,
-  },
-  infoIcon: {
-    fontSize: 20,
-    marginRight: 12,
-    width: 24,
+    gap: 12,
   },
   infoText: {
-    fontSize: 16,
+    fontSize: 14,
     flex: 1,
   },
-  reportButton: {
-    marginTop: 16,
-    padding: 12,
+  soonerCareHighlight: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 8,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  reportButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  insuranceBadge: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
     marginBottom: 12,
   },
-  insuranceBadgeText: {
+  soonerCareText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
   },
   insuranceList: {
-    marginBottom: 12,
+    fontSize: 14,
+    lineHeight: 20,
   },
-  insuranceItem: {
-    fontSize: 16,
+  pricingGrid: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  pricingItem: {
+    flex: 1,
+  },
+  pricingLabel: {
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  pricingValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  infoBox: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 8,
+  },
+  infoBoxText: {
+    fontSize: 13,
+    lineHeight: 18,
     marginBottom: 8,
   },
-  insuranceNote: {
-    fontSize: 13,
-    fontStyle: 'italic',
+  infoClose: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  consultBox: {
+    padding: 16,
+    borderRadius: 8,
+  },
+  consultHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  consultPrice: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  consultDuration: {
+    fontSize: 14,
+  },
+  consultDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  acceptingText: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
   mapContainer: {
     height: 200,
@@ -589,27 +803,18 @@ const styles = StyleSheet.create({
   map: {
     flex: 1,
   },
-  webMapButton: {
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  webMapButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  bookingSection: {
-    padding: 16,
+  bookContainer: {
+    paddingHorizontal: 16,
+    marginTop: 16,
   },
   bookButton: {
-    padding: 18,
+    paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
   },
   bookButtonText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: 'bold',
   },
 });

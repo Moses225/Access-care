@@ -1,3 +1,5 @@
+import { validateBooking, sanitizeText, sanitizePhone } from '../../utils/validation';
+import { logError } from '../../utils/crashReporting';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { addDoc, collection, doc, getDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
@@ -20,7 +22,7 @@ export default function BookingScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useTheme();
-  
+
   const [provider, setProvider] = useState<any>(null);
   const [loadingProvider, setLoadingProvider] = useState(true);
   const [selectedDate, setSelectedDate] = useState('');
@@ -39,7 +41,7 @@ export default function BookingScreen() {
 
     try {
       const providerDoc = await getDoc(doc(db, 'providers', id));
-      
+
       if (providerDoc.exists()) {
         setProvider({
           id: providerDoc.id,
@@ -66,7 +68,7 @@ export default function BookingScreen() {
   const timeSlots = generateTimeSlots();
 
   const today = new Date().toISOString().split('T')[0];
-  
+
   const maxDate = new Date();
   maxDate.setMonth(maxDate.getMonth() + 3);
   const maxDateString = maxDate.toISOString().split('T')[0];
@@ -83,72 +85,73 @@ export default function BookingScreen() {
   };
 
   const handleBooking = async () => {
-    if (!selectedDate) {
-      Alert.alert('Error', 'Please select a date');
-      return;
-    }
-    if (!selectedTime) {
-      Alert.alert('Error', 'Please select a time');
-      return;
-    }
-    if (!patientName.trim()) {
-      Alert.alert('Error', 'Please enter your name');
-      return;
-    }
-    if (!patientPhone.trim()) {
-      Alert.alert('Error', 'Please enter your phone number');
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const user = auth.currentUser;
-
-      const bookingData = {
-        userId: user?.uid || 'guest',
-        providerId: id,
-        providerName: provider.name,
-        providerSpecialty: provider.specialty,
-        date: selectedDate,
-        time: selectedTime,
-        patientName: patientName.trim(),
-        patientPhone: patientPhone.trim(),
-        notes: notes.trim(),
-        status: 'pending',
-        createdAt: new Date().toISOString(),
-      };
-
-      const bookingRef = await addDoc(collection(db, 'bookings'), bookingData);
-
-      console.log('✅ Booking created:', bookingRef.id);
-
-      // Send SMS confirmation
-      await sendBookingConfirmationSMS(
-        patientPhone.trim(),
-        provider.name,
-        formatDate(selectedDate),
-        selectedTime,
-        bookingRef.id
-      );
-
-      Alert.alert(
-        'Booking Requested!',
-        `Your appointment request for ${formatDate(selectedDate)} at ${selectedTime} has been submitted. The provider will confirm shortly.`,
-        [
-          {
-            text: 'OK',
-            onPress: () => router.push(`/booking/confirmation?bookingId=${bookingRef.id}` as any),
-          },
-        ]
-      );
-    } catch (error) {
-      console.error('❌ Booking error:', error);
-      Alert.alert('Error', 'Failed to create booking. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+  // Sanitize inputs
+  const sanitizedData = {
+    patientName: sanitizeText(patientName),
+    patientPhone: sanitizePhone(patientPhone),
+    date: selectedDate,
+    time: selectedTime,
+    notes: sanitizeText(notes),
   };
+
+  // Validate with Zod
+  const validation = validateBooking(sanitizedData);
+
+  if (!validation.valid) {
+    const firstError = Object.values(validation.errors)[0];
+    Alert.alert('Validation Error', firstError);
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const user = auth.currentUser;
+
+    const bookingData = {
+      userId: user?.uid || 'guest',
+      providerId: id,
+      providerName: provider.name,
+      providerSpecialty: provider.specialty,
+      date: sanitizedData.date,
+      time: sanitizedData.time,
+      patientName: sanitizedData.patientName,
+      patientPhone: sanitizedData.patientPhone,
+      notes: sanitizedData.notes,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    };
+
+    const bookingRef = await addDoc(collection(db, 'bookings'), bookingData);
+
+    console.log('✅ Booking created:', bookingRef.id);
+
+    await sendBookingConfirmationSMS(
+      sanitizedData.patientPhone,
+      provider.name,
+      formatDate(sanitizedData.date),
+      sanitizedData.time,
+      bookingRef.id
+    );
+
+    Alert.alert(
+      'Booking Requested!',
+      `Your appointment request for ${formatDate(sanitizedData.date)} at ${sanitizedData.time} has been submitted. The provider will confirm shortly.`,
+      [
+        {
+          text: 'OK',
+          onPress: () => router.push(`/booking/confirmation?bookingId=${bookingRef.id}` as any),
+        },
+      ]
+    );
+  } catch (error) {
+    console.error('❌ Booking error:', error);
+    logError(error, 'Booking');
+    Alert.alert('Error', 'Failed to create booking. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+};
 
   if (loadingProvider) {
     return (

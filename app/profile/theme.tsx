@@ -1,6 +1,7 @@
-import { Stack, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import React from 'react';
 import {
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,57 +12,129 @@ import { useTheme } from '../../context/ThemeContext';
 
 export default function ThemeScreen() {
   const router = useRouter();
-  const { themeId, setTheme, colors } = useTheme();
+  const { currentTheme, themes, colors, setTheme } = useTheme();
 
-  const themes = [
-    { id: 'maternalPink', name: 'Maternal Pink', emoji: '🌸' },
-    { id: 'oceanBlue', name: 'Ocean Blue', emoji: '🌊' },
-    { id: 'softLavender', name: 'Soft Lavender', emoji: '💜' },
-    { id: 'peachCream', name: 'Peach Cream', emoji: '🍑' },
-    { id: 'mintFresh', name: 'Mint Fresh', emoji: '🌿' },
-  ];
+  const handleThemeSelect = async (themeId: string) => {
+    try {
+      console.log('👆 User selected theme:', themeId);
+
+      if (themeId === currentTheme.id) {
+        console.log('ℹ️ Same theme selected, ignoring');
+        return;
+      }
+
+      await setTheme(themeId);
+
+      Alert.alert(
+        'Theme Updated! 🎨',
+        'Your theme has been changed successfully.',
+        [{ text: 'OK' }]
+      );
+
+      console.log('✅ Theme selection complete');
+
+    } catch (error) {
+      console.error('❌ Error changing theme:', error);
+      Alert.alert(
+        'Error',
+        'Failed to change theme. Please try again.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
 
   return (
-    <>
-      <Stack.Screen options={{ headerShown: false }} />
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { backgroundColor: colors.card }]}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Text style={[styles.backText, { color: colors.primary }]}>← Back</Text>
-          </TouchableOpacity>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: colors.text }]}>
+            Choose Your Theme
+          </Text>
+          <Text style={[styles.subtitle, { color: colors.subtext }]}>
+            Personalize your app experience
+          </Text>
         </View>
 
-        <ScrollView style={styles.content}>
-          <Text style={[styles.title, { color: colors.text }]}>Choose Theme</Text>
-          <Text style={[styles.subtitle, { color: colors.subtext }]}>
-            Select your preferred color scheme
-          </Text>
+        {/* Theme Options */}
+        <View style={styles.themesContainer}>
+          {themes.map((theme) => {
+            const isSelected = theme.id === currentTheme.id;
 
-          {themes.map((t) => (
-            <TouchableOpacity
-              key={t.id}
-              style={[
-                styles.themeCard,
-                { 
-                  backgroundColor: colors.card,
-                  borderColor: themeId === t.id ? colors.primary : colors.border,
-                  borderWidth: 2,
-                }
-              ]}
-              onPress={() => setTheme(t.id)}
-            >
-              <Text style={styles.themeEmoji}>{t.emoji}</Text>
-              <Text style={[styles.themeName, { color: colors.text }]}>
-                {t.name}
-              </Text>
-              {themeId === t.id && (
-                <Text style={styles.checkmark}>✓</Text>
-              )}
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-    </>
+            return (
+              <TouchableOpacity
+                key={theme.id}
+                style={[
+                  styles.themeCard,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: isSelected ? colors.primary : colors.border,
+                    borderWidth: isSelected ? 3 : 1,
+                  },
+                ]}
+                onPress={() => handleThemeSelect(theme.id)}
+                activeOpacity={0.7}
+              >
+                {/* Theme Name */}
+                <View style={styles.themeHeader}>
+                  <Text style={[styles.themeName, { color: colors.text }]}>
+                    {theme.name}
+                  </Text>
+
+                  {/* Selected Badge */}
+                  {isSelected && (
+                    <View style={[styles.selectedBadge, { backgroundColor: colors.primary }]}>
+                      <Text style={styles.selectedBadgeText}>✓ Active</Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Color Preview */}
+                <View style={styles.colorPreview}>
+                  <View style={styles.colorRow}>
+                    <View style={[styles.colorBox, { backgroundColor: theme.colors.primary }]}>
+                      <Text style={styles.colorLabel}>Primary</Text>
+                    </View>
+                    <View style={[styles.colorBox, { backgroundColor: theme.colors.secondary }]}>
+                      <Text style={styles.colorLabel}>Secondary</Text>
+                    </View>
+                  </View>
+                  <View style={styles.colorRow}>
+                    <View style={[styles.colorBox, { backgroundColor: theme.colors.background }]}>
+                      <Text style={[styles.colorLabel, { color: theme.colors.text }]}>
+                        Background
+                      </Text>
+                    </View>
+                    <View style={[styles.colorBox, { backgroundColor: theme.colors.card }]}>
+                      <Text style={[styles.colorLabel, { color: theme.colors.text }]}>
+                        Card
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Tap to Apply */}
+                {!isSelected && (
+                  <Text style={[styles.tapText, { color: colors.subtext }]}>
+                    Tap to apply
+                  </Text>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* Info Text */}
+        <View style={styles.infoContainer}>
+          <Text style={[styles.infoIcon, { color: colors.primary }]}>💡</Text>
+          <Text style={[styles.infoText, { color: colors.subtext }]}>
+            Your theme preference will be saved and applied across the entire app.
+          </Text>
+        </View>
+
+        <View style={{ height: 40 }} />
+      </ScrollView>
+    </View>
   );
 }
 
@@ -70,17 +143,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: 60,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
-  },
-  backText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  content: {
-    flex: 1,
     padding: 20,
+    paddingTop: 10,
   },
   title: {
     fontSize: 28,
@@ -88,27 +152,81 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 14,
-    marginBottom: 24,
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  themesContainer: {
+    padding: 16,
+    gap: 16,
   },
   themeCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    borderRadius: 16,
     padding: 20,
-    borderRadius: 12,
-    marginBottom: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  themeEmoji: {
-    fontSize: 32,
-    marginRight: 16,
+  themeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   themeName: {
-    fontSize: 18,
-    fontWeight: '600',
-    flex: 1,
+    fontSize: 20,
+    fontWeight: 'bold',
   },
-  checkmark: {
-    fontSize: 24,
-    color: '#2ECC71',
+  selectedBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  selectedBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  colorPreview: {
+    gap: 8,
+  },
+  colorRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  colorBox: {
+    flex: 1,
+    height: 60,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
+  },
+  colorLabel: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  tapText: {
+    marginTop: 12,
+    fontSize: 14,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  infoContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 20,
+    gap: 12,
+  },
+  infoIcon: {
+    fontSize: 20,
+  },
+  infoText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
   },
 });

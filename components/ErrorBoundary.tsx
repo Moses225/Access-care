@@ -31,7 +31,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
           <Text style={styles.emoji}>😕</Text>
           <Text style={styles.title}>Something went wrong</Text>
           <Text style={styles.message}>
-            Don't worry, your data is safe. Try restarting the app.
+            Do not worry, your data is safe. Try restarting the app.
           </Text>
           <TouchableOpacity
             style={styles.button}

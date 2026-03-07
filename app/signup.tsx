@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { Alert, Image, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { auth } from '../firebase';
+import { sanitizeEmail, validateSignup } from '../utils/validation';
+import { logError } from '../utils/crashReporting';
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -14,43 +16,56 @@ export default function SignupScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleSignup = async () => {
-    if (!email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
-    }
+    // Sanitize inputs
+    const sanitizedEmail = sanitizeEmail(email);
 
-    if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
-      return;
-    }
+    // Validate inputs with Zod
+    const validation = validateSignup({
+      email: sanitizedEmail,
+      password: password,
+      confirmPassword: confirmPassword,
+    });
 
-    if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+    if (!validation.valid) {
+      const firstError = Object.values(validation.errors)[0];
+      Alert.alert('Validation Error', firstError);
       return;
     }
 
     setLoading(true);
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      await createUserWithEmailAndPassword(auth, sanitizedEmail, password);
       Alert.alert('Success', 'Account created successfully!');
     } catch (error: any) {
-      Alert.alert('Signup Failed', error.message);
+      logError(error, 'Signup');
+
+      let errorMessage = 'Failed to create account. Please try again.';
+
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'This email is already registered. Please sign in instead.';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address';
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = 'Password is too weak. Use at least 6 characters.';
+      }
+
+      Alert.alert('Signup Failed', errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={[styles.container, { backgroundColor: colors.background }]}
     >
-      <Image 
+      <Image
         source={require('../assets/images/AccessCare-logo.png')}
         style={styles.logo}
         resizeMode="contain"
       />
-      
+
       <Text style={[styles.title, { color: colors.text }]}>Create Account</Text>
       <Text style={[styles.subtitle, { color: colors.subtext }]}>Join AccessCare today</Text>
 
@@ -62,15 +77,17 @@ export default function SignupScreen() {
         onChangeText={setEmail}
         autoCapitalize="none"
         keyboardType="email-address"
+        editable={!loading}
       />
 
       <TextInput
         style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
-        placeholder="Password"
+        placeholder="Password (min 6 characters)"
         placeholderTextColor={colors.subtext}
         value={password}
         onChangeText={setPassword}
         secureTextEntry
+        editable={!loading}
       />
 
       <TextInput
@@ -80,10 +97,12 @@ export default function SignupScreen() {
         value={confirmPassword}
         onChangeText={setConfirmPassword}
         secureTextEntry
+        editable={!loading}
+        onSubmitEditing={handleSignup}
       />
 
-      <TouchableOpacity 
-        style={[styles.signupButton, { backgroundColor: colors.primary }]}
+      <TouchableOpacity
+        style={[styles.signupButton, { backgroundColor: colors.primary, opacity: loading ? 0.7 : 1 }]}
         onPress={handleSignup}
         disabled={loading}
       >
@@ -92,7 +111,7 @@ export default function SignupScreen() {
 
       <View style={styles.footer}>
         <Text style={[styles.footerText, { color: colors.subtext }]}>Already have an account? </Text>
-        <TouchableOpacity onPress={() => router.push('/')}>
+        <TouchableOpacity onPress={() => router.push('/')} disabled={loading}>
           <Text style={[styles.loginLink, { color: colors.primary }]}>Sign In</Text>
         </TouchableOpacity>
       </View>

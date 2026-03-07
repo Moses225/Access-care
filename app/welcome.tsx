@@ -10,15 +10,15 @@ export default function WelcomeScreen() {
   return (
     <ScrollView contentContainerStyle={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.hero, { backgroundColor: colors.card }]}>
-        <Image 
+        <Image
           source={require('../assets/images/AccessCare-logo.png')}
           style={styles.logo}
           resizeMode="contain"
         />
-        
+
         <Text style={[styles.title, { color: colors.primary }]}>AccessCare</Text>
         <Text style={[styles.tagline, { color: colors.subtext }]}>Connecting Patients with Quality Healthcare</Text>
-        
+
         <View style={styles.statsRow}>
           <StatCard number="23+" label="Providers" icon="👨‍⚕️" />
           <StatCard number="3" label="Categories" icon="📋" />
@@ -29,28 +29,28 @@ export default function WelcomeScreen() {
       <View style={styles.featuresSection}>
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Bridging the Healthcare Gap</Text>
         <Text style={[styles.missionText, { color: colors.subtext }]}>
-          Whether you're in a remote area or a busy city, AccessCare connects you to the care you need, when you need it.
+          Whether you are in a remote area or a busy city, AccessCare connects you to the care you need, when you need it.
         </Text>
-        
-        <FeatureCard 
+
+        <FeatureCard
           icon="🌍"
           title="Find Nearby Care"
           description="Locate providers in your area, even in remote locations"
           gradient={['#667eea', '#764ba2']}
         />
-        <FeatureCard 
+        <FeatureCard
           icon="🔗"
           title="Direct Connection"
           description="Connect instantly with healthcare professionals"
           gradient={['#f093fb', '#f5576c']}
         />
-        <FeatureCard 
+        <FeatureCard
           icon="💬"
           title="Ask Questions"
           description="Get answers from professionals, no matter where you are"
           gradient={['#4facfe', '#00f2fe']}
         />
-        <FeatureCard 
+        <FeatureCard
           icon="🗺️"
           title="Navigate to Care"
           description="Turn-by-turn directions to your nearest provider"
@@ -66,7 +66,7 @@ export default function WelcomeScreen() {
       </View>
 
       <View style={styles.ctaSection}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.primaryButton, { backgroundColor: colors.primary }]}
           onPress={() => router.push('/' as any)}
           activeOpacity={0.8}
@@ -74,7 +74,7 @@ export default function WelcomeScreen() {
           <Text style={styles.primaryButtonText}>Find Care Now</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.secondaryButton, { borderColor: colors.primary, backgroundColor: colors.background }]}
           onPress={() => router.push('/signup' as any)}
           activeOpacity={0.8}
@@ -90,7 +90,7 @@ export default function WelcomeScreen() {
 
 function StatCard({ number, label, icon }: { number: string; label: string; icon: string }) {
   const { colors } = useTheme();
-  
+
   return (
     <View style={[styles.statCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
       <Text style={styles.statIcon}>{icon}</Text>
@@ -100,14 +100,14 @@ function StatCard({ number, label, icon }: { number: string; label: string; icon
   );
 }
 
-function FeatureCard({ icon, title, description, gradient }: { 
-  icon: string; 
-  title: string; 
+function FeatureCard({ icon, title, description, gradient }: {
+  icon: string;
+  title: string;
   description: string;
   gradient: string[];
 }) {
   const { colors } = useTheme();
-  
+
   return (
     <View style={[styles.featureCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
       <View style={[styles.iconCircle, { backgroundColor: gradient[0] }]}>

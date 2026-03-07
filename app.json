@@ -2,47 +2,68 @@
   "expo": {
     "name": "AccessCare",
     "slug": "accesscare",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/images/AccessCare-logo.png",
+    "version": "1.1.0",
     "scheme": "accesscare",
-    "userInterfaceStyle": "light",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/images/Accesscare.png",
+      "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#2E75B6"
     },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.accesscare.app"
+      "bundleIdentifier": "com.accesscare.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "AccessCare needs your location to show nearby healthcare providers.",
+        "NSCameraUsageDescription": "AccessCare needs access to your camera to take profile pictures.",
+        "NSPhotoLibraryUsageDescription": "AccessCare needs access to your photos to set your profile picture."
+      }
     },
     "android": {
+      "versionCode": 2,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/AccessCare-logo.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#2E75B6"
       },
-      "package": "com.accesscare.app"
+      "package": "com.accesscare.app",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "INTERNET",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "YAIzaSyCYh1TzWIAonLgs32hW84fEQeatfDGlS54"
+        }
+      }
     },
     "web": {
-      "bundler": "metro",
-      "output": "static",
-      "favicon": "./assets/images/AccessCare-logo.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
     },
     "plugins": [
       "expo-router",
-      "expo-web-browser",
-      "@react-native-community/datetimepicker"
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "AccessCare needs access to your photos to set your profile picture.",
+          "cameraPermission": "AccessCare needs access to your camera to take profile pictures."
+        }
+      ]
     ],
-    "experiments": {
-      "typedRoutes": true
-    },
     "extra": {
-      "router": {},
+      "router": {
+        "origin": false
+      },
       "eas": {
-        "projectId": "995509b6-4f68-418d-b6ea-de1591eae79c"
+        "projectId": "your-project-id-here"
       }
     }
   }
