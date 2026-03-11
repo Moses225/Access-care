@@ -62,7 +62,7 @@ export default function AppointmentsScreen() {
         setLoading(false);
       },
       (error) => {
-        console.error('Error fetching bookings:', error);
+        if (__DEV__) console.error('Error fetching bookings:', error);
         setLoading(false);
       }
     );
@@ -87,7 +87,7 @@ export default function AppointmentsScreen() {
               });
               Alert.alert('Cancelled', 'Appointment has been cancelled');
             } catch (error) {
-              console.error('Cancel error:', error);
+              if (__DEV__) console.error('Cancel error:', error);
               Alert.alert('Error', 'Failed to cancel appointment');
             }
           }

@@ -16,10 +16,10 @@ export default function ThemeScreen() {
 
   const handleThemeSelect = async (themeId: string) => {
     try {
-      console.log('👆 User selected theme:', themeId);
+      if (__DEV__) console.log('👆 User selected theme:', themeId);
 
       if (themeId === currentTheme.id) {
-        console.log('ℹ️ Same theme selected, ignoring');
+        if (__DEV__) console.log('ℹ️ Same theme selected, ignoring');
         return;
       }
 
@@ -31,10 +31,10 @@ export default function ThemeScreen() {
         [{ text: 'OK' }]
       );
 
-      console.log('✅ Theme selection complete');
+      if (__DEV__) console.log('✅ Theme selection complete');
 
     } catch (error) {
-      console.error('❌ Error changing theme:', error);
+      if (__DEV__) console.error('❌ Error changing theme:', error);
       Alert.alert(
         'Error',
         'Failed to change theme. Please try again.',

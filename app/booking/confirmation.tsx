@@ -32,7 +32,7 @@ export default function BookingConfirmationScreen() {
         setBooking({ id: bookingDoc.id, ...bookingDoc.data() });
       }
     } catch (error) {
-      console.error('Error loading booking:', error);
+      if (__DEV__) console.error('Error loading booking:', error);
     } finally {
       setLoading(false);
     }

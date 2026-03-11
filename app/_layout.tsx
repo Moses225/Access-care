@@ -1,118 +1,60 @@
-import { Stack, useRouter, useSegments, usePathname } from 'expo-router'; // Add usePathname
-import { onAuthStateChanged } from 'firebase/auth';
-import { useEffect, useState } from 'react';
+import { Stack, useRouter, useSegments, usePathname } from 'expo-router';
+import { useEffect } from 'react';
 import { ActivityIndicator, View, Text } from 'react-native';
 import { ThemeProvider } from '../context/ThemeContext';
-import { auth } from '../firebase';
+import { AuthProvider, useAuth } from '../context/AuthContext';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 
+// ─── Navigation Guard ─────────────────────────────────────────────────────────
 function RootNavigator() {
   const router = useRouter();
   const segments = useSegments();
-  const pathname = usePathname(); // 🆕 ADD THIS - gets actual current path
-  const [initializing, setInitializing] = useState(true);
-  const [user, setUser] = useState<any>(null);
-
-  useEffect(() => {
-    console.log('👂 Setting up auth listener...');
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      console.log('🔐 Auth state changed:', currentUser ? '✅ Logged in' : '🔓 Logged out');
-      if (currentUser) console.log('   User email:', currentUser.email);
-      setUser(currentUser);
-      if (initializing) {
-        console.log('✓ Initial auth check complete');
-        setInitializing(false);
-      }
-    });
-    return unsubscribe;
-  }, []);
+  const pathname = usePathname();
+  const { user, initializing } = useAuth();
 
   useEffect(() => {
     if (initializing) {
-      console.log('⏳ Still initializing, not navigating yet...');
+      if (__DEV__) console.log('⏳ Still initializing, not navigating yet...');
       return;
     }
 
     const currentSegment = segments[0];
+    const isOnIndex = !currentSegment || pathname === '/' || pathname === '/index';
 
-    // 🆕 IMPORTANT: Check actual pathname to handle /index correctly
-    const actualPath = pathname || '/';
-    const isOnIndex = actualPath === '/' || actualPath === '/index' || (!currentSegment && actualPath === '/');
+    if (__DEV__) {
+      console.log('🧭 Navigation check:', {
+        user: user ? 'logged in' : 'logged out',
+        currentSegment: currentSegment || 'EMPTY',
+        pathname,
+        isOnIndex,
+      });
+    }
 
-    console.log('🧭 Navigation check:', {
-      user: user ? 'logged in' : 'logged out',
-      currentSegment: currentSegment || 'EMPTY',
-      pathname: actualPath,
-      isOnIndex,
-      allSegments: segments,
-    });
+    const isOnAuthRoute =
+      currentSegment === 'welcome' ||
+      currentSegment === 'signup' ||
+      isOnIndex;
 
-    // ============================================
-    // USER IS LOGGED IN
-    // ============================================
+    const isOnProtectedRoute =
+      currentSegment === '(tabs)' ||
+      currentSegment === 'provider' ||
+      currentSegment === 'booking' ||
+      currentSegment === 'profile';
+
     if (user) {
-      const inAuthGroup = currentSegment === 'welcome' ||
-                         currentSegment === 'signup' ||
-                         isOnIndex; // 🆕 Use isOnIndex instead of checking segments
-
-      const inProtectedGroup = currentSegment === '(tabs)' ||
-                              currentSegment === 'provider' ||
-                              currentSegment === 'booking' ||
-                              currentSegment === 'profile';
-
-      if (inAuthGroup) {
-        console.log('📍 User logged in but on auth page, navigating to main app');
-        setTimeout(() => {
-          router.replace('/(tabs)');
-        }, 100);
-        return;
+      if (isOnAuthRoute && currentSegment !== '(tabs)') {
+        if (__DEV__) console.log('📍 User logged in but on auth page, navigating to main app');
+        setTimeout(() => router.replace('/(tabs)'), 100);
       }
-
-      if (inProtectedGroup) {
-        console.log('✓ User logged in on protected route - correct state');
-        return;
-      }
-
-      // If on some other route, let it be
-      console.log('✓ User logged in on other route:', currentSegment || actualPath);
       return;
     }
 
-    // ============================================
-    // USER IS LOGGED OUT
-    // ============================================
-    if (!user) {
-      const inAuthGroup = currentSegment === 'welcome' ||
-                         currentSegment === 'signup' ||
-                         isOnIndex; // 🆕 Use isOnIndex
-
-      const inProtectedGroup = currentSegment === '(tabs)' ||
-                              currentSegment === 'provider' ||
-                              currentSegment === 'booking' ||
-                              currentSegment === 'profile';
-
-      // If on protected route or completely empty (and NOT on index), redirect to welcome
-      if (inProtectedGroup) {
-        console.log('📍 User logged out on protected route, navigating to welcome');
-        setTimeout(() => {
-          router.replace('/welcome');
-        }, 100);
-        return;
-      }
-
-      // 🆕 CRITICAL FIX: Don't redirect if we're on an auth page (including index)
-      if (inAuthGroup) {
-        console.log('✓ User logged out on auth route - correct state');
-        return;
-      }
-
-      // Only redirect if on unknown route
-      console.log('📍 User logged out on unknown route, navigating to welcome');
-      setTimeout(() => {
-        router.replace('/welcome');
-      }, 100);
+    if (isOnProtectedRoute) {
+      if (__DEV__) console.log('📍 User logged out on protected route, navigating to welcome');
+      setTimeout(() => router.replace('/welcome'), 100);
     }
-  }, [user, segments, pathname, initializing, router]); // 🆕 Add pathname to dependencies
+
+  }, [user, segments, pathname, initializing, router]);
 
   if (initializing) {
     return (
@@ -147,11 +89,14 @@ function RootNavigator() {
   );
 }
 
+// ─── Root Layout ──────────────────────────────────────────────────────────────
 export default function RootLayout() {
   return (
     <ErrorBoundary>
       <ThemeProvider>
-        <RootNavigator />
+        <AuthProvider>
+          <RootNavigator />
+        </AuthProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

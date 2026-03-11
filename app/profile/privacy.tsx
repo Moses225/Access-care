@@ -33,7 +33,7 @@ export default function PrivacyScreen() {
         setTwoFactorAuth(data.twoFactorAuth ?? false);
       }
     } catch (error) {
-      console.error('Error loading privacy settings:', error);
+      if (__DEV__) console.error('Error loading privacy settings:', error);
     }
   };
 
@@ -57,7 +57,7 @@ export default function PrivacyScreen() {
         updatedAt: new Date(),
       });
     } catch (error) {
-      console.error('Error saving privacy settings:', error);
+      if (__DEV__) console.error('Error saving privacy settings:', error);
     }
   };
 

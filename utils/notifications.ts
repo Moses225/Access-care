@@ -9,7 +9,7 @@ export async function scheduleAppointmentReminder(
     // Request permission
     const { status } = await Notifications.requestPermissionsAsync();
     if (status !== 'granted') {
-      console.log('Notification permission denied');
+      if (__DEV__) console.log('Notification permission denied');
       return;
     }
 
@@ -22,8 +22,8 @@ export async function scheduleAppointmentReminder(
       trigger: null,
     });
 
-    console.log('Notification sent');
+    if (__DEV__) console.log('Notification sent');
   } catch (error) {
-    console.log('Notification error:', error);
+    if (__DEV__) console.log('Notification error:', error);
   }
 }

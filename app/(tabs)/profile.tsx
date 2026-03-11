@@ -49,7 +49,7 @@ export default function ProfileScreen() {
         }
       }
     } catch (error) {
-      console.error('Error loading user data:', error);
+      if (__DEV__) console.error('Error loading user data:', error);
     }
   };
 
@@ -70,7 +70,7 @@ export default function ProfileScreen() {
             await signOut(auth);
             router.replace('/');
           } catch (error) {
-            console.error('Error logging out:', error);
+            if (__DEV__) console.error('Error logging out:', error);
             Alert.alert('Error', 'Failed to log out');
           }
         },
@@ -104,7 +104,7 @@ export default function ProfileScreen() {
                 source={{ uri: profileImage }} 
                 style={styles.profileImage}
                 onError={() => {
-                  console.log('Error loading profile image');
+                  if (__DEV__) console.log('Error loading profile image');
                   setProfileImage(null);
                 }}
               />

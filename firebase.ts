@@ -1,23 +1,23 @@
 import { getApp, getApps, initializeApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
+import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAMYBfxhljita9XVqTc_HHahMA7mFVFPn8",
-  authDomain: "accesscare-app.firebaseapp.com",
-  projectId: "accesscare-app",
-  storageBucket: "accesscare-app.firebasestorage.app",
-  messagingSenderId: "283308941540",
-  appId: "1:283308941540:web:e3c57ebf0e16ca9c8f4cf1"
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase
+if (__DEV__) {
+  console.log('🔧 Firebase connecting to project:', process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID);
+}
+
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// Initialize Auth (Expo handles persistence automatically)
-export const auth: Auth = getAuth(app);
+export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
-
-console.log('✅ Firebase initialized');

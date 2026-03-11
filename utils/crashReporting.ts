@@ -1,5 +1,5 @@
 export function logError(error: any, context: string) {
-  console.error(`[${context}] Error:`, error);
+  if (__DEV__) console.error(`[${context}] Error:`, error);
   
   // In production, send to crash reporting service
   // For now, just log to console
@@ -12,5 +12,5 @@ export function logError(error: any, context: string) {
 }
 
 export function logWarning(message: string, context: string) {
-  console.warn(`[${context}] Warning:`, message);
+  if (__DEV__) console.warn(`[${context}] Warning:`, message);
 }

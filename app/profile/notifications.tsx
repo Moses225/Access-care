@@ -33,7 +33,7 @@ export default function NotificationsScreen() {
         setGeneralUpdates(data.generalUpdates ?? false);
       }
     } catch (error) {
-      console.error('Error loading notifications:', error);
+      if (__DEV__) console.error('Error loading notifications:', error);
     }
   };
 
@@ -57,7 +57,7 @@ export default function NotificationsScreen() {
         updatedAt: new Date(),
       });
     } catch (error) {
-      console.error('Error saving notification settings:', error);
+      if (__DEV__) console.error('Error saving notification settings:', error);
     }
   };
 

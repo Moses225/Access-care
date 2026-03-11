@@ -56,7 +56,7 @@ export default function SavedProvidersScreen() {
             };
           }
         } catch (error) {
-          console.error(`Error loading provider ${providerId}:`, error);
+          if (__DEV__) console.error(`Error loading provider ${providerId}:`, error);
         }
         return null;
       });
@@ -66,7 +66,7 @@ export default function SavedProvidersScreen() {
       
       setSavedProviders(validProviders);
     } catch (error) {
-      console.error('Error loading saved providers:', error);
+      if (__DEV__) console.error('Error loading saved providers:', error);
     } finally {
       setLoading(false);
     }

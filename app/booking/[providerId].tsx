@@ -97,7 +97,7 @@ export default function BookingScreen() {
 
       const bookingRef = await addDoc(collection(db, 'bookings'), bookingData);
 
-      console.log('✅ Booking created:', bookingRef.id);
+      if (__DEV__) console.log('✅ Booking created:', bookingRef.id);
 
       // Show success and navigate to confirmation
       Alert.alert(
@@ -111,7 +111,7 @@ export default function BookingScreen() {
         ]
       );
     } catch (error) {
-      console.error('❌ Booking error:', error);
+      if (__DEV__) console.error('❌ Booking error:', error);
       Alert.alert('Error', 'Failed to create booking. Please try again.');
     } finally {
       setLoading(false);

@@ -23,7 +23,7 @@ export function useProviders() {
         setLoading(false);
       },
       (err) => {
-        console.error('Error fetching providers:', err);
+        if (__DEV__) console.error('Error fetching providers:', err);
         setError(err.message);
         setLoading(false);
       }

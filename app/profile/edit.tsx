@@ -39,7 +39,7 @@ export default function EditProfileScreen() {
         setHasExistingImage(true);
       }
     } catch (error) {
-      console.error('Error loading profile image:', error);
+      if (__DEV__) console.error('Error loading profile image:', error);
     }
   };
 
@@ -104,7 +104,7 @@ export default function EditProfileScreen() {
                   const imageRef = ref(storage, `profileImages/${user.uid}`);
                   await deleteObject(imageRef);
                 } catch (error) {
-                  console.log('No image to delete in storage');
+                  if (__DEV__) console.log('No image to delete in storage');
                 }
               }
 
@@ -121,7 +121,7 @@ export default function EditProfileScreen() {
                 { text: 'OK', onPress: () => router.back() }
               ]);
             } catch (error) {
-              console.error('Error deleting image:', error);
+              if (__DEV__) console.error('Error deleting image:', error);
               Alert.alert('Error', 'Failed to delete image');
             } finally {
               setUploading(false);
@@ -173,7 +173,7 @@ export default function EditProfileScreen() {
         { text: 'OK', onPress: () => router.back() }
       ]);
     } catch (error: any) {
-      console.error('Error uploading image:', error);
+      if (__DEV__) console.error('Error uploading image:', error);
       
       if (error.code === 'storage/unauthorized') {
         Alert.alert(

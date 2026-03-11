@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { logError } from '../utils/crashReporting';
 
 interface Props {
   children: React.ReactNode;
@@ -20,9 +21,15 @@ export class ErrorBoundary extends React.Component<Props, State> {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: any) {
-    console.error('Error caught by boundary:', error, errorInfo);
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    // Log to crash reporting service
+    logError(error, 'ErrorBoundary');
+    if (__DEV__) console.error('Error caught by boundary:', error, errorInfo);
   }
+
+  handleReset = () => {
+    this.setState({ hasError: false, error: null });
+  };
 
   render() {
     if (this.state.hasError) {
@@ -31,12 +38,9 @@ export class ErrorBoundary extends React.Component<Props, State> {
           <Text style={styles.emoji}>😕</Text>
           <Text style={styles.title}>Something went wrong</Text>
           <Text style={styles.message}>
-            Do not worry, your data is safe. Try restarting the app.
+            Don&apos;t worry, your data is safe. Try restarting the app.
           </Text>
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() => this.setState({ hasError: false, error: null })}
-          >
+          <TouchableOpacity style={styles.button} onPress={this.handleReset}>
             <Text style={styles.buttonText}>Try Again</Text>
           </TouchableOpacity>
         </View>

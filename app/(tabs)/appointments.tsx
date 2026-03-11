@@ -69,7 +69,7 @@ export default function AppointmentsScreen() {
 
       setAppointments(appointmentsList);
     } catch (error) {
-      console.error('Error loading appointments:', error);
+      if (__DEV__) console.error('Error loading appointments:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -101,7 +101,7 @@ export default function AppointmentsScreen() {
               Alert.alert('Cancelled', 'Your appointment has been cancelled.');
               loadAppointments();
             } catch (error) {
-              console.error('Error cancelling appointment:', error);
+              if (__DEV__) console.error('Error cancelling appointment:', error);
               Alert.alert('Error', 'Failed to cancel appointment. Please try again.');
             }
           },
@@ -126,7 +126,7 @@ export default function AppointmentsScreen() {
               // Navigate to provider booking page
               router.push(`/booking/${appointment.providerId}` as any);
             } catch (error) {
-              console.error('Error cancelling appointment:', error);
+              if (__DEV__) console.error('Error cancelling appointment:', error);
               Alert.alert('Error', 'Failed to reschedule. Please try again.');
             }
           },

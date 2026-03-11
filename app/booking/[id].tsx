@@ -49,7 +49,7 @@ export default function BookingScreen() {
         });
       }
     } catch (error) {
-      console.error('Error loading provider:', error);
+      if (__DEV__) console.error('Error loading provider:', error);
       Alert.alert('Error', 'Failed to load provider details');
     } finally {
       setLoadingProvider(false);
@@ -124,7 +124,7 @@ export default function BookingScreen() {
 
     const bookingRef = await addDoc(collection(db, 'bookings'), bookingData);
 
-    console.log('✅ Booking created:', bookingRef.id);
+    if (__DEV__) console.log('✅ Booking created:', bookingRef.id);
 
     await sendBookingConfirmationSMS(
       sanitizedData.patientPhone,
@@ -145,7 +145,7 @@ export default function BookingScreen() {
       ]
     );
   } catch (error) {
-    console.error('❌ Booking error:', error);
+    if (__DEV__) console.error('❌ Booking error:', error);
     logError(error, 'Booking');
     Alert.alert('Error', 'Failed to create booking. Please try again.');
   } finally {
@@ -208,7 +208,7 @@ export default function BookingScreen() {
             maxDate={maxDateString}
             onDayPress={(day) => {
               setSelectedDate(day.dateString);
-              console.log('📅 Selected date:', day.dateString);
+              if (__DEV__) console.log('📅 Selected date:', day.dateString);
             }}
             markedDates={{
               [selectedDate]: {

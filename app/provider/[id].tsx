@@ -11,7 +11,7 @@ import {
   Image,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { collection, getDocs, query } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { Ionicons } from '@expo/vector-icons';
 import { db } from '../../firebase';
 import { useTheme } from '../../context/ThemeContext';
@@ -63,13 +63,14 @@ interface Provider {
   };
 }
 
+// ─── Pricing Estimate Card ────────────────────────────────────────────────────
 const PricingEstimateCard = ({ colors }: { colors: any }) => {
   const [showInfo, setShowInfo] = useState(false);
 
   return (
     <View style={[styles.section, { backgroundColor: colors.card }]}>
       <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>💰 Pricing Estimate</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Pricing Estimate</Text>
         <TouchableOpacity onPress={() => setShowInfo(!showInfo)}>
           <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
         </TouchableOpacity>
@@ -91,7 +92,7 @@ const PricingEstimateCard = ({ colors }: { colors: any }) => {
       {showInfo && (
         <View style={[styles.infoBox, { backgroundColor: colors.background }]}>
           <Text style={[styles.infoBoxText, { color: colors.text }]}>
-            This is an estimate. Actual costs may vary. Always verify with the provider&apos;s office
+            This is an estimate. Actual costs may vary. Always verify with the provider office
             before your appointment.
           </Text>
           <TouchableOpacity onPress={() => setShowInfo(false)}>
@@ -103,6 +104,7 @@ const PricingEstimateCard = ({ colors }: { colors: any }) => {
   );
 };
 
+// ─── Interview Consult Card ───────────────────────────────────────────────────
 const InterviewConsultCard = ({
   interviewConsult,
   colors,
@@ -116,7 +118,7 @@ const InterviewConsultCard = ({
     <View style={[styles.section, { backgroundColor: colors.card }]}>
       <View style={styles.sectionHeader}>
         <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          🤝 Meet & Greet Available
+          Meet & Greet Available
         </Text>
       </View>
 
@@ -138,6 +140,7 @@ const InterviewConsultCard = ({
   );
 };
 
+// ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function ProviderDetailScreen() {
   const params = useLocalSearchParams();
   const router = useRouter();
@@ -149,6 +152,7 @@ export default function ProviderDetailScreen() {
 
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
+  // ─── Load single provider via getDoc (1 read, not full collection) ──────────
   const loadProvider = useCallback(async () => {
     try {
       if (!id || typeof id !== 'string') {
@@ -159,76 +163,72 @@ export default function ProviderDetailScreen() {
 
       setLoading(true);
 
-      const providersRef = collection(db, 'providers');
-      const q = query(providersRef);
-      const querySnapshot = await getDocs(q);
+      const providerRef = doc(db, 'providers', id);
+      const docSnap = await getDoc(providerRef);
 
-      let foundProvider: Provider | null = null;
-
-      querySnapshot.forEach((docSnap) => {
-        if (docSnap.id === id) {
-          const data = docSnap.data();
-
-          let safeRating = 0;
-          if (typeof data.rating === 'number') {
-            safeRating = data.rating;
-          } else if (typeof data.rating === 'string') {
-            const parsed = parseFloat(data.rating);
-            safeRating = isNaN(parsed) ? 0 : parsed;
-          }
-
-          let safeLatitude = data.latitude || 35.4676;
-          let safeLongitude = data.longitude || -97.5164;
-
-          let safeInsurance: string[] = [];
-          if (Array.isArray(data.insuranceAccepted)) {
-            safeInsurance = data.insuranceAccepted;
-          } else if (typeof data.insuranceAccepted === 'string') {
-            safeInsurance = [data.insuranceAccepted];
-          }
-
-          foundProvider = {
-            id: docSnap.id,
-            name: data.name || 'Unknown Provider',
-            specialty: data.specialty || 'General',
-            address: data.address || '',
-            phone: data.phone || '',
-            rating: safeRating,
-            acceptsNewPatients: data.acceptingNewPatients ?? data.acceptsNewPatients ?? true,
-            insuranceAccepted: safeInsurance,
-            location: {
-              latitude: safeLatitude,
-              longitude: safeLongitude,
-            },
-            latitude: safeLatitude,
-            longitude: safeLongitude,
-            city: data.city || '',
-            state: data.state || 'Oklahoma',
-            verified: data.verified ?? false,
-            profilePicture: data.profilePicture || '',
-            welcomeMessage: data.welcomeMessage || '',
-            aboutMe: data.aboutMe || '',
-            specialInterests: Array.isArray(data.specialInterests) ? data.specialInterests : [],
-            education: Array.isArray(data.education) ? data.education : [],
-            languagesSpoken: Array.isArray(data.languagesSpoken) ? data.languagesSpoken : [],
-            boardCertifications: Array.isArray(data.boardCertifications)
-              ? data.boardCertifications
-              : [],
-            interviewConsult: data.interviewConsult || null,
-          };
-        }
-      });
-
-      if (!foundProvider) {
+      if (!docSnap.exists()) {
         Alert.alert('Provider Not Found', 'This provider could not be loaded.', [
           { text: 'OK', onPress: () => router.back() },
         ]);
         return;
       }
 
+      const data = docSnap.data();
+
+      // Safe rating parsing
+      let safeRating = 0;
+      if (typeof data.rating === 'number') {
+        safeRating = data.rating;
+      } else if (typeof data.rating === 'string') {
+        const parsed = parseFloat(data.rating);
+        safeRating = isNaN(parsed) ? 0 : parsed;
+      }
+
+      // Safe coordinates with Oklahoma City fallback
+      const safeLatitude = typeof data.latitude === 'number' ? data.latitude : 35.4676;
+      const safeLongitude = typeof data.longitude === 'number' ? data.longitude : -97.5164;
+
+      // Safe insurance array
+      let safeInsurance: string[] = [];
+      if (Array.isArray(data.insuranceAccepted)) {
+        safeInsurance = data.insuranceAccepted;
+      } else if (typeof data.insuranceAccepted === 'string') {
+        safeInsurance = [data.insuranceAccepted];
+      }
+
+      const foundProvider: Provider = {
+        id: docSnap.id,
+        name: typeof data.name === 'string' ? data.name : 'Unknown Provider',
+        specialty: typeof data.specialty === 'string' ? data.specialty : 'General',
+        address: typeof data.address === 'string' ? data.address : '',
+        phone: typeof data.phone === 'string' ? data.phone : '',
+        rating: safeRating,
+        acceptsNewPatients: data.acceptingNewPatients ?? data.acceptsNewPatients ?? true,
+        insuranceAccepted: safeInsurance,
+        location: {
+          latitude: safeLatitude,
+          longitude: safeLongitude,
+        },
+        latitude: safeLatitude,
+        longitude: safeLongitude,
+        city: typeof data.city === 'string' ? data.city : '',
+        state: typeof data.state === 'string' ? data.state : 'Oklahoma',
+        verified: data.verified === true,
+        profilePicture: typeof data.profilePicture === 'string' ? data.profilePicture : '',
+        welcomeMessage: typeof data.welcomeMessage === 'string' ? data.welcomeMessage : '',
+        aboutMe: typeof data.aboutMe === 'string' ? data.aboutMe : '',
+        specialInterests: Array.isArray(data.specialInterests) ? data.specialInterests : [],
+        education: Array.isArray(data.education) ? data.education : [],
+        languagesSpoken: Array.isArray(data.languagesSpoken) ? data.languagesSpoken : [],
+        boardCertifications: Array.isArray(data.boardCertifications)
+          ? data.boardCertifications
+          : [],
+        interviewConsult: data.interviewConsult || null,
+      };
+
       setProvider(foundProvider);
     } catch (error) {
-      console.error('Error loading provider:', error);
+      if (__DEV__) console.error('Error loading provider:', error);
       Alert.alert('Error', 'Could not load provider details', [
         { text: 'OK', onPress: () => router.back() },
       ]);
@@ -237,6 +237,7 @@ export default function ProviderDetailScreen() {
     }
   }, [id, router]);
 
+  // ─── Check favorites ─────────────────────────────────────────────────────────
   const checkIfFavorite = useCallback(async () => {
     try {
       const favs = await AsyncStorage.getItem('favorites');
@@ -245,7 +246,7 @@ export default function ProviderDetailScreen() {
         setIsFavorite(favorites.includes(id));
       }
     } catch (error) {
-      console.log('Error checking favorites:', error);
+      if (__DEV__) console.log('Error checking favorites:', error);
     }
   }, [id]);
 
@@ -254,6 +255,7 @@ export default function ProviderDetailScreen() {
     checkIfFavorite();
   }, [loadProvider, checkIfFavorite]);
 
+  // ─── Actions ─────────────────────────────────────────────────────────────────
   const handleCall = () => {
     if (provider?.phone) {
       Linking.openURL(`tel:${provider.phone}`);
@@ -282,10 +284,11 @@ export default function ProviderDetailScreen() {
       await AsyncStorage.setItem('favorites', JSON.stringify(favorites));
       setIsFavorite(!isFavorite);
     } catch (error) {
-      console.log('Error toggling favorite:', error);
+      if (__DEV__) console.log('Error toggling favorite:', error);
     }
   };
 
+  // ─── Loading state ────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <View style={[styles.container, styles.centerContainer, { backgroundColor: colors.background }]}>
@@ -295,6 +298,7 @@ export default function ProviderDetailScreen() {
     );
   }
 
+  // ─── Not found state ──────────────────────────────────────────────────────────
   if (!provider) {
     return (
       <View style={[styles.container, styles.centerContainer, { backgroundColor: colors.background }]}>
@@ -314,11 +318,18 @@ export default function ProviderDetailScreen() {
     provider.insuranceAccepted.includes('Medicaid');
   const acceptingPatients = provider.acceptsNewPatients ?? provider.acceptingNewPatients ?? true;
 
+  // ─── Main render ──────────────────────────────────────────────────────────────
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.card }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backBtn}
+          accessibilityLabel="Go back"
+          accessibilityRole="button"
+        >
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
 
@@ -346,7 +357,12 @@ export default function ProviderDetailScreen() {
           </View>
         </View>
 
-        <TouchableOpacity onPress={toggleFavorite} style={styles.favoriteBtn}>
+        <TouchableOpacity
+          onPress={toggleFavorite}
+          style={styles.favoriteBtn}
+          accessibilityLabel={isFavorite ? 'Remove from saved providers' : 'Save provider'}
+          accessibilityRole="button"
+        >
           <Ionicons
             name={isFavorite ? 'heart' : 'heart-outline'}
             size={28}
@@ -356,16 +372,16 @@ export default function ProviderDetailScreen() {
       </View>
 
       {/* Welcome Message */}
-      {provider.welcomeMessage && (
+      {!!provider.welcomeMessage && (
         <View style={[styles.section, { backgroundColor: colors.primary + '20' }]}>
           <Text style={[styles.welcomeMessage, { color: colors.text }]}>
-            💬 {provider.welcomeMessage}
+            {provider.welcomeMessage}
           </Text>
         </View>
       )}
 
       {/* About */}
-      {provider.aboutMe && (
+      {!!provider.aboutMe && (
         <View style={[styles.section, { backgroundColor: colors.card }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>About</Text>
           <Text style={[styles.aboutText, { color: colors.text }]}>{provider.aboutMe}</Text>
@@ -389,7 +405,7 @@ export default function ProviderDetailScreen() {
       {/* Education */}
       {provider.education && provider.education.length > 0 && (
         <View style={[styles.section, { backgroundColor: colors.card }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>🎓 Education</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Education</Text>
           {provider.education.map((edu, index) => (
             <View key={index} style={styles.educationItem}>
               <Text style={[styles.degree, { color: colors.text }]}>{edu.degree}</Text>
@@ -404,7 +420,7 @@ export default function ProviderDetailScreen() {
       {/* Languages */}
       {provider.languagesSpoken && provider.languagesSpoken.length > 1 && (
         <View style={[styles.section, { backgroundColor: colors.card }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>🌍 Languages Spoken</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Languages Spoken</Text>
           <Text style={[styles.languages, { color: colors.text }]}>
             {provider.languagesSpoken.join(', ')}
           </Text>
@@ -414,9 +430,7 @@ export default function ProviderDetailScreen() {
       {/* Board Certifications */}
       {provider.boardCertifications && provider.boardCertifications.length > 0 && (
         <View style={[styles.section, { backgroundColor: colors.card }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            📜 Board Certifications
-          </Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Board Certifications</Text>
           {provider.boardCertifications.map((cert, index) => (
             <Text key={index} style={[styles.certification, { color: colors.text }]}>
               • {cert}
@@ -430,6 +444,8 @@ export default function ProviderDetailScreen() {
         <TouchableOpacity
           style={[styles.actionButton, { backgroundColor: colors.primary }]}
           onPress={handleCall}
+          accessibilityLabel="Call provider"
+          accessibilityRole="button"
         >
           <Ionicons name="call" size={20} color="#fff" />
           <Text style={styles.actionText}>Call</Text>
@@ -438,6 +454,8 @@ export default function ProviderDetailScreen() {
         <TouchableOpacity
           style={[styles.actionButton, { backgroundColor: colors.primary }]}
           onPress={handleDirections}
+          accessibilityLabel="Get directions to provider"
+          accessibilityRole="button"
         >
           <Ionicons name="navigate" size={20} color="#fff" />
           <Text style={styles.actionText}>Directions</Text>
@@ -446,7 +464,7 @@ export default function ProviderDetailScreen() {
 
       {/* Contact Info */}
       <View style={[styles.section, { backgroundColor: colors.card }]}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>📞 Contact Information</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Contact Information</Text>
 
         <View style={styles.infoRow}>
           <Ionicons name="location" size={20} color={colors.primary} />
@@ -468,10 +486,10 @@ export default function ProviderDetailScreen() {
 
       {/* Insurance */}
       <View style={[styles.section, { backgroundColor: colors.card }]}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>💳 Insurance Accepted</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Insurance Accepted</Text>
         {hasSoonerCare && (
           <View style={[styles.soonerCareHighlight, { backgroundColor: colors.success }]}>
-            <Text style={styles.soonerCareText}>✅ Accepts SoonerCare/Medicaid</Text>
+            <Text style={styles.soonerCareText}>Accepts SoonerCare / Medicaid</Text>
           </View>
         )}
         <Text style={[styles.insuranceList, { color: colors.text }]}>
@@ -485,11 +503,11 @@ export default function ProviderDetailScreen() {
       {/* Interview Consult */}
       <InterviewConsultCard interviewConsult={provider.interviewConsult} colors={colors} />
 
-      {/* Accepting Patients Status */}
+      {/* Accepting Patients */}
       {acceptingPatients && (
         <View style={[styles.section, { backgroundColor: colors.success + '20' }]}>
           <Text style={[styles.acceptingText, { color: colors.success }]}>
-            ✅ Currently Accepting New Patients
+            Currently Accepting New Patients
           </Text>
         </View>
       )}
@@ -497,7 +515,7 @@ export default function ProviderDetailScreen() {
       {/* Map */}
       {MapView && provider.location && (
         <View style={[styles.section, { backgroundColor: colors.card }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>📍 Location</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Location</Text>
           <View style={styles.mapContainer}>
             <MapView
               style={styles.map}
@@ -514,17 +532,14 @@ export default function ProviderDetailScreen() {
         </View>
       )}
 
-      {/* Book Appointment Button */}
+      {/* Book Appointment */}
       <View style={styles.bookContainer}>
         <TouchableOpacity
-          style={[
-            styles.bookButton,
-            {
-              backgroundColor: acceptingPatients ? colors.primary : colors.border,
-            },
-          ]}
+          style={[styles.bookButton, { backgroundColor: acceptingPatients ? colors.primary : colors.border }]}
           disabled={!acceptingPatients}
           activeOpacity={0.7}
+          accessibilityLabel={acceptingPatients ? 'Book appointment' : 'Provider not accepting new patients'}
+          accessibilityRole="button"
           onPress={() => {
             if (acceptingPatients && id) {
               router.push(`/booking/${id}` as any);
@@ -532,7 +547,7 @@ export default function ProviderDetailScreen() {
           }}
         >
           <Text style={styles.bookButtonText}>
-            {acceptingPatients ? '📅 Book Appointment' : 'Not Accepting New Patients'}
+            {acceptingPatients ? 'Book Appointment' : 'Not Accepting New Patients'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -542,32 +557,14 @@ export default function ProviderDetailScreen() {
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  centerContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-  },
-  errorText: {
-    fontSize: 18,
-    marginBottom: 20,
-  },
-  backButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  backButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  container: { flex: 1 },
+  centerContainer: { justifyContent: 'center', alignItems: 'center' },
+  loadingText: { marginTop: 16, fontSize: 16 },
+  errorText: { fontSize: 18, marginBottom: 20 },
+  backButton: { paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
+  backButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   header: {
     paddingTop: 60,
     paddingBottom: 20,
@@ -575,246 +572,61 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  backBtn: {
-    padding: 8,
-    marginRight: 8,
-  },
-  headerContent: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  profilePic: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    marginRight: 12,
-  },
+  backBtn: { padding: 8, marginRight: 8 },
+  headerContent: { flex: 1, flexDirection: 'row', alignItems: 'center' },
+  profilePic: { width: 70, height: 70, borderRadius: 35, marginRight: 12 },
   placeholderPic: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    marginRight: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 70, height: 70, borderRadius: 35, marginRight: 12,
+    justifyContent: 'center', alignItems: 'center',
   },
-  placeholderText: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: 'bold',
-  },
-  headerText: {
-    flex: 1,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 4,
-  },
-  name: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    flex: 1,
-  },
-  verifiedBadge: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  verifiedText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  specialty: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  favoriteBtn: {
-    padding: 8,
-  },
-  section: {
-    marginHorizontal: 16,
-    marginTop: 16,
-    padding: 16,
-    borderRadius: 12,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: 'bold',
-    marginBottom: 12,
-  },
-  welcomeMessage: {
-    fontSize: 15,
-    lineHeight: 22,
-    fontStyle: 'italic',
-  },
-  aboutText: {
-    fontSize: 15,
-    lineHeight: 22,
-  },
-  interestsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  interestChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  interestText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  educationItem: {
-    marginBottom: 12,
-  },
-  degree: {
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  school: {
-    fontSize: 14,
-  },
-  languages: {
-    fontSize: 15,
-  },
-  certification: {
-    fontSize: 14,
-    marginBottom: 6,
-  },
-  actionsContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    marginTop: 16,
-    gap: 12,
-  },
+  placeholderText: { color: '#fff', fontSize: 28, fontWeight: 'bold' },
+  headerText: { flex: 1 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  name: { fontSize: 18, fontWeight: 'bold', flex: 1 },
+  verifiedBadge: { width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  verifiedText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
+  specialty: { fontSize: 14, fontWeight: '600' },
+  favoriteBtn: { padding: 8 },
+  section: { marginHorizontal: 16, marginTop: 16, padding: 16, borderRadius: 12 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  sectionTitle: { fontSize: 17, fontWeight: 'bold', marginBottom: 12 },
+  welcomeMessage: { fontSize: 15, lineHeight: 22, fontStyle: 'italic' },
+  aboutText: { fontSize: 15, lineHeight: 22 },
+  interestsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  interestChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },
+  interestText: { color: '#fff', fontSize: 13, fontWeight: '600' },
+  educationItem: { marginBottom: 12 },
+  degree: { fontSize: 15, fontWeight: '600', marginBottom: 4 },
+  school: { fontSize: 14 },
+  languages: { fontSize: 15 },
+  certification: { fontSize: 14, marginBottom: 6 },
+  actionsContainer: { flexDirection: 'row', paddingHorizontal: 16, marginTop: 16, gap: 12 },
   actionButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 8,
-    gap: 8,
+    flex: 1, flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'center', paddingVertical: 12, borderRadius: 8, gap: 8,
   },
-  actionText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 12,
-  },
-  infoText: {
-    fontSize: 14,
-    flex: 1,
-  },
-  soonerCareHighlight: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    marginBottom: 12,
-  },
-  soonerCareText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  insuranceList: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  pricingGrid: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  pricingItem: {
-    flex: 1,
-  },
-  pricingLabel: {
-    fontSize: 12,
-    marginBottom: 4,
-  },
-  pricingValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  infoBox: {
-    marginTop: 12,
-    padding: 12,
-    borderRadius: 8,
-  },
-  infoBoxText: {
-    fontSize: 13,
-    lineHeight: 18,
-    marginBottom: 8,
-  },
-  infoClose: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  consultBox: {
-    padding: 16,
-    borderRadius: 8,
-  },
-  consultHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  consultPrice: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  consultDuration: {
-    fontSize: 14,
-  },
-  consultDescription: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  acceptingText: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  mapContainer: {
-    height: 200,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  map: {
-    flex: 1,
-  },
-  bookContainer: {
-    paddingHorizontal: 16,
-    marginTop: 16,
-  },
-  bookButton: {
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  bookButtonText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: 'bold',
-  },
+  actionText: { color: '#fff', fontSize: 15, fontWeight: '600' },
+  infoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 12 },
+  infoText: { fontSize: 14, flex: 1 },
+  soonerCareHighlight: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, marginBottom: 12 },
+  soonerCareText: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
+  insuranceList: { fontSize: 14, lineHeight: 20 },
+  pricingGrid: { flexDirection: 'row', gap: 12 },
+  pricingItem: { flex: 1 },
+  pricingLabel: { fontSize: 12, marginBottom: 4 },
+  pricingValue: { fontSize: 20, fontWeight: 'bold' },
+  infoBox: { marginTop: 12, padding: 12, borderRadius: 8 },
+  infoBoxText: { fontSize: 13, lineHeight: 18, marginBottom: 8 },
+  infoClose: { fontSize: 14, fontWeight: '600' },
+  consultBox: { padding: 16, borderRadius: 8 },
+  consultHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  consultPrice: { fontSize: 24, fontWeight: 'bold' },
+  consultDuration: { fontSize: 14 },
+  consultDescription: { fontSize: 14, lineHeight: 20 },
+  acceptingText: { fontSize: 15, fontWeight: 'bold', textAlign: 'center' },
+  mapContainer: { height: 200, borderRadius: 12, overflow: 'hidden' },
+  map: { flex: 1 },
+  bookContainer: { paddingHorizontal: 16, marginTop: 16 },
+  bookButton: { paddingVertical: 16, borderRadius: 12, alignItems: 'center' },
+  bookButtonText: { color: '#fff', fontSize: 17, fontWeight: 'bold' },
 });

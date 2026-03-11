@@ -270,7 +270,7 @@ export default function HomeScreen() {
         setShowDisclaimer(false);
       }
     } catch (error) {
-      console.log('Could not load disclaimer preference:', error);
+      if (__DEV__) console.log('Could not load disclaimer preference:', error);
     }
   };
 
@@ -285,7 +285,7 @@ export default function HomeScreen() {
       });
       await AsyncStorage.setItem('disclaimerDismissed', 'true');
     } catch (error) {
-      console.log('Could not save disclaimer preference:', error);
+      if (__DEV__) console.log('Could not save disclaimer preference:', error);
     }
   };
 
@@ -303,7 +303,7 @@ export default function HomeScreen() {
         }
       }
     } catch (error) {
-      console.log('Could not load user name:', error);
+      if (__DEV__) console.log('Could not load user name:', error);
     }
   };
 
@@ -311,14 +311,14 @@ export default function HomeScreen() {
     try {
       setLoading(true);
 
-      console.log('🔄 Starting to load providers...');
+      if (__DEV__) console.log('🔄 Starting to load providers...');
 
       let querySnapshot;
       try {
         const providersQuery = query(collection(db, 'providers'));
         querySnapshot = await getDocs(providersQuery);
       } catch (firestoreError) {
-        console.error('❌ Firestore error:', firestoreError);
+        if (__DEV__) console.error('❌ Firestore error:', firestoreError);
         Alert.alert(
           'Network Error',
           'Could not load providers. Please check your internet connection.',
@@ -337,10 +337,12 @@ export default function HomeScreen() {
         const data = docSnap.data();
 
         if (!data.name || !data.specialty) {
-          console.warn(`⚠️ Skipping provider ${docSnap.id} - missing required fields:`, {
-            hasName: !!data.name,
-            hasSpecialty: !!data.specialty,
-          });
+          if (__DEV__) {
+            console.warn(`⚠️ Skipping provider ${docSnap.id} - missing required fields:`, {
+              hasName: !!data.name,
+              hasSpecialty: !!data.specialty,
+            });
+          }
           skippedCount++;
           return;
         }
@@ -407,13 +409,15 @@ export default function HomeScreen() {
         }
       });
 
-      console.log(`✅ Loaded ${validCount} valid providers, skipped ${skippedCount} invalid`);
+      if (__DEV__) console.log(`✅ Loaded ${validCount} valid providers, skipped ${skippedCount} invalid`);
 
       // 🆕 DEBUG: Show first 3 provider IDs
-      console.log('📋 First 3 provider IDs:', providersList.slice(0, 3).map(p => ({
-        id: p.id,
-        name: p.name
-      })));
+      if (__DEV__) {
+        console.log('📋 First 3 provider IDs:', providersList.slice(0, 3).map(p => ({
+          id: p.id,
+          name: p.name
+        })));
+      }
 
       setProviders(providersList);
 
@@ -452,7 +456,7 @@ export default function HomeScreen() {
       const cats = ['all', ...Array.from(specialtiesSet)].slice(0, 8);
       setAvailableCategories(cats);
     } catch (error) {
-      console.error('❌ Unexpected error in loadProviders:', error);
+      if (__DEV__) console.error('❌ Unexpected error in loadProviders:', error);
       Alert.alert('Error', 'Failed to load providers. Please try again.', [
         { text: 'Retry', onPress: () => loadProviders() },
         { text: 'Cancel', style: 'cancel' },
@@ -522,15 +526,17 @@ export default function HomeScreen() {
   const handleProviderPress = (providerId: string) => {
     try {
       if (!providerId || typeof providerId !== 'string') {
-        console.error('Invalid provider ID:', providerId);
+        if (__DEV__) console.error('Invalid provider ID:', providerId);
         Alert.alert('Error', 'Could not open provider details');
         return;
       }
 
-      console.log('🔗 Navigating to provider:', providerId); // 🆕 DEBUG
+      if (__DEV__) {
+        console.log('🔗 Navigating to provider:', providerId); // 🆕 DEBUG
+      }
       router.push(`/provider/${providerId}` as any);
     } catch (error) {
-      console.error('Error navigating to provider:', error);
+      if (__DEV__) console.error('Error navigating to provider:', error);
       Alert.alert('Error', 'Could not open provider details');
     }
   };

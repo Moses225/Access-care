@@ -15,7 +15,7 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    console.log('🔑 handleLogin called');
+    if (__DEV__) console.log('🔑 handleLogin called');
 
     // Sanitize inputs
     const sanitizedEmail = sanitizeEmail(email);
@@ -32,20 +32,20 @@ export default function LoginScreen() {
       return;
     }
 
-    console.log('🔑 Attempting to sign in with:', sanitizedEmail);
+    if (__DEV__) console.log('🔑 Attempting to sign in with:', sanitizedEmail);
     setLoading(true);
 
     try {
-      console.log('🔑 Calling signInWithEmailAndPassword...');
+      if (__DEV__) console.log('🔑 Calling signInWithEmailAndPassword...');
       const userCredential = await signInWithEmailAndPassword(auth, sanitizedEmail, password);
-      console.log('✅ Sign in SUCCESS!', userCredential.user.email);
-      console.log('✅ User UID:', userCredential.user.uid);
-      console.log('⏳ Waiting for auth state change to trigger navigation...');
+      if (__DEV__) console.log('✅ Sign in SUCCESS!', userCredential.user.email);
+      if (__DEV__) console.log('✅ User UID:', userCredential.user.uid);
+      if (__DEV__) console.log('⏳ Waiting for auth state change to trigger navigation...');
 
       // Navigation will happen automatically via _layout.tsx
 
     } catch (error: any) {
-      console.error('❌ Sign in FAILED:', error);
+      if (__DEV__) console.error('❌ Sign in FAILED:', error);
       logError(error, 'Login');
 
       let errorMessage = 'Failed to sign in. Please try again.';
@@ -67,7 +67,7 @@ export default function LoginScreen() {
       Alert.alert('Login Failed', errorMessage);
     } finally {
       setLoading(false);
-      console.log('🔑 Login attempt complete (loading=false)');
+      if (__DEV__) console.log('🔑 Login attempt complete (loading=false)');
     }
   };
 

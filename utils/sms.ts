@@ -9,26 +9,28 @@ export async function sendBookingConfirmationSMS(
   time: string,
   bookingId: string
 ): Promise<boolean> {
-  console.log(`
-📱 SMS CONFIRMATION (Beta - Logged Only)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-To: ${phoneNumber}
-
-AccessCare Appointment Request
-
-✅ Provider: ${providerName}
-📅 Date: ${date}
-⏰ Time: ${time}
-🆔 Booking ID: ${bookingId}
-
-Status: Pending Confirmation
-
-We'll text you when the provider confirms!
-
-Reply STOP to unsubscribe.
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  `);
+  if (__DEV__) {
+    console.log(`
+  📱 SMS CONFIRMATION (Beta - Logged Only)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  To: ${phoneNumber}
   
+  AccessCare Appointment Request
+  
+  ✅ Provider: ${providerName}
+  📅 Date: ${date}
+  ⏰ Time: ${time}
+  🆔 Booking ID: ${bookingId}
+  
+  Status: Pending Confirmation
+  
+  We'll text you when the provider confirms!
+  
+  Reply STOP to unsubscribe.
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    `);
+  }
+
   // For beta testing, return success
   return true;
 }
@@ -39,21 +41,23 @@ export async function sendBookingConfirmedSMS(
   date: string,
   time: string
 ): Promise<boolean> {
-  console.log(`
-📱 SMS CONFIRMED (Beta - Logged Only)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-To: ${phoneNumber}
-
-✅ Appointment CONFIRMED!
-
-Provider: ${providerName}
-Date: ${date}
-Time: ${time}
-
-See you soon! Reply if you need to reschedule.
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  `);
+  if (__DEV__) {
+    console.log(`
+  📱 SMS CONFIRMED (Beta - Logged Only)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  To: ${phoneNumber}
   
+  ✅ Appointment CONFIRMED!
+  
+  Provider: ${providerName}
+  Date: ${date}
+  Time: ${time}
+  
+  See you soon! Reply if you need to reschedule.
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    `);
+  }
+
   return true;
 }
 
@@ -63,22 +67,24 @@ export async function sendBookingReminderSMS(
   date: string,
   time: string
 ): Promise<boolean> {
-  console.log(`
-📱 SMS REMINDER (Beta - Logged Only)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-To: ${phoneNumber}
-
-⏰ Appointment Reminder
-
-Tomorrow at ${time}
-Provider: ${providerName}
-
-📍 Arrive 10 minutes early
-🆔 Bring your ID and insurance card
-
-Reply CONFIRM or CANCEL
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  `);
+  if (__DEV__) {
+    console.log(`
+  📱 SMS REMINDER (Beta - Logged Only)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  To: ${phoneNumber}
   
+  ⏰ Appointment Reminder
+  
+  Tomorrow at ${time}
+  Provider: ${providerName}
+  
+  📍 Arrive 10 minutes early
+  🆔 Bring your ID and insurance card
+  
+  Reply CONFIRM or CANCEL
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    `);
+  }
+
   return true;
 }

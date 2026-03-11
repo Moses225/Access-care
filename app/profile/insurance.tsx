@@ -35,7 +35,7 @@ export default function InsuranceScreen() {
         setPolicyNumber(data.policy || '');
       }
     } catch (error) {
-      console.error('Error loading insurance:', error);
+      if (__DEV__) console.error('Error loading insurance:', error);
     }
   };
 
@@ -53,7 +53,7 @@ export default function InsuranceScreen() {
 
       Alert.alert('Success', 'Insurance information saved');
     } catch (error) {
-      console.error('Error saving insurance:', error);
+      if (__DEV__) console.error('Error saving insurance:', error);
       Alert.alert('Error', 'Failed to save insurance information');
     } finally {
       setLoading(false);
