@@ -25,6 +25,7 @@ export default function SavedProvidersScreen() {
       return;
     }
     loadSavedProviders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isGuest]);
 
   const loadSavedProviders = async () => {
