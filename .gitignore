@@ -90,3 +90,5 @@ Thumbs.db
 .env.local
 .env.staging
 .env.production
+scripts/serviceAccountKey.staging.json
+scripts/serviceAccountKey.production.json
