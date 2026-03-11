@@ -25,7 +25,7 @@ try {
   const ExpoMaps = require('react-native-maps');
   MapView = ExpoMaps.default;
   Marker = ExpoMaps.Marker;
-} catch (e) {
+} catch {
   // Maps not available
 }
 
