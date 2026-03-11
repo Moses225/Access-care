@@ -1,6 +1,5 @@
 import { collection, doc, onSnapshot, query, updateDoc, where } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'expo-router';
 import {
   ActivityIndicator, Alert, FlatList, StyleSheet,
   Text, TouchableOpacity, View,
@@ -27,7 +26,6 @@ type BookingRecord = {
 export type Booking = BookingRecord & { id: string };
 
 export default function AppointmentsScreen() {
-  const router = useRouter();
   const { colors } = useTheme();
   const { isGuest } = useAuth();
 
