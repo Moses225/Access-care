@@ -15,7 +15,7 @@ export default function WelcomeScreen() {
       setGuestLoading(true);
       await signInAsGuest();
       // AuthContext will update user state → _layout.tsx navigates to /(tabs)
-    } catch (error) {
+    } catch{
       Alert.alert('Error', 'Could not start guest session. Please try again.');
     } finally {
       setGuestLoading(false);
