@@ -21,7 +21,7 @@ let MapView: any;
 let Marker: any;
 
 try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const ExpoMaps = require('react-native-maps');
   MapView = ExpoMaps.default;
   Marker = ExpoMaps.Marker;
