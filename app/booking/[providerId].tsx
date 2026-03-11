@@ -1,32 +1,44 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { addDoc, collection, doc, getDoc } from 'firebase/firestore';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert, ScrollView, StyleSheet, Text,
+  TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
+import { GuestUpgradePrompt } from '../../components/GuestUpgradePrompt';
 import { auth, db } from '../../firebase';
 
 export default function BookingScreen() {
   const router = useRouter();
   const { providerId } = useLocalSearchParams<{ providerId: string }>();
   const { colors } = useTheme();
-  
+  const { isGuest } = useAuth();
+
+  const [provider, setProvider] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
   const [patientName, setPatientName] = useState('');
   const [patientPhone, setPatientPhone] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
 
-  // Generate available time slots (9 AM - 5 PM, every 30 minutes)
+  useEffect(() => {
+    if (!isGuest) loadProvider();
+  }, [isGuest]);
+
+  const loadProvider = async () => {
+    try {
+      const providerDoc = await getDoc(doc(db, 'providers', providerId));
+      if (providerDoc.exists()) setProvider({ id: providerDoc.id, ...providerDoc.data() });
+    } catch (error) {
+      if (__DEV__) console.error('Error loading provider:', error);
+    }
+  };
+
   const generateTimeSlots = () => {
     const slots = [];
     for (let hour = 9; hour < 17; hour++) {
@@ -37,52 +49,27 @@ export default function BookingScreen() {
   };
 
   const timeSlots = generateTimeSlots();
-
-  // Get minimum date (today)
   const today = new Date().toISOString().split('T')[0];
-  
-  // Get maximum date (3 months from now)
   const maxDate = new Date();
   maxDate.setMonth(maxDate.getMonth() + 3);
   const maxDateString = maxDate.toISOString().split('T')[0];
 
   const handleBooking = async () => {
-    // Validation
-    if (!selectedDate) {
-      Alert.alert('Error', 'Please select a date');
-      return;
-    }
-    if (!selectedTime) {
-      Alert.alert('Error', 'Please select a time');
-      return;
-    }
-    if (!patientName.trim()) {
-      Alert.alert('Error', 'Please enter your name');
-      return;
-    }
-    if (!patientPhone.trim()) {
-      Alert.alert('Error', 'Please enter your phone number');
-      return;
-    }
+    if (!selectedDate) { Alert.alert('Error', 'Please select a date'); return; }
+    if (!selectedTime) { Alert.alert('Error', 'Please select a time'); return; }
+    if (!patientName.trim()) { Alert.alert('Error', 'Please enter your name'); return; }
+    if (!patientPhone.trim()) { Alert.alert('Error', 'Please enter your phone number'); return; }
 
     setLoading(true);
-
     try {
-      // Get provider details
       const providerDoc = await getDoc(doc(db, 'providers', providerId));
-      
-      if (!providerDoc.exists()) {
-        Alert.alert('Error', 'Provider not found');
-        setLoading(false);
-        return;
-      }
+      if (!providerDoc.exists()) { Alert.alert('Error', 'Provider not found'); return; }
 
       const providerData = providerDoc.data();
       const user = auth.currentUser;
 
-      // Create booking
       const bookingData = {
-        userId: user?.uid || 'guest',
+        userId: user?.uid || '',
         providerId,
         providerName: providerData.name,
         providerSpecialty: providerData.specialty,
@@ -96,19 +83,12 @@ export default function BookingScreen() {
       };
 
       const bookingRef = await addDoc(collection(db, 'bookings'), bookingData);
-
       if (__DEV__) console.log('✅ Booking created:', bookingRef.id);
 
-      // Show success and navigate to confirmation
       Alert.alert(
         'Booking Requested!',
-        `Your appointment request for ${selectedDate} at ${selectedTime} has been submitted. The provider will confirm shortly.`,
-        [
-          {
-            text: 'OK',
-            onPress: () => router.push(`/booking/confirmation?bookingId=${bookingRef.id}` as any),
-          },
-        ]
+        `Your appointment request for ${selectedDate} at ${selectedTime} has been submitted.`,
+        [{ text: 'OK', onPress: () => router.push(`/booking/confirmation?bookingId=${bookingRef.id}` as any) }]
       );
     } catch (error) {
       if (__DEV__) console.error('❌ Booking error:', error);
@@ -118,30 +98,62 @@ export default function BookingScreen() {
     }
   };
 
+  // ─── Guest wall ────────────────────────────────────────────────────────────
+  if (isGuest) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { backgroundColor: colors.card }]}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}
+            accessibilityRole="button" accessibilityLabel="Go back">
+            <Text style={[styles.backText, { color: colors.primary }]}>← Back</Text>
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Book Appointment</Text>
+        </View>
+        <View style={styles.guestWall}>
+          <Text style={styles.lockIcon}>🔒</Text>
+          <Text style={[styles.guestWallTitle, { color: colors.text }]}>Account Required to Book</Text>
+          <Text style={[styles.guestWallText, { color: colors.subtext }]}>
+            Create a free account to book appointments. It only takes 30 seconds.
+          </Text>
+          <TouchableOpacity
+            style={[styles.createAccountButton, { backgroundColor: colors.primary }]}
+            onPress={() => setShowUpgradePrompt(true)}
+            accessibilityRole="button"
+          >
+            <Text style={styles.createAccountButtonText}>Create Free Account</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.back()} accessibilityRole="button">
+            <Text style={[styles.backToProviderText, { color: colors.subtext }]}>Go back to provider</Text>
+          </TouchableOpacity>
+        </View>
+        <GuestUpgradePrompt
+          visible={showUpgradePrompt}
+          onClose={() => setShowUpgradePrompt(false)}
+          reason="book appointments"
+        />
+      </View>
+    );
+  }
+
+  // ─── Full account ──────────────────────────────────────────────────────────
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.card }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}
+          accessibilityRole="button" accessibilityLabel="Go back">
           <Text style={[styles.backText, { color: colors.primary }]}>← Back</Text>
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Book Appointment</Text>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Calendar */}
         <View style={[styles.section, { backgroundColor: colors.card }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Select Date</Text>
           <Calendar
             minDate={today}
             maxDate={maxDateString}
             onDayPress={(day) => setSelectedDate(day.dateString)}
-            markedDates={{
-              [selectedDate]: {
-                selected: true,
-                selectedColor: colors.primary,
-              },
-            }}
+            markedDates={{ [selectedDate]: { selected: true, selectedColor: colors.primary } }}
             theme={{
               backgroundColor: colors.card,
               calendarBackground: colors.card,
@@ -157,7 +169,6 @@ export default function BookingScreen() {
           />
         </View>
 
-        {/* Time Slots */}
         {selectedDate && (
           <View style={[styles.section, { backgroundColor: colors.card }]}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Select Time</Text>
@@ -167,21 +178,15 @@ export default function BookingScreen() {
                 return (
                   <TouchableOpacity
                     key={time}
-                    style={[
-                      styles.timeSlot,
-                      {
-                        backgroundColor: isSelected ? colors.primary : colors.background,
-                        borderColor: isSelected ? colors.primary : colors.border,
-                      },
-                    ]}
+                    style={[styles.timeSlot, {
+                      backgroundColor: isSelected ? colors.primary : colors.background,
+                      borderColor: isSelected ? colors.primary : colors.border,
+                    }]}
                     onPress={() => setSelectedTime(time)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Select ${time}`}
                   >
-                    <Text
-                      style={[
-                        styles.timeText,
-                        { color: isSelected ? '#ffffff' : colors.text },
-                      ]}
-                    >
+                    <Text style={[styles.timeText, { color: isSelected ? '#ffffff' : colors.text }]}>
                       {time}
                     </Text>
                   </TouchableOpacity>
@@ -191,56 +196,37 @@ export default function BookingScreen() {
           </View>
         )}
 
-        {/* Patient Information */}
         {selectedDate && selectedTime && (
           <View style={[styles.section, { backgroundColor: colors.card }]}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Your Information
-            </Text>
-
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Your Information</Text>
             <TextInput
               style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
-              placeholder="Full Name *"
-              placeholderTextColor={colors.subtext}
-              value={patientName}
-              onChangeText={setPatientName}
+              placeholder="Full Name *" placeholderTextColor={colors.subtext}
+              value={patientName} onChangeText={setPatientName}
+              accessibilityLabel="Full name"
             />
-
             <TextInput
               style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
-              placeholder="Phone Number *"
-              placeholderTextColor={colors.subtext}
-              value={patientPhone}
-              onChangeText={setPatientPhone}
-              keyboardType="phone-pad"
+              placeholder="Phone Number *" placeholderTextColor={colors.subtext}
+              value={patientPhone} onChangeText={setPatientPhone} keyboardType="phone-pad"
+              accessibilityLabel="Phone number"
             />
-
             <TextInput
               style={[styles.textArea, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
-              placeholder="Notes (Optional)"
-              placeholderTextColor={colors.subtext}
-              value={notes}
-              onChangeText={setNotes}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
+              placeholder="Notes (Optional)" placeholderTextColor={colors.subtext}
+              value={notes} onChangeText={setNotes} multiline numberOfLines={4} textAlignVertical="top"
+              accessibilityLabel="Notes"
             />
           </View>
         )}
 
-        {/* Booking Summary */}
         {selectedDate && selectedTime && (
           <View style={[styles.section, { backgroundColor: colors.card }]}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Booking Summary</Text>
             <View style={styles.summaryRow}>
               <Text style={[styles.summaryLabel, { color: colors.subtext }]}>Date:</Text>
               <Text style={[styles.summaryValue, { color: colors.text }]}>
-                {new Date(selectedDate).toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
+                {new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
               </Text>
             </View>
             <View style={styles.summaryRow}>
@@ -249,21 +235,17 @@ export default function BookingScreen() {
             </View>
           </View>
         )}
-
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Book Button */}
       {selectedDate && selectedTime && (
         <View style={[styles.footer, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
           <TouchableOpacity
             style={[styles.bookButton, { backgroundColor: colors.primary }]}
-            onPress={handleBooking}
-            disabled={loading}
+            onPress={handleBooking} disabled={loading}
+            accessibilityRole="button" accessibilityLabel="Request appointment"
           >
-            <Text style={styles.bookButtonText}>
-              {loading ? 'Booking...' : 'Request Appointment'}
-            </Text>
+            <Text style={styles.bookButtonText}>{loading ? 'Booking...' : 'Request Appointment'}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -272,94 +254,30 @@ export default function BookingScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    paddingTop: 60,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-  },
-  backButton: {
-    marginBottom: 10,
-  },
-  backText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-  },
-  section: {
-    margin: 16,
-    padding: 20,
-    borderRadius: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
-  timeSlots: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  timeSlot: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    borderWidth: 2,
-    minWidth: 80,
-    alignItems: 'center',
-  },
-  timeText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  input: {
-    padding: 15,
-    borderRadius: 12,
-    borderWidth: 2,
-    fontSize: 16,
-    marginBottom: 12,
-  },
-  textArea: {
-    padding: 15,
-    borderRadius: 12,
-    borderWidth: 2,
-    fontSize: 16,
-    minHeight: 100,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  summaryLabel: {
-    fontSize: 16,
-  },
-  summaryValue: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 16,
-    borderTopWidth: 1,
-  },
-  bookButton: {
-    padding: 18,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  bookButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
+  container: { flex: 1 },
+  header: { paddingTop: 60, paddingBottom: 20, paddingHorizontal: 20 },
+  backButton: { marginBottom: 10 },
+  backText: { fontSize: 16, fontWeight: '600' },
+  headerTitle: { fontSize: 28, fontWeight: 'bold' },
+  section: { margin: 16, padding: 20, borderRadius: 16 },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 16 },
+  timeSlots: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  timeSlot: { paddingVertical: 12, paddingHorizontal: 20, borderRadius: 12, borderWidth: 2, minWidth: 80, alignItems: 'center' },
+  timeText: { fontSize: 16, fontWeight: '600' },
+  input: { padding: 15, borderRadius: 12, borderWidth: 2, fontSize: 16, marginBottom: 12 },
+  textArea: { padding: 15, borderRadius: 12, borderWidth: 2, fontSize: 16, minHeight: 100 },
+  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
+  summaryLabel: { fontSize: 16 },
+  summaryValue: { fontSize: 16, fontWeight: '600' },
+  footer: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, borderTopWidth: 1 },
+  bookButton: { padding: 18, borderRadius: 12, alignItems: 'center' },
+  bookButtonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+  // Guest wall
+  guestWall: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
+  lockIcon: { fontSize: 64, marginBottom: 20 },
+  guestWallTitle: { fontSize: 22, fontWeight: 'bold', marginBottom: 12, textAlign: 'center' },
+  guestWallText: { fontSize: 15, lineHeight: 22, textAlign: 'center', marginBottom: 32 },
+  createAccountButton: { paddingVertical: 16, paddingHorizontal: 40, borderRadius: 12, marginBottom: 16, width: '100%', alignItems: 'center' },
+  createAccountButtonText: { color: '#fff', fontSize: 17, fontWeight: 'bold' },
+  backToProviderText: { fontSize: 15, paddingVertical: 12 },
 });

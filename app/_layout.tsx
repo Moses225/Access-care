@@ -52,6 +52,13 @@ function RootNavigator() {
     if (isOnProtectedRoute) {
       if (__DEV__) console.log('📍 User logged out on protected route, navigating to welcome');
       setTimeout(() => router.replace('/welcome'), 100);
+      return;
+    }
+
+    // Redirect from login screen to welcome screen for fresh opens
+    if (isOnIndex) {
+      if (__DEV__) console.log('📍 User logged out on index, redirecting to welcome');
+      setTimeout(() => router.replace('/welcome'), 100);
     }
 
   }, [user, segments, pathname, initializing, router]);

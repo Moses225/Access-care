@@ -1,11 +1,26 @@
 import { useRouter } from 'expo-router';
-import React from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState } from 'react';
+import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 
 export default function WelcomeScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { signInAsGuest } = useAuth();
+  const [guestLoading, setGuestLoading] = useState(false);
+
+  const handleBrowseAsGuest = async () => {
+    try {
+      setGuestLoading(true);
+      await signInAsGuest();
+      // AuthContext will update user state → _layout.tsx navigates to /(tabs)
+    } catch (error) {
+      Alert.alert('Error', 'Could not start guest session. Please try again.');
+    } finally {
+      setGuestLoading(false);
+    }
+  };
 
   return (
     <ScrollView contentContainerStyle={[styles.container, { backgroundColor: colors.background }]}>
@@ -15,9 +30,10 @@ export default function WelcomeScreen() {
           style={styles.logo}
           resizeMode="contain"
         />
-
         <Text style={[styles.title, { color: colors.primary }]}>AccessCare</Text>
-        <Text style={[styles.tagline, { color: colors.subtext }]}>Connecting Patients with Quality Healthcare</Text>
+        <Text style={[styles.tagline, { color: colors.subtext }]}>
+          Connecting Patients with Quality Healthcare
+        </Text>
 
         <View style={styles.statsRow}>
           <StatCard number="23+" label="Providers" icon="👨‍⚕️" />
@@ -32,57 +48,68 @@ export default function WelcomeScreen() {
           Whether you are in a remote area or a busy city, AccessCare connects you to the care you need, when you need it.
         </Text>
 
-        <FeatureCard
-          icon="🌍"
-          title="Find Nearby Care"
-          description="Locate providers in your area, even in remote locations"
-          gradient={['#667eea', '#764ba2']}
-        />
-        <FeatureCard
-          icon="🔗"
-          title="Direct Connection"
-          description="Connect instantly with healthcare professionals"
-          gradient={['#f093fb', '#f5576c']}
-        />
-        <FeatureCard
-          icon="💬"
-          title="Ask Questions"
-          description="Get answers from professionals, no matter where you are"
-          gradient={['#4facfe', '#00f2fe']}
-        />
-        <FeatureCard
-          icon="🗺️"
-          title="Navigate to Care"
-          description="Turn-by-turn directions to your nearest provider"
-          gradient={['#43e97b', '#38f9d7']}
-        />
+        <FeatureCard icon="🌍" title="Find Nearby Care" description="Locate providers in your area, even in remote locations" gradient={['#667eea', '#764ba2']} />
+        <FeatureCard icon="🔗" title="Direct Connection" description="Connect instantly with healthcare professionals" gradient={['#f093fb', '#f5576c']} />
+        <FeatureCard icon="💬" title="Ask Questions" description="Get answers from professionals, no matter where you are" gradient={['#4facfe', '#00f2fe']} />
+        <FeatureCard icon="🗺️" title="Navigate to Care" description="Turn-by-turn directions to your nearest provider" gradient={['#43e97b', '#38f9d7']} />
       </View>
 
       <View style={[styles.impactSection, { backgroundColor: colors.card }]}>
         <Text style={[styles.impactTitle, { color: colors.primary }]}>Healthcare Without Boundaries</Text>
         <Text style={[styles.impactText, { color: colors.subtext }]}>
-          AccessCare breaks down barriers to healthcare access by connecting patients in underserved and remote communities with a comprehensive network of providers, from primary care to rare disease specialists.
+          AccessCare breaks down barriers to healthcare access by connecting patients in underserved
+          and remote communities with a comprehensive network of providers.
         </Text>
       </View>
 
       <View style={styles.ctaSection}>
+        {/* Primary — Sign in */}
         <TouchableOpacity
           style={[styles.primaryButton, { backgroundColor: colors.primary }]}
           onPress={() => router.push('/' as any)}
           activeOpacity={0.8}
+          accessibilityLabel="Sign in to your account"
+          accessibilityRole="button"
         >
-          <Text style={styles.primaryButtonText}>Find Care Now</Text>
+          <Text style={styles.primaryButtonText}>Sign In</Text>
         </TouchableOpacity>
 
+        {/* Secondary — Create account */}
         <TouchableOpacity
           style={[styles.secondaryButton, { borderColor: colors.primary, backgroundColor: colors.background }]}
           onPress={() => router.push('/signup' as any)}
           activeOpacity={0.8}
+          accessibilityLabel="Create a new account"
+          accessibilityRole="button"
         >
           <Text style={[styles.secondaryButtonText, { color: colors.primary }]}>Create Account</Text>
         </TouchableOpacity>
 
-        <Text style={[styles.footer, { color: colors.subtext }]}>Connecting communities to quality healthcare, one patient at a time</Text>
+        {/* Tertiary — Browse as guest */}
+        <TouchableOpacity
+          style={[styles.guestButton, { borderColor: colors.border }]}
+          onPress={handleBrowseAsGuest}
+          disabled={guestLoading}
+          activeOpacity={0.7}
+          accessibilityLabel="Browse providers without creating an account"
+          accessibilityRole="button"
+        >
+          {guestLoading ? (
+            <ActivityIndicator size="small" color={colors.subtext} />
+          ) : (
+            <Text style={[styles.guestButtonText, { color: colors.subtext }]}>
+              Browse as Guest
+            </Text>
+          )}
+        </TouchableOpacity>
+
+        <Text style={[styles.guestNote, { color: colors.subtext }]}>
+          Guest browsing lets you explore providers. Create a free account to book appointments.
+        </Text>
+
+        <Text style={[styles.footer, { color: colors.subtext }]}>
+          Connecting communities to quality healthcare, one patient at a time
+        </Text>
       </View>
     </ScrollView>
   );
@@ -90,7 +117,6 @@ export default function WelcomeScreen() {
 
 function StatCard({ number, label, icon }: { number: string; label: string; icon: string }) {
   const { colors } = useTheme();
-
   return (
     <View style={[styles.statCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
       <Text style={styles.statIcon}>{icon}</Text>
@@ -101,13 +127,9 @@ function StatCard({ number, label, icon }: { number: string; label: string; icon
 }
 
 function FeatureCard({ icon, title, description, gradient }: {
-  icon: string;
-  title: string;
-  description: string;
-  gradient: string[];
+  icon: string; title: string; description: string; gradient: string[];
 }) {
   const { colors } = useTheme();
-
   return (
     <View style={[styles.featureCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
       <View style={[styles.iconCircle, { backgroundColor: gradient[0] }]}>
@@ -147,7 +169,10 @@ const styles = StyleSheet.create({
   ctaSection: { padding: 20, paddingTop: 10 },
   primaryButton: { paddingVertical: 18, borderRadius: 12, marginBottom: 15, shadowColor: '#667eea', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 5 },
   primaryButtonText: { color: '#fff', fontSize: 18, fontWeight: 'bold', textAlign: 'center' },
-  secondaryButton: { paddingVertical: 18, borderRadius: 12, borderWidth: 2, marginBottom: 30 },
+  secondaryButton: { paddingVertical: 18, borderRadius: 12, borderWidth: 2, marginBottom: 12 },
   secondaryButtonText: { fontSize: 18, fontWeight: 'bold', textAlign: 'center' },
+  guestButton: { paddingVertical: 14, borderRadius: 12, borderWidth: 1, marginBottom: 12, alignItems: 'center' },
+  guestButtonText: { fontSize: 16, fontWeight: '500' },
+  guestNote: { fontSize: 13, textAlign: 'center', marginBottom: 20, lineHeight: 18, paddingHorizontal: 10 },
   footer: { fontSize: 13, textAlign: 'center', fontStyle: 'italic', marginBottom: 20 },
 });
