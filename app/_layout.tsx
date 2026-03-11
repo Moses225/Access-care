@@ -1,16 +1,16 @@
 import { Stack, useRouter, useSegments, usePathname } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { ActivityIndicator, View, Text } from 'react-native';
 import { ThemeProvider } from '../context/ThemeContext';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 
-// ─── Navigation Guard ─────────────────────────────────────────────────────────
 function RootNavigator() {
   const router = useRouter();
   const segments = useSegments();
   const pathname = usePathname();
   const { user, initializing } = useAuth();
+  const isNavigating = useRef(false);
 
   useEffect(() => {
     if (initializing) {
@@ -19,21 +19,25 @@ function RootNavigator() {
     }
 
     const currentSegment = segments[0];
-    const isOnIndex = !currentSegment || pathname === '/' || pathname === '/index';
+
+    // Skip EMPTY segment — app/index.tsx handles it via Redirect
+    if (!currentSegment) return;
 
     if (__DEV__) {
       console.log('🧭 Navigation check:', {
         user: user ? 'logged in' : 'logged out',
         currentSegment: currentSegment || 'EMPTY',
         pathname,
-        isOnIndex,
       });
     }
+
+    // Don't fire multiple navigations at once
+    if (isNavigating.current) return;
 
     const isOnAuthRoute =
       currentSegment === 'welcome' ||
       currentSegment === 'signup' ||
-      isOnIndex;
+      currentSegment === 'login';
 
     const isOnProtectedRoute =
       currentSegment === '(tabs)' ||
@@ -42,23 +46,20 @@ function RootNavigator() {
       currentSegment === 'profile';
 
     if (user) {
-      if (isOnAuthRoute && currentSegment !== '(tabs)') {
+      if (isOnAuthRoute) {
         if (__DEV__) console.log('📍 User logged in but on auth page, navigating to main app');
-        setTimeout(() => router.replace('/(tabs)'), 100);
+        isNavigating.current = true;
+        router.replace('/(tabs)');
+        setTimeout(() => { isNavigating.current = false; }, 500);
       }
       return;
     }
 
     if (isOnProtectedRoute) {
       if (__DEV__) console.log('📍 User logged out on protected route, navigating to welcome');
-      setTimeout(() => router.replace('/welcome'), 100);
-      return;
-    }
-
-    // Redirect from login screen to welcome screen for fresh opens
-    if (isOnIndex) {
-      if (__DEV__) console.log('📍 User logged out on index, redirecting to welcome');
-      setTimeout(() => router.replace('/welcome'), 100);
+      isNavigating.current = true;
+      router.replace('/welcome');
+      setTimeout(() => { isNavigating.current = false; }, 500);
     }
 
   }, [user, segments, pathname, initializing, router]);
@@ -76,6 +77,7 @@ function RootNavigator() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="welcome" />
       <Stack.Screen name="index" />
+      <Stack.Screen name="login" />
       <Stack.Screen name="signup" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="provider/[id]" />
@@ -96,7 +98,6 @@ function RootNavigator() {
   );
 }
 
-// ─── Root Layout ──────────────────────────────────────────────────────────────
 export default function RootLayout() {
   return (
     <ErrorBoundary>

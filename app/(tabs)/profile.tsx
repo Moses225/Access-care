@@ -80,11 +80,11 @@ export default function ProfileScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScrollView 
+      <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl 
-            refreshing={refreshing} 
+          <RefreshControl
+            refreshing={refreshing}
             onRefresh={onRefresh}
             tintColor={colors.primary}
           />
@@ -95,13 +95,13 @@ export default function ProfileScreen() {
         </View>
 
         <View style={[styles.profileSection, { backgroundColor: colors.card }]}>
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => router.push('/profile/edit')}
             activeOpacity={0.7}
           >
             {profileImage ? (
-              <Image 
-                source={{ uri: profileImage }} 
+              <Image
+                source={{ uri: profileImage }}
                 style={styles.profileImage}
                 onError={() => {
                   if (__DEV__) console.log('Error loading profile image');
@@ -285,6 +285,13 @@ export default function ProfileScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+      {__DEV__ && (
+  <TouchableOpacity onPress={() => router.push('/provider-portal/login' as any)}>
+    <Text style={{ color: 'gray', fontSize: 12, textAlign: 'center', padding: 12 }}>
+      Provider Portal (dev)
+    </Text>
+  </TouchableOpacity>
+)}
     </View>
   );
 }

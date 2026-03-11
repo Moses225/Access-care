@@ -66,7 +66,7 @@ export default function WelcomeScreen() {
         {/* Primary — Sign in */}
         <TouchableOpacity
           style={[styles.primaryButton, { backgroundColor: colors.primary }]}
-          onPress={() => router.push('/' as any)}
+          onPress={() => router.push('/login' as any)}
           activeOpacity={0.8}
           accessibilityLabel="Sign in to your account"
           accessibilityRole="button"
