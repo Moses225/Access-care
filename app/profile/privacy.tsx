@@ -1,5 +1,5 @@
 import { Stack, useRouter } from 'expo-router';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
@@ -39,7 +39,7 @@ export default function PrivacyScreen() {
     try {
       const user = auth.currentUser;
       if (!user) return;
-      await setDoc(doc(db, 'privacy', user.uid), { ...settings, updatedAt: new Date() });
+      await setDoc(doc(db, 'privacy', user.uid), { ...settings, updatedAt: serverTimestamp() });
     } catch (error) {
       if (__DEV__) console.error('Error saving privacy settings:', error);
     }

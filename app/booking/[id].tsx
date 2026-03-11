@@ -1,7 +1,7 @@
 import { validateBooking, sanitizeText, sanitizePhone } from '../../utils/validation';
 import { logError } from '../../utils/crashReporting';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { addDoc, collection, doc, getDoc } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -122,7 +122,7 @@ export default function BookingScreen() {
         patientPhone: sanitizedData.patientPhone,
         notes: sanitizedData.notes,
         status: 'pending',
-        createdAt: new Date().toISOString(),
+        createdAt: serverTimestamp(),
       };
 
       const bookingRef = await addDoc(collection(db, 'bookings'), bookingData);

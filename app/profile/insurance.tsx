@@ -1,5 +1,5 @@
 import { Stack, useRouter } from 'expo-router';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
   Alert, ScrollView, StyleSheet, Text,
@@ -33,6 +33,7 @@ export default function InsuranceScreen() {
 
   useEffect(() => {
     if (isFullAccount) loadInsuranceInfo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFullAccount]);
 
   const loadInsuranceInfo = async () => {
@@ -62,7 +63,7 @@ export default function InsuranceScreen() {
       await setDoc(doc(db, 'insurance', user.uid), {
         provider: selectedPlan,
         policy: policyNumber,
-        updatedAt: new Date(),
+        updatedAt: serverTimestamp(),
       });
 
       Alert.alert('Saved', 'Insurance information updated.');

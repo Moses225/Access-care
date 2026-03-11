@@ -22,23 +22,28 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Find Care',
-          tabBarIcon: ({ color }) => <FontAwesome size={28} name="search" color={color} />,
+          tabBarIcon: ({ color }) => <FontAwesome size={24} name="search" color={color} />,
         }}
       />
-      
       <Tabs.Screen
         name="appointments"
         options={{
           title: 'Appointments',
-          tabBarIcon: ({ color }) => <FontAwesome size={28} name="calendar" color={color} />,
+          tabBarIcon: ({ color }) => <FontAwesome size={24} name="calendar" color={color} />,
         }}
       />
-      
+      <Tabs.Screen
+        name="insurance"
+        options={{
+          title: 'Insurance',
+          tabBarIcon: ({ color }) => <FontAwesome size={24} name="shield" color={color} />,
+        }}
+      />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color }) => <FontAwesome size={28} name="user" color={color} />,
+          tabBarIcon: ({ color }) => <FontAwesome size={24} name="user" color={color} />,
         }}
       />
     </Tabs>

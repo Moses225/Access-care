@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { addDoc, collection, doc, getDoc } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
   Alert, ScrollView, StyleSheet, Text,
@@ -79,7 +79,7 @@ export default function BookingScreen() {
         patientPhone: patientPhone.trim(),
         notes: notes.trim(),
         status: 'pending',
-        createdAt: new Date().toISOString(),
+        createdAt: serverTimestamp(),
       };
 
       const bookingRef = await addDoc(collection(db, 'bookings'), bookingData);

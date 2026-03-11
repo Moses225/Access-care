@@ -1,5 +1,4 @@
-import { useRouter } from 'expo-router';
-import { addDoc, collection, onSnapshot, orderBy, query, where } from 'firebase/firestore';
+import { addDoc, collection, onSnapshot, orderBy, query, serverTimestamp, where } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import {
   Alert, FlatList, KeyboardAvoidingView, Platform,
@@ -20,7 +19,6 @@ type Question = {
 };
 
 export default function QAScreen() {
-  const router = useRouter();
   const { colors } = useTheme();
   const { isGuest } = useAuth();
 
@@ -62,7 +60,7 @@ export default function QAScreen() {
     await addDoc(collection(db, 'questions'), {
       userId: uid,
       question: newQuestion,
-      createdAt: new Date(),
+      createdAt: serverTimestamp(),
     });
 
     setNewQuestion('');
