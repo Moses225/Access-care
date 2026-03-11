@@ -1,7 +1,7 @@
 import { collection, doc, onSnapshot, orderBy, query, updateDoc } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { Alert, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator } from 'react-native';
-import { db, auth } from '../../firebase';
+import { db} from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'expo-router';
 

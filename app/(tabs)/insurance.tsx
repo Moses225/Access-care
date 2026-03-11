@@ -1,6 +1,4 @@
-import { useRouter } from 'expo-router';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
   Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View,
@@ -52,19 +50,17 @@ type InsuranceData = {
 };
 
 export default function InsuranceHubScreen() {
-  const router = useRouter();
   const { colors } = useTheme();
   const { user, isGuest } = useAuth();
 
   const [activeType, setActiveType] = useState<'medical' | 'dental' | 'vision'>('medical');
   const [selections, setSelections] = useState<InsuranceData>({});
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
 
   useEffect(() => {
     if (!isGuest && user) loadInsurance();
-    else setLoading(false);
+     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isGuest, user]);
 
   const loadInsurance = async () => {
@@ -81,7 +77,6 @@ export default function InsuranceHubScreen() {
     } catch (error) {
       if (__DEV__) console.error('Error loading insurance:', error);
     } finally {
-      setLoading(false);
     }
   };
 

@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { addDoc, collection, doc, getDoc, serverTimestamp } from 'firebase/firestore';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Alert, ScrollView, StyleSheet, Text,
   TextInput, TouchableOpacity, View,
@@ -17,7 +17,6 @@ export default function BookingScreen() {
   const { colors } = useTheme();
   const { isGuest } = useAuth();
 
-  const [provider, setProvider] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
   const [patientName, setPatientName] = useState('');
@@ -25,19 +24,6 @@ export default function BookingScreen() {
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
-
-  useEffect(() => {
-    if (!isGuest) loadProvider();
-  }, [isGuest]);
-
-  const loadProvider = async () => {
-    try {
-      const providerDoc = await getDoc(doc(db, 'providers', providerId));
-      if (providerDoc.exists()) setProvider({ id: providerDoc.id, ...providerDoc.data() });
-    } catch (error) {
-      if (__DEV__) console.error('Error loading provider:', error);
-    }
-  };
 
   const generateTimeSlots = () => {
     const slots = [];
@@ -90,8 +76,7 @@ export default function BookingScreen() {
         `Your appointment request for ${selectedDate} at ${selectedTime} has been submitted.`,
         [{ text: 'OK', onPress: () => router.push(`/booking/confirmation?bookingId=${bookingRef.id}` as any) }]
       );
-    } catch (error) {
-      if (__DEV__) console.error('❌ Booking error:', error);
+    } catch {
       Alert.alert('Error', 'Failed to create booking. Please try again.');
     } finally {
       setLoading(false);
