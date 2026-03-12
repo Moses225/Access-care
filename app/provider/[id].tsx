@@ -1,14 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Linking,
-  Alert,
-  ActivityIndicator,
-  Image,
+  View, Text, StyleSheet, ScrollView,
+  TouchableOpacity, Linking, Alert,
+  ActivityIndicator, Image,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { doc, getDoc } from 'firebase/firestore';
@@ -19,14 +13,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 let MapView: any;
 let Marker: any;
-
 try {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const ExpoMaps = require('react-native-maps');
   MapView = ExpoMaps.default;
   Marker = ExpoMaps.Marker;
 } catch {
-  // Maps not available
+  // Maps not available in this build
 }
 
 interface Provider {
@@ -38,11 +31,10 @@ interface Provider {
   rating: number;
   acceptsNewPatients?: boolean;
   acceptingNewPatients?: boolean;
+  telehealth?: boolean;
+  inPerson?: boolean;
   insuranceAccepted: string[];
-  location?: {
-    latitude: number;
-    longitude: number;
-  };
+  location?: { latitude: number; longitude: number };
   latitude?: number;
   longitude?: number;
   city?: string;
@@ -51,6 +43,7 @@ interface Provider {
   profilePicture?: string;
   welcomeMessage?: string;
   aboutMe?: string;
+  languages?: string;
   specialInterests?: string[];
   education?: { degree: string; school: string; year: number }[];
   languagesSpoken?: string[];
@@ -63,10 +56,9 @@ interface Provider {
   };
 }
 
-// ─── Pricing Estimate Card ────────────────────────────────────────────────────
+// ─── Pricing Estimate Card ─────────────────────────────────────────────────────
 const PricingEstimateCard = ({ colors }: { colors: any }) => {
   const [showInfo, setShowInfo] = useState(false);
-
   return (
     <View style={[styles.section, { backgroundColor: colors.card }]}>
       <View style={styles.sectionHeader}>
@@ -75,12 +67,9 @@ const PricingEstimateCard = ({ colors }: { colors: any }) => {
           <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
         </TouchableOpacity>
       </View>
-
       <View style={styles.pricingGrid}>
         <View style={styles.pricingItem}>
-          <Text style={[styles.pricingLabel, { color: colors.subtext }]}>
-            SoonerCare/Medicaid
-          </Text>
+          <Text style={[styles.pricingLabel, { color: colors.subtext }]}>SoonerCare/Medicaid</Text>
           <Text style={[styles.pricingValue, { color: colors.success }]}>$0 Copay</Text>
         </View>
         <View style={styles.pricingItem}>
@@ -88,7 +77,6 @@ const PricingEstimateCard = ({ colors }: { colors: any }) => {
           <Text style={[styles.pricingValue, { color: colors.text }]}>$120 - $200</Text>
         </View>
       </View>
-
       {showInfo && (
         <View style={[styles.infoBox, { backgroundColor: colors.background }]}>
           <Text style={[styles.infoBoxText, { color: colors.text }]}>
@@ -104,24 +92,16 @@ const PricingEstimateCard = ({ colors }: { colors: any }) => {
   );
 };
 
-// ─── Interview Consult Card ───────────────────────────────────────────────────
+// ─── Interview Consult Card ────────────────────────────────────────────────────
 const InterviewConsultCard = ({
-  interviewConsult,
-  colors,
-}: {
-  interviewConsult: Provider['interviewConsult'];
-  colors: any;
-}) => {
-  if (!interviewConsult || !interviewConsult.offered) return null;
-
+  interviewConsult, colors,
+}: { interviewConsult: Provider['interviewConsult']; colors: any }) => {
+  if (!interviewConsult?.offered) return null;
   return (
     <View style={[styles.section, { backgroundColor: colors.card }]}>
       <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          Meet & Greet Available
-        </Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Meet & Greet Available</Text>
       </View>
-
       <View style={[styles.consultBox, { backgroundColor: colors.background }]}>
         <View style={styles.consultHeader}>
           <Text style={[styles.consultPrice, { color: colors.primary }]}>
@@ -140,7 +120,7 @@ const InterviewConsultCard = ({
   );
 };
 
-// ─── Main Screen ──────────────────────────────────────────────────────────────
+// ─── Main Screen ───────────────────────────────────────────────────────────────
 export default function ProviderDetailScreen() {
   const params = useLocalSearchParams();
   const router = useRouter();
@@ -152,7 +132,6 @@ export default function ProviderDetailScreen() {
 
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
-  // ─── Load single provider via getDoc (1 read, not full collection) ──────────
   const loadProvider = useCallback(async () => {
     try {
       if (!id || typeof id !== 'string') {
@@ -160,12 +139,9 @@ export default function ProviderDetailScreen() {
         router.back();
         return;
       }
-
       setLoading(true);
 
-      const providerRef = doc(db, 'providers', id);
-      const docSnap = await getDoc(providerRef);
-
+      const docSnap = await getDoc(doc(db, 'providers', id));
       if (!docSnap.exists()) {
         Alert.alert('Provider Not Found', 'This provider could not be loaded.', [
           { text: 'OK', onPress: () => router.back() },
@@ -175,28 +151,32 @@ export default function ProviderDetailScreen() {
 
       const data = docSnap.data();
 
-      // Safe rating parsing
+      // Safe rating
       let safeRating = 0;
-      if (typeof data.rating === 'number') {
-        safeRating = data.rating;
-      } else if (typeof data.rating === 'string') {
-        const parsed = parseFloat(data.rating);
-        safeRating = isNaN(parsed) ? 0 : parsed;
+      if (typeof data.rating === 'number') safeRating = data.rating;
+      else if (typeof data.rating === 'string') {
+        const p = parseFloat(data.rating);
+        safeRating = isNaN(p) ? 0 : p;
       }
 
-      // Safe coordinates with Oklahoma City fallback
+      // Safe coordinates
       const safeLatitude = typeof data.latitude === 'number' ? data.latitude : 35.4676;
       const safeLongitude = typeof data.longitude === 'number' ? data.longitude : -97.5164;
 
-      // Safe insurance array
+      // Safe insurance
       let safeInsurance: string[] = [];
-      if (Array.isArray(data.insuranceAccepted)) {
-        safeInsurance = data.insuranceAccepted;
-      } else if (typeof data.insuranceAccepted === 'string') {
-        safeInsurance = [data.insuranceAccepted];
+      if (Array.isArray(data.insuranceAccepted)) safeInsurance = data.insuranceAccepted;
+      else if (typeof data.insuranceAccepted === 'string') safeInsurance = [data.insuranceAccepted];
+
+      // Languages — portal saves as string, CSV import may be array
+      let resolvedLanguages = '';
+      if (typeof data.languages === 'string' && data.languages) {
+        resolvedLanguages = data.languages;
+      } else if (Array.isArray(data.languagesSpoken) && data.languagesSpoken.length > 0) {
+        resolvedLanguages = data.languagesSpoken.join(', ');
       }
 
-      const foundProvider: Provider = {
+      setProvider({
         id: docSnap.id,
         name: typeof data.name === 'string' ? data.name : 'Unknown Provider',
         specialty: typeof data.specialty === 'string' ? data.specialty : 'General',
@@ -204,11 +184,11 @@ export default function ProviderDetailScreen() {
         phone: typeof data.phone === 'string' ? data.phone : '',
         rating: safeRating,
         acceptsNewPatients: data.acceptingNewPatients ?? data.acceptsNewPatients ?? true,
+        // Portal-saved fields
+        telehealth: data.telehealth === true,
+        inPerson: data.inPerson !== false, // default true if not set
         insuranceAccepted: safeInsurance,
-        location: {
-          latitude: safeLatitude,
-          longitude: safeLongitude,
-        },
+        location: { latitude: safeLatitude, longitude: safeLongitude },
         latitude: safeLatitude,
         longitude: safeLongitude,
         city: typeof data.city === 'string' ? data.city : '',
@@ -216,19 +196,17 @@ export default function ProviderDetailScreen() {
         verified: data.verified === true,
         profilePicture: typeof data.profilePicture === 'string' ? data.profilePicture : '',
         welcomeMessage: typeof data.welcomeMessage === 'string' ? data.welcomeMessage : '',
+        // bio (portal) takes precedence over aboutMe (CSV)
         aboutMe: typeof data.bio === 'string' && data.bio
-        ? data.bio
-        : typeof data.aboutMe === 'string' ? data.aboutMe : '',
+          ? data.bio
+          : typeof data.aboutMe === 'string' ? data.aboutMe : '',
+        languages: resolvedLanguages,
         specialInterests: Array.isArray(data.specialInterests) ? data.specialInterests : [],
         education: Array.isArray(data.education) ? data.education : [],
         languagesSpoken: Array.isArray(data.languagesSpoken) ? data.languagesSpoken : [],
-        boardCertifications: Array.isArray(data.boardCertifications)
-          ? data.boardCertifications
-          : [],
+        boardCertifications: Array.isArray(data.boardCertifications) ? data.boardCertifications : [],
         interviewConsult: data.interviewConsult || null,
-      };
-
-      setProvider(foundProvider);
+      });
     } catch (error) {
       if (__DEV__) console.error('Error loading provider:', error);
       Alert.alert('Error', 'Could not load provider details', [
@@ -239,14 +217,10 @@ export default function ProviderDetailScreen() {
     }
   }, [id, router]);
 
-  // ─── Check favorites ─────────────────────────────────────────────────────────
   const checkIfFavorite = useCallback(async () => {
     try {
       const favs = await AsyncStorage.getItem('favorites');
-      if (favs) {
-        const favorites = JSON.parse(favs);
-        setIsFavorite(favorites.includes(id));
-      }
+      if (favs) setIsFavorite(JSON.parse(favs).includes(id));
     } catch (error) {
       if (__DEV__) console.log('Error checking favorites:', error);
     }
@@ -257,18 +231,14 @@ export default function ProviderDetailScreen() {
     checkIfFavorite();
   }, [loadProvider, checkIfFavorite]);
 
-  // ─── Actions ─────────────────────────────────────────────────────────────────
   const handleCall = () => {
-    if (provider?.phone) {
-      Linking.openURL(`tel:${provider.phone}`);
-    }
+    if (provider?.phone) Linking.openURL(`tel:${provider.phone}`);
   };
 
   const handleDirections = () => {
     if (provider?.location) {
       const { latitude, longitude } = provider.location;
-      const url = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
-      Linking.openURL(url);
+      Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`);
     }
   };
 
@@ -276,13 +246,9 @@ export default function ProviderDetailScreen() {
     try {
       const favs = await AsyncStorage.getItem('favorites');
       let favorites = favs ? JSON.parse(favs) : [];
-
-      if (isFavorite) {
-        favorites = favorites.filter((fav: string) => fav !== id);
-      } else {
-        favorites.push(id);
-      }
-
+      favorites = isFavorite
+        ? favorites.filter((f: string) => f !== id)
+        : [...favorites, id];
       await AsyncStorage.setItem('favorites', JSON.stringify(favorites));
       setIsFavorite(!isFavorite);
     } catch (error) {
@@ -290,7 +256,6 @@ export default function ProviderDetailScreen() {
     }
   };
 
-  // ─── Loading state ────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <View style={[styles.container, styles.centerContainer, { backgroundColor: colors.background }]}>
@@ -300,7 +265,6 @@ export default function ProviderDetailScreen() {
     );
   }
 
-  // ─── Not found state ──────────────────────────────────────────────────────────
   if (!provider) {
     return (
       <View style={[styles.container, styles.centerContainer, { backgroundColor: colors.background }]}>
@@ -320,30 +284,23 @@ export default function ProviderDetailScreen() {
     provider.insuranceAccepted.includes('Medicaid');
   const acceptingPatients = provider.acceptsNewPatients ?? provider.acceptingNewPatients ?? true;
 
-  // ─── Main render ──────────────────────────────────────────────────────────────
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
 
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.card }]}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backBtn}
-          accessibilityLabel="Go back"
-          accessibilityRole="button"
-        >
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button">
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
 
         <View style={styles.headerContent}>
-          {provider.profilePicture && provider.profilePicture.startsWith('http') ? (
+          {provider.profilePicture?.startsWith('http') ? (
             <Image source={{ uri: provider.profilePicture }} style={styles.profilePic} />
           ) : (
             <View style={[styles.placeholderPic, { backgroundColor: colors.primary }]}>
               <Text style={styles.placeholderText}>{provider.name.charAt(0)}</Text>
             </View>
           )}
-
           <View style={styles.headerText}>
             <View style={styles.nameRow}>
               <Text style={[styles.name, { color: colors.text }]} numberOfLines={2}>
@@ -356,14 +313,30 @@ export default function ProviderDetailScreen() {
               )}
             </View>
             <Text style={[styles.specialty, { color: colors.primary }]}>{provider.specialty}</Text>
+
+            {/* ── Visit type badges ── */}
+            <View style={styles.badgeRow}>
+              {provider.inPerson !== false && (
+                <View style={[styles.visitBadge, { backgroundColor: colors.primary + '20' }]}>
+                  <Ionicons name="business-outline" size={11} color={colors.primary} />
+                  <Text style={[styles.visitBadgeText, { color: colors.primary }]}>In-Person</Text>
+                </View>
+              )}
+              {provider.telehealth === true && (
+                <View style={[styles.visitBadge, { backgroundColor: '#6366F120' }]}>
+                  <Ionicons name="videocam-outline" size={11} color="#6366F1" />
+                  <Text style={[styles.visitBadgeText, { color: '#6366F1' }]}>Telehealth</Text>
+                </View>
+              )}
+            </View>
           </View>
         </View>
 
         <TouchableOpacity
           onPress={toggleFavorite}
           style={styles.favoriteBtn}
-          accessibilityLabel={isFavorite ? 'Remove from saved providers' : 'Save provider'}
           accessibilityRole="button"
+          accessibilityLabel={isFavorite ? 'Remove from saved' : 'Save provider'}
         >
           <Ionicons
             name={isFavorite ? 'heart' : 'heart-outline'}
@@ -419,13 +392,11 @@ export default function ProviderDetailScreen() {
         </View>
       )}
 
-      {/* Languages */}
-      {provider.languagesSpoken && provider.languagesSpoken.length > 1 && (
+      {/* Languages — supports both string (portal) and array (CSV) */}
+      {!!provider.languages && (
         <View style={[styles.section, { backgroundColor: colors.card }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Languages Spoken</Text>
-          <Text style={[styles.languages, { color: colors.text }]}>
-            {provider.languagesSpoken.join(', ')}
-          </Text>
+          <Text style={[styles.languages, { color: colors.text }]}>{provider.languages}</Text>
         </View>
       )}
 
@@ -434,9 +405,7 @@ export default function ProviderDetailScreen() {
         <View style={[styles.section, { backgroundColor: colors.card }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Board Certifications</Text>
           {provider.boardCertifications.map((cert, index) => (
-            <Text key={index} style={[styles.certification, { color: colors.text }]}>
-              • {cert}
-            </Text>
+            <Text key={index} style={[styles.certification, { color: colors.text }]}>• {cert}</Text>
           ))}
         </View>
       )}
@@ -446,18 +415,17 @@ export default function ProviderDetailScreen() {
         <TouchableOpacity
           style={[styles.actionButton, { backgroundColor: colors.primary }]}
           onPress={handleCall}
-          accessibilityLabel="Call provider"
           accessibilityRole="button"
+          accessibilityLabel="Call provider"
         >
           <Ionicons name="call" size={20} color="#fff" />
           <Text style={styles.actionText}>Call</Text>
         </TouchableOpacity>
-
         <TouchableOpacity
           style={[styles.actionButton, { backgroundColor: colors.primary }]}
           onPress={handleDirections}
-          accessibilityLabel="Get directions to provider"
           accessibilityRole="button"
+          accessibilityLabel="Get directions"
         >
           <Ionicons name="navigate" size={20} color="#fff" />
           <Text style={styles.actionText}>Directions</Text>
@@ -467,23 +435,35 @@ export default function ProviderDetailScreen() {
       {/* Contact Info */}
       <View style={[styles.section, { backgroundColor: colors.card }]}>
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Contact Information</Text>
-
-        <View style={styles.infoRow}>
-          <Ionicons name="location" size={20} color={colors.primary} />
-          <Text style={[styles.infoText, { color: colors.text }]}>{provider.address}</Text>
-        </View>
-
-        <View style={styles.infoRow}>
-          <Ionicons name="call" size={20} color={colors.primary} />
-          <Text style={[styles.infoText, { color: colors.text }]}>{provider.phone}</Text>
-        </View>
-
-        <View style={styles.infoRow}>
-          <Ionicons name="star" size={20} color={colors.primary} />
-          <Text style={[styles.infoText, { color: colors.text }]}>
-            {provider.rating.toFixed(1)} Rating
-          </Text>
-        </View>
+        {!!provider.address && (
+          <View style={styles.infoRow}>
+            <Ionicons name="location" size={20} color={colors.primary} />
+            <Text style={[styles.infoText, { color: colors.text }]}>{provider.address}</Text>
+          </View>
+        )}
+        {!!provider.phone && (
+          <View style={styles.infoRow}>
+            <Ionicons name="call" size={20} color={colors.primary} />
+            <Text style={[styles.infoText, { color: colors.text }]}>{provider.phone}</Text>
+          </View>
+        )}
+        {provider.rating > 0 && (
+          <View style={styles.infoRow}>
+            <Ionicons name="star" size={20} color={colors.primary} />
+            <Text style={[styles.infoText, { color: colors.text }]}>
+              {provider.rating.toFixed(1)} Rating
+            </Text>
+          </View>
+        )}
+        {/* Telehealth detail row */}
+        {provider.telehealth === true && (
+          <View style={styles.infoRow}>
+            <Ionicons name="videocam" size={20} color="#6366F1" />
+            <Text style={[styles.infoText, { color: colors.text }]}>
+              Telehealth / Virtual visits available
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Insurance */}
@@ -491,12 +471,14 @@ export default function ProviderDetailScreen() {
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Insurance Accepted</Text>
         {hasSoonerCare && (
           <View style={[styles.soonerCareHighlight, { backgroundColor: colors.success }]}>
-            <Text style={styles.soonerCareText}>Accepts SoonerCare / Medicaid</Text>
+            <Text style={styles.soonerCareText}>✓ Accepts SoonerCare / Medicaid</Text>
           </View>
         )}
-        <Text style={[styles.insuranceList, { color: colors.text }]}>
-          {provider.insuranceAccepted.join(', ')}
-        </Text>
+        {provider.insuranceAccepted.length > 0 && (
+          <Text style={[styles.insuranceList, { color: colors.text }]}>
+            {provider.insuranceAccepted.join(', ')}
+          </Text>
+        )}
       </View>
 
       {/* Pricing Estimate */}
@@ -505,11 +487,17 @@ export default function ProviderDetailScreen() {
       {/* Interview Consult */}
       <InterviewConsultCard interviewConsult={provider.interviewConsult} colors={colors} />
 
-      {/* Accepting Patients */}
-      {acceptingPatients && (
+      {/* Accepting status */}
+      {acceptingPatients ? (
         <View style={[styles.section, { backgroundColor: colors.success + '20' }]}>
           <Text style={[styles.acceptingText, { color: colors.success }]}>
-            Currently Accepting New Patients
+            ✓ Currently Accepting New Patients
+          </Text>
+        </View>
+      ) : (
+        <View style={[styles.section, { backgroundColor: colors.border }]}>
+          <Text style={[styles.acceptingText, { color: colors.subtext }]}>
+            Not Currently Accepting New Patients
           </Text>
         </View>
       )}
@@ -534,18 +522,21 @@ export default function ProviderDetailScreen() {
         </View>
       )}
 
-      {/* Book Appointment */}
+      {/* Book Button */}
       <View style={styles.bookContainer}>
         <TouchableOpacity
-          style={[styles.bookButton, { backgroundColor: acceptingPatients ? colors.primary : colors.border }]}
+          style={[
+            styles.bookButton,
+            { backgroundColor: acceptingPatients ? colors.primary : colors.border },
+          ]}
           disabled={!acceptingPatients}
           activeOpacity={0.7}
-          accessibilityLabel={acceptingPatients ? 'Book appointment' : 'Provider not accepting new patients'}
           accessibilityRole="button"
+          accessibilityLabel={
+            acceptingPatients ? 'Book appointment' : 'Provider not accepting new patients'
+          }
           onPress={() => {
-            if (acceptingPatients && id) {
-              router.push(`/booking/${id}` as any);
-            }
+            if (acceptingPatients && id) router.push(`/booking/${id}` as any);
           }}
         >
           <Text style={styles.bookButtonText}>
@@ -559,7 +550,6 @@ export default function ProviderDetailScreen() {
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1 },
   centerContainer: { justifyContent: 'center', alignItems: 'center' },
@@ -568,11 +558,8 @@ const styles = StyleSheet.create({
   backButton: { paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
   backButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   header: {
-    paddingTop: 60,
-    paddingBottom: 20,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
+    paddingTop: 60, paddingBottom: 20, paddingHorizontal: 16,
+    flexDirection: 'row', alignItems: 'center',
   },
   backBtn: { padding: 8, marginRight: 8 },
   headerContent: { flex: 1, flexDirection: 'row', alignItems: 'center' },
@@ -585,12 +572,27 @@ const styles = StyleSheet.create({
   headerText: { flex: 1 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
   name: { fontSize: 18, fontWeight: 'bold', flex: 1 },
-  verifiedBadge: { width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  verifiedBadge: {
+    width: 20, height: 20, borderRadius: 10,
+    justifyContent: 'center', alignItems: 'center',
+  },
   verifiedText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
-  specialty: { fontSize: 14, fontWeight: '600' },
+  specialty: { fontSize: 14, fontWeight: '600', marginBottom: 6 },
+
+  // Visit type badges
+  badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  visitBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20,
+  },
+  visitBadgeText: { fontSize: 11, fontWeight: '600' },
+
   favoriteBtn: { padding: 8 },
   section: { marginHorizontal: 16, marginTop: 16, padding: 16, borderRadius: 12 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  sectionHeader: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'center', marginBottom: 12,
+  },
   sectionTitle: { fontSize: 17, fontWeight: 'bold', marginBottom: 12 },
   welcomeMessage: { fontSize: 15, lineHeight: 22, fontStyle: 'italic' },
   aboutText: { fontSize: 15, lineHeight: 22 },
@@ -621,7 +623,10 @@ const styles = StyleSheet.create({
   infoBoxText: { fontSize: 13, lineHeight: 18, marginBottom: 8 },
   infoClose: { fontSize: 14, fontWeight: '600' },
   consultBox: { padding: 16, borderRadius: 8 },
-  consultHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  consultHeader: {
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between', marginBottom: 8,
+  },
   consultPrice: { fontSize: 24, fontWeight: 'bold' },
   consultDuration: { fontSize: 14 },
   consultDescription: { fontSize: 14, lineHeight: 20 },

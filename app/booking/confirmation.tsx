@@ -37,7 +37,6 @@ const STATUS_CONFIG: Record<string, {
   },
 };
 
-// Timezone-safe date formatter
 function formatDate(dateString: string): string {
   if (!dateString || !dateString.includes('-')) return dateString || '—';
   const parts = dateString.split('-').map(Number);
@@ -57,8 +56,7 @@ export default function BookingConfirmationScreen() {
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
 
-  // Keep snapshot unsubscribe in a ref so we can clean up on unmount
-  const unsubRef = useRef<(() => void) | null>(null);
+  const snapshotUnsubRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (!bookingId) {
@@ -66,26 +64,51 @@ export default function BookingConfirmationScreen() {
       return;
     }
 
-    // Real-time listener — status/declineReason appear instantly
-    const unsub = onSnapshot(
-      doc(db, 'bookings', bookingId),
-      (snap) => {
-        if (snap.exists()) {
-          setBooking({ id: snap.id, ...snap.data() });
-        } else {
-          setBooking(null);
-        }
-        setLoading(false);
-      },
-      (error) => {
-        if (__DEV__) console.error('Error loading booking:', error);
-        setLoading(false);
+    // Wrap in auth listener so the Firestore snapshot tears down
+    // cleanly when the user switches between patient and provider accounts
+    const authUnsub = auth.onAuthStateChanged((user) => {
+      // Clean up existing Firestore listener whenever auth changes
+      if (snapshotUnsubRef.current) {
+        snapshotUnsubRef.current();
+        snapshotUnsubRef.current = null;
       }
-    );
 
-    unsubRef.current = unsub;
+      if (!user) {
+        setBooking(null);
+        setLoading(false);
+        return;
+      }
+
+      const snapshotUnsub = onSnapshot(
+        doc(db, 'bookings', bookingId),
+        (snap) => {
+          if (snap.exists()) {
+            setBooking({ id: snap.id, ...snap.data() });
+          } else {
+            setBooking(null);
+          }
+          setLoading(false);
+        },
+        (error) => {
+          // permission-denied fires when auth switches mid-session — not a real error
+          if (error.code === 'permission-denied') {
+            setLoading(false);
+            return;
+          }
+          if (__DEV__) console.error('Error loading booking:', error);
+          setLoading(false);
+        }
+      );
+
+      snapshotUnsubRef.current = snapshotUnsub;
+    });
+
     return () => {
-      if (unsubRef.current) unsubRef.current();
+      authUnsub();
+      if (snapshotUnsubRef.current) {
+        snapshotUnsubRef.current();
+        snapshotUnsubRef.current = null;
+      }
     };
   }, [bookingId]);
 
@@ -116,7 +139,7 @@ export default function BookingConfirmationScreen() {
                 cancelledAt: serverTimestamp(),
                 cancelledBy: 'patient',
               });
-              // onSnapshot will update the UI automatically
+              // onSnapshot updates the UI automatically
             } catch (error) {
               if (__DEV__) console.error('Cancel error:', error);
               Alert.alert('Error', 'Failed to cancel. Please try again.');
@@ -153,24 +176,18 @@ export default function BookingConfirmationScreen() {
 
   const statusConfig = STATUS_CONFIG[booking.status] || STATUS_CONFIG.pending;
 
-  // A booking was cancelled by the provider if:
-  // - status is cancelled
-  // - cancelledBy is not 'patient' (could be 'provider' or undefined for old records)
-  // - declineReason exists
   const cancelledByProvider =
     booking.status === 'cancelled' &&
     booking.cancelledBy !== 'patient' &&
     typeof booking.declineReason === 'string' &&
     booking.declineReason.length > 0;
 
-  // Patient can cancel only their own pending appointments
   const canPatientCancel =
     booking.status === 'pending' &&
     auth.currentUser?.uid === booking.userId;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.card }]}>
         <TouchableOpacity
           onPress={() => router.push('/(tabs)/appointments' as any)}
@@ -181,10 +198,8 @@ export default function BookingConfirmationScreen() {
         <Text style={[styles.headerTitle, { color: colors.text }]}>Appointment Details</Text>
       </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
-      >
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+
         {/* Status Banner */}
         <View style={[
           styles.statusBanner,
@@ -204,12 +219,9 @@ export default function BookingConfirmationScreen() {
           </View>
         </View>
 
-        {/* Decline/cancellation reason box */}
+        {/* Provider declined — show reason */}
         {cancelledByProvider && (
-          <View style={[
-            styles.reasonBox,
-            { backgroundColor: colors.card, borderColor: '#EF444430' },
-          ]}>
+          <View style={[styles.reasonBox, { backgroundColor: colors.card, borderColor: '#EF444430' }]}>
             <Text style={styles.reasonBoxLabel}>REASON FOR CANCELLATION</Text>
             <Text style={[styles.reasonBoxText, { color: colors.text }]}>
               {booking.declineReason}
@@ -220,15 +232,10 @@ export default function BookingConfirmationScreen() {
           </View>
         )}
 
-        {/* Patient-cancelled note */}
+        {/* Patient cancelled themselves */}
         {booking.status === 'cancelled' && booking.cancelledBy === 'patient' && (
-          <View style={[
-            styles.reasonBox,
-            { backgroundColor: colors.card, borderColor: '#94A3B830' },
-          ]}>
-            <Text style={[styles.reasonBoxLabel, { color: '#94A3B8' }]}>
-              CANCELLED BY YOU
-            </Text>
+          <View style={[styles.reasonBox, { backgroundColor: colors.card, borderColor: '#94A3B830' }]}>
+            <Text style={[styles.reasonBoxLabel, { color: '#94A3B8' }]}>CANCELLED BY YOU</Text>
             <Text style={[styles.reasonBoxText, { color: colors.subtext }]}>
               You cancelled this appointment.
             </Text>
@@ -256,14 +263,12 @@ export default function BookingConfirmationScreen() {
 
         {/* Actions */}
         <View style={styles.actions}>
-          {/* Patient can cancel their own pending appointment */}
           {canPatientCancel && (
             <TouchableOpacity
               style={[styles.cancelButton, { borderColor: '#EF4444' }]}
               onPress={handleCancel}
               disabled={cancelling}
               accessibilityRole="button"
-              accessibilityLabel="Cancel appointment"
             >
               {cancelling ? (
                 <ActivityIndicator color="#EF4444" size="small" />
@@ -273,7 +278,6 @@ export default function BookingConfirmationScreen() {
             </TouchableOpacity>
           )}
 
-          {/* Book again — only for cancelled appointments */}
           {booking.status === 'cancelled' && (
             <TouchableOpacity
               style={[styles.primaryButton, { backgroundColor: colors.primary }]}
@@ -284,15 +288,12 @@ export default function BookingConfirmationScreen() {
             </TouchableOpacity>
           )}
 
-          {/* View provider — always available */}
           <TouchableOpacity
             style={[styles.outlineButton, { borderColor: colors.primary }]}
             onPress={() => router.push(`/provider/${booking.providerId}` as any)}
             accessibilityRole="button"
           >
-            <Text style={[styles.outlineButtonText, { color: colors.primary }]}>
-              View Provider
-            </Text>
+            <Text style={[styles.outlineButtonText, { color: colors.primary }]}>View Provider</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -300,9 +301,7 @@ export default function BookingConfirmationScreen() {
             onPress={() => router.push('/(tabs)/appointments' as any)}
             accessibilityRole="button"
           >
-            <Text style={[styles.ghostButtonText, { color: colors.subtext }]}>
-              ← All Appointments
-            </Text>
+            <Text style={[styles.ghostButtonText, { color: colors.subtext }]}>← All Appointments</Text>
           </TouchableOpacity>
         </View>
 
@@ -314,9 +313,7 @@ export default function BookingConfirmationScreen() {
   );
 }
 
-function DetailRow({
-  label, value, colors,
-}: { label: string; value: string; colors: any }) {
+function DetailRow({ label, value, colors }: { label: string; value: string; colors: any }) {
   return (
     <View style={styles.detailRow}>
       <Text style={[styles.detailLabel, { color: colors.subtext }]}>{label}</Text>
@@ -344,8 +341,7 @@ const styles = StyleSheet.create({
   statusMessage: { fontSize: 13, lineHeight: 18 },
 
   reasonBox: {
-    borderWidth: 1, borderRadius: 14,
-    padding: 16, marginBottom: 16,
+    borderWidth: 1, borderRadius: 14, padding: 16, marginBottom: 16,
   },
   reasonBoxLabel: {
     color: '#EF4444', fontSize: 10, fontWeight: '700',
@@ -364,23 +360,16 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start', marginBottom: 14, flexWrap: 'wrap',
   },
   detailLabel: { fontSize: 15 },
-  detailValue: {
-    fontSize: 15, fontWeight: '600',
-    flex: 1, textAlign: 'right', marginLeft: 16,
-  },
+  detailValue: { fontSize: 15, fontWeight: '600', flex: 1, textAlign: 'right', marginLeft: 16 },
 
   actions: { gap: 12, marginTop: 8 },
   cancelButton: {
-    padding: 16, borderRadius: 12,
-    alignItems: 'center', borderWidth: 2,
+    padding: 16, borderRadius: 12, alignItems: 'center', borderWidth: 2,
   },
   cancelButtonText: { color: '#EF4444', fontSize: 15, fontWeight: '700' },
   primaryButton: { padding: 18, borderRadius: 12, alignItems: 'center' },
   primaryButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-  outlineButton: {
-    padding: 16, borderRadius: 12,
-    alignItems: 'center', borderWidth: 2,
-  },
+  outlineButton: { padding: 16, borderRadius: 12, alignItems: 'center', borderWidth: 2 },
   outlineButtonText: { fontSize: 15, fontWeight: '600' },
   ghostButton: { padding: 12, alignItems: 'center' },
   ghostButtonText: { fontSize: 14 },
