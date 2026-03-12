@@ -1,9 +1,13 @@
 import { useRouter } from 'expo-router';
-import { collection, doc, onSnapshot, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
+import {
+  collection, doc, onSnapshot, query,
+  serverTimestamp, updateDoc, where,
+} from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Modal,
-  Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
+  Platform, ScrollView, StyleSheet, Text, TextInput,
+  TouchableOpacity, View,
 } from 'react-native';
 import { db } from '../../firebase';
 import { useProviderAuth } from '../../context/ProviderAuthContext';
@@ -16,7 +20,7 @@ type Booking = {
   time: string;
   notes?: string;
   status: string;
-  createdAt: string;
+  createdAt: any;
 };
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
@@ -35,9 +39,21 @@ const DECLINE_REASONS = [
   'Other',
 ];
 
+// Timezone-safe date formatter
+function formatDate(dateStr: string): string {
+  if (!dateStr || !dateStr.includes('-')) return dateStr || '—';
+  const parts = dateStr.split('-').map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) return dateStr;
+  const [year, month, day] = parts;
+  return new Date(year, month - 1, day).toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric',
+  });
+}
+
 export default function ProviderBookingsScreen() {
   const router = useRouter();
   const { providerProfile, isProvider, initializing } = useProviderAuth();
+
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'pending' | 'confirmed' | 'all'>('pending');
@@ -64,16 +80,27 @@ export default function ProviderBookingsScreen() {
       where('providerId', '==', providerProfile.providerId)
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data: Booking[] = snapshot.docs.map(d => ({
-        id: d.id, ...(d.data() as Omit<Booking, 'id'>),
-      }));
-      data.sort((a, b) =>
-        new Date(a.date + ' ' + a.time).getTime() - new Date(b.date + ' ' + b.time).getTime()
-      );
-      setBookings(data);
-      setLoading(false);
-    });
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const data: Booking[] = snapshot.docs.map(d => ({
+          id: d.id,
+          ...(d.data() as Omit<Booking, 'id'>),
+        }));
+        data.sort((a, b) => {
+          // Pending first, then by date
+          if (a.status === 'pending' && b.status !== 'pending') return -1;
+          if (a.status !== 'pending' && b.status === 'pending') return 1;
+          return a.date.localeCompare(b.date) || a.time.localeCompare(b.time);
+        });
+        setBookings(data);
+        setLoading(false);
+      },
+      (error) => {
+        if (__DEV__) console.error('Provider bookings error:', error);
+        setLoading(false);
+      }
+    );
 
     return unsubscribe;
   }, [providerProfile?.providerId]);
@@ -93,7 +120,8 @@ export default function ProviderBookingsScreen() {
                 status: 'confirmed',
                 confirmedAt: serverTimestamp(),
               });
-            } catch {
+            } catch (error) {
+              if (__DEV__) console.error('Confirm error:', error);
               Alert.alert('Error', 'Failed to confirm. Please try again.');
             } finally {
               setActionLoading(null);
@@ -114,7 +142,9 @@ export default function ProviderBookingsScreen() {
   const submitDecline = async () => {
     if (!declineTarget) return;
 
-    const reason = selectedReason === 'Other' ? otherReason.trim() : selectedReason;
+    const reason = selectedReason === 'Other'
+      ? otherReason.trim()
+      : selectedReason;
 
     if (!reason) {
       Alert.alert('Reason Required', 'Please select or enter a reason for declining.');
@@ -129,8 +159,10 @@ export default function ProviderBookingsScreen() {
         status: 'cancelled',
         declinedAt: serverTimestamp(),
         declineReason: reason,
+        cancelledBy: 'provider',   // ← required for patient to see reason
       });
-    } catch {
+    } catch (error) {
+      if (__DEV__) console.error('Decline error:', error);
       Alert.alert('Error', 'Failed to decline. Please try again.');
     } finally {
       setActionLoading(null);
@@ -142,11 +174,6 @@ export default function ProviderBookingsScreen() {
     if (filter === 'all') return true;
     return b.status === filter;
   });
-
-  const formatDate = (dateStr: string) =>
-    new Date(dateStr).toLocaleDateString('en-US', {
-      weekday: 'short', month: 'short', day: 'numeric',
-    });
 
   if (loading) {
     return (
@@ -189,9 +216,7 @@ export default function ProviderBookingsScreen() {
 
       {filteredBookings.length === 0 ? (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyIcon}>
-            {filter === 'pending' ? '🎉' : '📅'}
-          </Text>
+          <Text style={styles.emptyIcon}>{filter === 'pending' ? '🎉' : '📅'}</Text>
           <Text style={styles.emptyTitle}>
             {filter === 'pending' ? 'All caught up!' : `No ${filter} appointments`}
           </Text>
@@ -213,7 +238,7 @@ export default function ProviderBookingsScreen() {
             return (
               <View style={styles.bookingCard}>
                 <View style={styles.cardHeader}>
-                  <View>
+                  <View style={styles.cardHeaderLeft}>
                     <Text style={styles.patientName}>{item.patientName}</Text>
                     <Text style={styles.patientPhone}>{item.patientPhone}</Text>
                   </View>
@@ -383,7 +408,10 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#334155',
     padding: 20, gap: 16,
   },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  cardHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
+  },
+  cardHeaderLeft: { flex: 1, marginRight: 12 },
   patientName: { color: '#F8FAFC', fontSize: 17, fontWeight: '700', marginBottom: 2 },
   patientPhone: { color: '#64748B', fontSize: 13 },
   statusPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
@@ -394,10 +422,16 @@ const styles = StyleSheet.create({
   },
   dateTimeItem: { flex: 1, padding: 14, alignItems: 'center' },
   dateTimeDivider: { width: 1, backgroundColor: '#1E293B' },
-  dateTimeLabel: { color: '#475569', fontSize: 10, fontWeight: '700', letterSpacing: 1, marginBottom: 4 },
+  dateTimeLabel: {
+    color: '#475569', fontSize: 10, fontWeight: '700',
+    letterSpacing: 1, marginBottom: 4,
+  },
   dateTimeValue: { color: '#F8FAFC', fontSize: 15, fontWeight: '600' },
   notesBox: { backgroundColor: '#0F172A', borderRadius: 10, padding: 14 },
-  notesLabel: { color: '#475569', fontSize: 10, fontWeight: '700', letterSpacing: 1, marginBottom: 6 },
+  notesLabel: {
+    color: '#475569', fontSize: 10, fontWeight: '700',
+    letterSpacing: 1, marginBottom: 6,
+  },
   notesText: { color: '#94A3B8', fontSize: 14, lineHeight: 20 },
   actions: { flexDirection: 'row', gap: 10 },
   declineButton: {
@@ -417,8 +451,7 @@ const styles = StyleSheet.create({
 
   // Modal
   modalOverlay: {
-    flex: 1, backgroundColor: '#00000088',
-    justifyContent: 'flex-end',
+    flex: 1, backgroundColor: '#00000088', justifyContent: 'flex-end',
   },
   modalSheet: {
     backgroundColor: '#1E293B',
