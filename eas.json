@@ -9,8 +9,7 @@
       "distribution": "internal",
       "channel": "development",
       "android": {
-        "buildType": "apk",
-        "packageName": "com.accesscare.app"
+        "buildType": "apk"
       },
       "env": {
         "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyCMKOU3BhgahIDw2AnPWTpwrvczWiV_vqU",
@@ -25,8 +24,7 @@
       "distribution": "internal",
       "channel": "staging",
       "android": {
-        "buildType": "apk",
-        "packageName": "com.accesscare.app"
+        "buildType": "apk"
       },
       "env": {
         "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyCMKOU3BhgahIDw2AnPWTpwrvczWiV_vqU",
@@ -42,8 +40,7 @@
       "channel": "beta",
       "autoIncrement": true,
       "android": {
-        "buildType": "apk",
-        "packageName": "com.accesscare.app"
+        "buildType": "apk"
       },
       "env": {
         "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyAMYBfxhljita9XVqTc_HHahMA7mFVFPn8",
@@ -58,8 +55,7 @@
       "channel": "production",
       "autoIncrement": true,
       "android": {
-        "buildType": "app-bundle",
-        "packageName": "com.accesscare.app"
+        "buildType": "app-bundle"
       },
       "env": {
         "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyAMYBfxhljita9XVqTc_HHahMA7mFVFPn8",
