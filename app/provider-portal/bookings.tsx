@@ -2,8 +2,8 @@ import { useRouter } from 'expo-router';
 import { collection, doc, onSnapshot, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator, Alert, FlatList, Modal,
-  StyleSheet, Text, TextInput, TouchableOpacity, View,
+  ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Modal,
+  Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { db } from '../../firebase';
 import { useProviderAuth } from '../../context/ProviderAuthContext';
@@ -68,7 +68,9 @@ export default function ProviderBookingsScreen() {
       const data: Booking[] = snapshot.docs.map(d => ({
         id: d.id, ...(d.data() as Omit<Booking, 'id'>),
       }));
-      data.sort((a, b) => new Date(a.date + ' ' + a.time).getTime() - new Date(b.date + ' ' + b.time).getTime());
+      data.sort((a, b) =>
+        new Date(a.date + ' ' + a.time).getTime() - new Date(b.date + ' ' + b.time).getTime()
+      );
       setBookings(data);
       setLoading(false);
     });
@@ -278,48 +280,60 @@ export default function ProviderBookingsScreen() {
         animationType="slide"
         onRequestClose={() => setDeclineModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
           <View style={styles.modalSheet}>
             <Text style={styles.modalTitle}>Reason for Declining</Text>
             <Text style={styles.modalSubtitle}>
               Select a reason — this helps patients understand next steps.
             </Text>
 
-            {DECLINE_REASONS.map((reason) => (
-              <TouchableOpacity
-                key={reason}
-                style={[
-                  styles.reasonOption,
-                  selectedReason === reason && styles.reasonOptionSelected,
-                ]}
-                onPress={() => setSelectedReason(reason)}
-                accessibilityRole="button"
-              >
-                <View style={[
-                  styles.reasonRadio,
-                  selectedReason === reason && styles.reasonRadioSelected,
-                ]} />
-                <Text style={[
-                  styles.reasonText,
-                  selectedReason === reason && styles.reasonTextSelected,
-                ]}>
-                  {reason}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              style={styles.reasonsScroll}
+            >
+              {DECLINE_REASONS.map((reason) => (
+                <TouchableOpacity
+                  key={reason}
+                  style={[
+                    styles.reasonOption,
+                    selectedReason === reason && styles.reasonOptionSelected,
+                  ]}
+                  onPress={() => setSelectedReason(reason)}
+                  accessibilityRole="button"
+                >
+                  <View style={[
+                    styles.reasonRadio,
+                    selectedReason === reason && styles.reasonRadioSelected,
+                  ]} />
+                  <Text style={[
+                    styles.reasonText,
+                    selectedReason === reason && styles.reasonTextSelected,
+                  ]}>
+                    {reason}
+                  </Text>
+                </TouchableOpacity>
+              ))}
 
-            {selectedReason === 'Other' && (
-              <TextInput
-                style={styles.otherInput}
-                placeholder="Please describe the reason..."
-                placeholderTextColor="#475569"
-                value={otherReason}
-                onChangeText={setOtherReason}
-                multiline
-                numberOfLines={3}
-                autoFocus
-              />
-            )}
+              {selectedReason === 'Other' && (
+                <TextInput
+                  style={styles.otherInput}
+                  placeholder="Please describe the reason..."
+                  placeholderTextColor="#475569"
+                  value={otherReason}
+                  onChangeText={setOtherReason}
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                  autoFocus
+                />
+              )}
+
+              <View style={{ height: 8 }} />
+            </ScrollView>
 
             <View style={styles.modalActions}>
               <TouchableOpacity
@@ -342,7 +356,7 @@ export default function ProviderBookingsScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -409,19 +423,23 @@ const styles = StyleSheet.create({
   modalSheet: {
     backgroundColor: '#1E293B',
     borderTopLeftRadius: 20, borderTopRightRadius: 20,
-    padding: 24, paddingBottom: 40, gap: 12,
+    padding: 24, paddingBottom: 40,
+    maxHeight: '85%',
   },
-  modalTitle: { color: '#F8FAFC', fontSize: 18, fontWeight: '700' },
-  modalSubtitle: { color: '#64748B', fontSize: 13, marginBottom: 8 },
+  modalTitle: { color: '#F8FAFC', fontSize: 18, fontWeight: '700', marginBottom: 6 },
+  modalSubtitle: { color: '#64748B', fontSize: 13, marginBottom: 16 },
+  reasonsScroll: { maxHeight: 360 },
   reasonOption: {
     flexDirection: 'row', alignItems: 'center',
-    padding: 14, borderRadius: 10, gap: 12,
+    padding: 14, borderRadius: 10,
     borderWidth: 1, borderColor: '#334155',
+    marginBottom: 8,
   },
   reasonOptionSelected: { borderColor: '#EF4444', backgroundColor: '#EF444410' },
   reasonRadio: {
     width: 18, height: 18, borderRadius: 9,
     borderWidth: 2, borderColor: '#475569',
+    marginRight: 12, flexShrink: 0,
   },
   reasonRadioSelected: { borderColor: '#EF4444', backgroundColor: '#EF4444' },
   reasonText: { color: '#94A3B8', fontSize: 14, flex: 1 },
@@ -431,10 +449,9 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#334155',
     borderRadius: 10, padding: 14,
     color: '#F8FAFC', fontSize: 14,
-    textAlignVertical: 'top', minHeight: 80,
-    marginTop: 4,
+    minHeight: 80, marginBottom: 8,
   },
-  modalActions: { flexDirection: 'row', gap: 10, marginTop: 8 },
+  modalActions: { flexDirection: 'row', gap: 10, marginTop: 12 },
   modalCancelButton: {
     flex: 1, padding: 14, borderRadius: 10,
     borderWidth: 1, borderColor: '#334155', alignItems: 'center',
