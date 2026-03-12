@@ -5,8 +5,6 @@ ios/
 .git/
 .vscode/
 *.log
-assets/images/AccessCare-logo.png
-assets/images/Accesscare.png
 scripts/
 *.md
 !README.md
