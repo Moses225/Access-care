@@ -1,10 +1,12 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { Stack, useRouter } from 'expo-router';
 import { doc, getDoc } from 'firebase/firestore';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator, FlatList, StyleSheet,
   Text, TouchableOpacity, View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { GuestUpgradePrompt } from '../../components/GuestUpgradePrompt';
@@ -13,32 +15,32 @@ import { db } from '../../firebase';
 export default function SavedProvidersScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { user, isGuest } = useAuth();
+  const { isGuest } = useAuth();
 
   const [savedProviders, setSavedProviders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
 
-  useEffect(() => {
+  const loadSavedProviders = useCallback(async () => {
     if (isGuest) {
       setLoading(false);
       return;
     }
-    loadSavedProviders();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isGuest]);
 
-  const loadSavedProviders = async () => {
     try {
-      if (!user) { setLoading(false); return; }
+      setLoading(true);
 
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      if (!userDoc.exists()) { setLoading(false); return; }
+      // Read from AsyncStorage — matches how provider/[id].tsx saves favorites
+      const favs = await AsyncStorage.getItem('favorites');
+      const favoriteIds: string[] = favs ? JSON.parse(favs) : [];
 
-      const favorites = userDoc.data().favorites || [];
-      if (favorites.length === 0) { setLoading(false); return; }
+      if (favoriteIds.length === 0) {
+        setSavedProviders([]);
+        setLoading(false);
+        return;
+      }
 
-      const providerPromises = favorites.map(async (providerId: string) => {
+      const providerPromises = favoriteIds.map(async (providerId: string) => {
         try {
           const providerDoc = await getDoc(doc(db, 'providers', providerId));
           if (providerDoc.exists()) return { id: providerDoc.id, ...providerDoc.data() };
@@ -55,7 +57,15 @@ export default function SavedProvidersScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isGuest]);
+
+  // Reload every time the screen comes into focus
+  // so unfavoriting a provider is reflected immediately
+  useFocusEffect(
+    useCallback(() => {
+      loadSavedProviders();
+    }, [loadSavedProviders])
+  );
 
   const renderProvider = ({ item }: any) => (
     <TouchableOpacity
@@ -87,7 +97,6 @@ export default function SavedProvidersScreen() {
     </TouchableOpacity>
   );
 
-  // ─── Loading ───────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <>
@@ -100,18 +109,13 @@ export default function SavedProvidersScreen() {
     );
   }
 
-  // ─── Guest wall ────────────────────────────────────────────────────────────
   if (isGuest) {
     return (
       <>
         <Stack.Screen options={{ headerShown: false }} />
         <View style={[styles.container, { backgroundColor: colors.background }]}>
           <View style={[styles.header, { backgroundColor: colors.card }]}>
-            <TouchableOpacity
-              onPress={() => router.back()}
-              accessibilityLabel="Go back"
-              accessibilityRole="button"
-            >
+            <TouchableOpacity onPress={() => router.back()} accessibilityLabel="Go back" accessibilityRole="button">
               <Text style={[styles.backText, { color: colors.primary }]}>← Back</Text>
             </TouchableOpacity>
             <Text style={[styles.title, { color: colors.text }]}>Saved Providers</Text>
@@ -119,9 +123,7 @@ export default function SavedProvidersScreen() {
 
           <View style={styles.guestWall}>
             <Text style={styles.lockIcon}>🔒</Text>
-            <Text style={[styles.guestWallTitle, { color: colors.text }]}>
-              Account Required
-            </Text>
+            <Text style={[styles.guestWallTitle, { color: colors.text }]}>Account Required</Text>
             <Text style={[styles.guestWallText, { color: colors.subtext }]}>
               Create a free account to save your favorite providers and access them anytime.
             </Text>
@@ -136,12 +138,9 @@ export default function SavedProvidersScreen() {
             <TouchableOpacity
               style={styles.backToProviderButton}
               onPress={() => router.back()}
-              accessibilityLabel="Go back"
               accessibilityRole="button"
             >
-              <Text style={[styles.backToProviderText, { color: colors.subtext }]}>
-                Continue browsing
-              </Text>
+              <Text style={[styles.backToProviderText, { color: colors.subtext }]}>Continue browsing</Text>
             </TouchableOpacity>
           </View>
 
@@ -155,17 +154,12 @@ export default function SavedProvidersScreen() {
     );
   }
 
-  // ─── Full account ──────────────────────────────────────────────────────────
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={[styles.header, { backgroundColor: colors.card }]}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            accessibilityLabel="Go back"
-            accessibilityRole="button"
-          >
+          <TouchableOpacity onPress={() => router.back()} accessibilityLabel="Go back" accessibilityRole="button">
             <Text style={[styles.backText, { color: colors.primary }]}>← Back</Text>
           </TouchableOpacity>
           <Text style={[styles.title, { color: colors.text }]}>Saved Providers</Text>
@@ -184,7 +178,7 @@ export default function SavedProvidersScreen() {
               <Text style={styles.emptyIcon}>❤️</Text>
               <Text style={[styles.emptyTitle, { color: colors.text }]}>No Saved Providers Yet</Text>
               <Text style={[styles.emptyText, { color: colors.subtext }]}>
-                Tap the heart icon on provider pages to save your favorites.
+                Tap the heart icon on a provider page to save your favorites.
               </Text>
               <TouchableOpacity
                 style={[styles.browseButton, { backgroundColor: colors.primary }]}
@@ -232,7 +226,6 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 16, textAlign: 'center', lineHeight: 24, marginBottom: 30 },
   browseButton: { paddingHorizontal: 32, paddingVertical: 16, borderRadius: 12 },
   browseButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-  // ─── Guest wall ────────────────────────────────────────────────────────────
   guestWall: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
   lockIcon: { fontSize: 64, marginBottom: 20 },
   guestWallTitle: { fontSize: 22, fontWeight: 'bold', marginBottom: 12, textAlign: 'center' },

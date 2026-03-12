@@ -20,6 +20,24 @@ import { GuestUpgradePrompt } from '../../components/GuestUpgradePrompt';
 import { auth, db } from '../../firebase';
 import { sendBookingConfirmationSMS } from '../../utils/sms';
 
+const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+// Generate 30-min slots between two "HH:MM" strings
+function generateSlotsForRange(open: string, close: string): string[] {
+  const slots: string[] = [];
+  const [openH, openM] = open.split(':').map(Number);
+  const [closeH, closeM] = close.split(':').map(Number);
+  const openMins = openH * 60 + openM;
+  const closeMins = closeH * 60 + closeM;
+
+  for (let m = openMins; m < closeMins; m += 30) {
+    const h = Math.floor(m / 60);
+    const min = m % 60;
+    slots.push(`${h.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`);
+  }
+  return slots;
+}
+
 export default function BookingScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -35,18 +53,48 @@ export default function BookingScreen() {
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+  const [timeSlots, setTimeSlots] = useState<string[]>([]);
+  const [dayIsClosed, setDayIsClosed] = useState(false);
 
-  // ─── Show upgrade prompt immediately if guest ─────────────────────────────
   useEffect(() => {
-    if (isGuest) {
-      setShowUpgradePrompt(true);
-    }
+    if (isGuest) setShowUpgradePrompt(true);
   }, [isGuest]);
 
   useEffect(() => {
     loadProvider();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // Recalculate time slots when date or provider changes
+  useEffect(() => {
+    if (!selectedDate) return;
+
+    const [year, month, day] = selectedDate.split('-').map(Number);
+    const localDate = new Date(year, month - 1, day);
+    const dayName = DAY_NAMES[localDate.getDay()];
+
+    const hours = provider?.hours;
+    if (hours && hours[dayName]) {
+      const dayHours = hours[dayName];
+      if (dayHours.closed) {
+        setTimeSlots([]);
+        setDayIsClosed(true);
+        setSelectedTime('');
+        return;
+      }
+      if (dayHours.open && dayHours.close) {
+        setTimeSlots(generateSlotsForRange(dayHours.open, dayHours.close));
+        setDayIsClosed(false);
+        setSelectedTime('');
+        return;
+      }
+    }
+
+    // Fallback: no hours set → default 9am–5pm
+    setTimeSlots(generateSlotsForRange('09:00', '17:00'));
+    setDayIsClosed(false);
+    setSelectedTime('');
+  }, [selectedDate, provider]);
 
   const loadProvider = async () => {
     if (!id) return;
@@ -63,16 +111,6 @@ export default function BookingScreen() {
     }
   };
 
-  const generateTimeSlots = () => {
-    const slots = [];
-    for (let hour = 9; hour < 17; hour++) {
-      slots.push(`${hour.toString().padStart(2, '0')}:00`);
-      slots.push(`${hour.toString().padStart(2, '0')}:30`);
-    }
-    return slots;
-  };
-
-  const timeSlots = generateTimeSlots();
   const today = new Date().toISOString().split('T')[0];
   const maxDate = new Date();
   maxDate.setMonth(maxDate.getMonth() + 3);
@@ -87,7 +125,6 @@ export default function BookingScreen() {
   };
 
   const handleBooking = async () => {
-    // Double-check guest status before submitting
     if (isGuest || !isFullAccount) {
       setShowUpgradePrompt(true);
       return;
@@ -154,7 +191,6 @@ export default function BookingScreen() {
     }
   };
 
-  // ─── Loading state ─────────────────────────────────────────────────────────
   if (loadingProvider) {
     return (
       <View style={[styles.container, styles.loadingContainer, { backgroundColor: colors.background }]}>
@@ -178,8 +214,6 @@ export default function BookingScreen() {
     );
   }
 
-  // ─── Guest wall ────────────────────────────────────────────────────────────
-  // Show a soft wall if guest — they see the upgrade prompt over a blurred preview
   if (isGuest) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -192,30 +226,23 @@ export default function BookingScreen() {
 
         <View style={styles.guestWall}>
           <Text style={styles.lockIcon}>🔒</Text>
-          <Text style={[styles.guestWallTitle, { color: colors.text }]}>
-            Account Required to Book
-          </Text>
+          <Text style={[styles.guestWallTitle, { color: colors.text }]}>Account Required to Book</Text>
           <Text style={[styles.guestWallText, { color: colors.subtext }]}>
             Create a free account to book appointments with {provider.name}. It only takes 30 seconds.
           </Text>
           <TouchableOpacity
             style={[styles.createAccountButton, { backgroundColor: colors.primary }]}
             onPress={() => setShowUpgradePrompt(true)}
-            accessibilityLabel="Create account to book appointment"
             accessibilityRole="button"
           >
             <Text style={styles.createAccountButtonText}>Create Free Account</Text>
           </TouchableOpacity>
-
           <TouchableOpacity
             style={styles.backToProviderButton}
             onPress={() => router.back()}
-            accessibilityLabel="Go back to provider"
             accessibilityRole="button"
           >
-            <Text style={[styles.backToProviderText, { color: colors.subtext }]}>
-              Go back to provider
-            </Text>
+            <Text style={[styles.backToProviderText, { color: colors.subtext }]}>Go back to provider</Text>
           </TouchableOpacity>
         </View>
 
@@ -228,17 +255,10 @@ export default function BookingScreen() {
     );
   }
 
-  // ─── Full account — normal booking flow ───────────────────────────────────
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.card }]}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backBtn}
-          accessibilityLabel="Go back"
-          accessibilityRole="button"
-        >
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button">
           <Text style={[styles.backText, { color: colors.primary }]}>← Back</Text>
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Book Appointment</Text>
@@ -253,9 +273,7 @@ export default function BookingScreen() {
             </Text>
           </View>
           <Text style={[styles.providerName, { color: colors.text }]}>{provider.name}</Text>
-          <Text style={[styles.providerSpecialty, { color: colors.primary }]}>
-            {provider.specialty}
-          </Text>
+          <Text style={[styles.providerSpecialty, { color: colors.primary }]}>{provider.specialty}</Text>
         </View>
 
         {/* Calendar */}
@@ -298,30 +316,47 @@ export default function BookingScreen() {
         {selectedDate && (
           <View style={[styles.section, { backgroundColor: colors.card }]}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Select Time</Text>
-            <View style={styles.timeSlots}>
-              {timeSlots.map((time) => {
-                const isSelected = selectedTime === time;
-                return (
-                  <TouchableOpacity
-                    key={time}
-                    style={[
-                      styles.timeSlot,
-                      {
-                        backgroundColor: isSelected ? colors.primary : colors.background,
-                        borderColor: isSelected ? colors.primary : colors.border,
-                      },
-                    ]}
-                    onPress={() => setSelectedTime(time)}
-                    accessibilityLabel={`Select ${time}`}
-                    accessibilityRole="button"
-                  >
-                    <Text style={[styles.timeText, { color: isSelected ? '#ffffff' : colors.text }]}>
-                      {time}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+
+            {dayIsClosed ? (
+              <View style={[styles.closedNotice, { backgroundColor: colors.background }]}>
+                <Text style={[styles.closedNoticeText, { color: colors.subtext }]}>
+                  🚫 This provider is not available on{' '}
+                  {new Date(...(selectedDate.split('-').map(Number) as [number, number, number])).toLocaleDateString('en-US', { weekday: 'long' })}s.
+                  Please select a different date.
+                </Text>
+              </View>
+            ) : timeSlots.length === 0 ? (
+              <View style={[styles.closedNotice, { backgroundColor: colors.background }]}>
+                <Text style={[styles.closedNoticeText, { color: colors.subtext }]}>
+                  No available slots for this date.
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.timeSlots}>
+                {timeSlots.map((time) => {
+                  const isSelected = selectedTime === time;
+                  return (
+                    <TouchableOpacity
+                      key={time}
+                      style={[
+                        styles.timeSlot,
+                        {
+                          backgroundColor: isSelected ? colors.primary : colors.background,
+                          borderColor: isSelected ? colors.primary : colors.border,
+                        },
+                      ]}
+                      onPress={() => setSelectedTime(time)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Select ${time}`}
+                    >
+                      <Text style={[styles.timeText, { color: isSelected ? '#ffffff' : colors.text }]}>
+                        {time}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
           </View>
         )}
 
@@ -370,9 +405,7 @@ export default function BookingScreen() {
             </View>
             <View style={styles.summaryRow}>
               <Text style={[styles.summaryLabel, { color: colors.subtext }]}>Date:</Text>
-              <Text style={[styles.summaryValue, { color: colors.text }]}>
-                {formatDate(selectedDate)}
-              </Text>
+              <Text style={[styles.summaryValue, { color: colors.text }]}>{formatDate(selectedDate)}</Text>
             </View>
             <View style={styles.summaryRow}>
               <Text style={[styles.summaryLabel, { color: colors.subtext }]}>Time:</Text>
@@ -391,8 +424,8 @@ export default function BookingScreen() {
             style={[styles.bookButton, { backgroundColor: colors.primary }]}
             onPress={handleBooking}
             disabled={loading}
-            accessibilityLabel="Request appointment"
             accessibilityRole="button"
+            accessibilityLabel="Request appointment"
           >
             <Text style={styles.bookButtonText}>
               {loading ? 'Booking...' : 'Request Appointment'}
@@ -423,6 +456,8 @@ const styles = StyleSheet.create({
   selectedDateDisplay: { marginTop: 16, padding: 12, borderRadius: 8, backgroundColor: 'rgba(0,0,0,0.05)' },
   selectedDateLabel: { fontSize: 12, marginBottom: 4 },
   selectedDateValue: { fontSize: 16, fontWeight: '600' },
+  closedNotice: { padding: 16, borderRadius: 10 },
+  closedNoticeText: { fontSize: 14, lineHeight: 20, textAlign: 'center' },
   timeSlots: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   timeSlot: { paddingVertical: 12, paddingHorizontal: 20, borderRadius: 12, borderWidth: 2, minWidth: 80, alignItems: 'center' },
   timeText: { fontSize: 16, fontWeight: '600' },
@@ -436,7 +471,6 @@ const styles = StyleSheet.create({
   bookButtonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
   backButton: { paddingHorizontal: 30, paddingVertical: 15, borderRadius: 12, marginTop: 20 },
   backButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  // ─── Guest wall ────────────────────────────────────────────────────────────
   guestWall: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
   lockIcon: { fontSize: 64, marginBottom: 20 },
   guestWallTitle: { fontSize: 22, fontWeight: 'bold', marginBottom: 12, textAlign: 'center' },

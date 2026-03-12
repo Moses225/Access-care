@@ -216,7 +216,9 @@ export default function ProviderDetailScreen() {
         verified: data.verified === true,
         profilePicture: typeof data.profilePicture === 'string' ? data.profilePicture : '',
         welcomeMessage: typeof data.welcomeMessage === 'string' ? data.welcomeMessage : '',
-        aboutMe: typeof data.aboutMe === 'string' ? data.aboutMe : '',
+        aboutMe: typeof data.bio === 'string' && data.bio
+        ? data.bio
+        : typeof data.aboutMe === 'string' ? data.aboutMe : '',
         specialInterests: Array.isArray(data.specialInterests) ? data.specialInterests : [],
         education: Array.isArray(data.education) ? data.education : [],
         languagesSpoken: Array.isArray(data.languagesSpoken) ? data.languagesSpoken : [],

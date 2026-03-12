@@ -2,8 +2,8 @@ import { useRouter } from 'expo-router';
 import { collection, doc, onSnapshot, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator, Alert, FlatList,
-  StyleSheet, Text, TouchableOpacity, View,
+  ActivityIndicator, Alert, FlatList, Modal,
+  StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { db } from '../../firebase';
 import { useProviderAuth } from '../../context/ProviderAuthContext';
@@ -26,6 +26,15 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
   completed: { label: 'Completed', color: '#818CF8', bg: '#818CF820' },
 };
 
+const DECLINE_REASONS = [
+  'Schedule conflict — no availability on this date',
+  'No longer accepting this insurance plan',
+  'Appointment type not available at this location',
+  'Please call our office to reschedule',
+  'Provider is out of office',
+  'Other',
+];
+
 export default function ProviderBookingsScreen() {
   const router = useRouter();
   const { providerProfile, isProvider, initializing } = useProviderAuth();
@@ -33,6 +42,12 @@ export default function ProviderBookingsScreen() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'pending' | 'confirmed' | 'all'>('pending');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Decline modal state
+  const [declineModalVisible, setDeclineModalVisible] = useState(false);
+  const [declineTarget, setDeclineTarget] = useState<Booking | null>(null);
+  const [selectedReason, setSelectedReason] = useState('');
+  const [otherReason, setOtherReason] = useState('');
 
   useEffect(() => {
     if (!initializing && !isProvider) {
@@ -87,31 +102,38 @@ export default function ProviderBookingsScreen() {
     );
   };
 
-  const handleDecline = (booking: Booking) => {
-    Alert.alert(
-      'Decline Request',
-      `Decline ${booking.patientName}'s request? They will need to rebook.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Decline',
-          style: 'destructive',
-          onPress: async () => {
-            setActionLoading(booking.id);
-            try {
-              await updateDoc(doc(db, 'bookings', booking.id), {
-                status: 'cancelled',
-                declinedAt: serverTimestamp(),
-              });
-            } catch {
-              Alert.alert('Error', 'Failed to decline. Please try again.');
-            } finally {
-              setActionLoading(null);
-            }
-          },
-        },
-      ]
-    );
+  const openDeclineModal = (booking: Booking) => {
+    setDeclineTarget(booking);
+    setSelectedReason('');
+    setOtherReason('');
+    setDeclineModalVisible(true);
+  };
+
+  const submitDecline = async () => {
+    if (!declineTarget) return;
+
+    const reason = selectedReason === 'Other' ? otherReason.trim() : selectedReason;
+
+    if (!reason) {
+      Alert.alert('Reason Required', 'Please select or enter a reason for declining.');
+      return;
+    }
+
+    setDeclineModalVisible(false);
+    setActionLoading(declineTarget.id);
+
+    try {
+      await updateDoc(doc(db, 'bookings', declineTarget.id), {
+        status: 'cancelled',
+        declinedAt: serverTimestamp(),
+        declineReason: reason,
+      });
+    } catch {
+      Alert.alert('Error', 'Failed to decline. Please try again.');
+    } finally {
+      setActionLoading(null);
+      setDeclineTarget(null);
+    }
   };
 
   const filteredBookings = bookings.filter(b => {
@@ -188,7 +210,6 @@ export default function ProviderBookingsScreen() {
 
             return (
               <View style={styles.bookingCard}>
-                {/* Card header */}
                 <View style={styles.cardHeader}>
                   <View>
                     <Text style={styles.patientName}>{item.patientName}</Text>
@@ -201,7 +222,6 @@ export default function ProviderBookingsScreen() {
                   </View>
                 </View>
 
-                {/* Date/time */}
                 <View style={styles.dateTimeRow}>
                   <View style={styles.dateTimeItem}>
                     <Text style={styles.dateTimeLabel}>DATE</Text>
@@ -214,7 +234,6 @@ export default function ProviderBookingsScreen() {
                   </View>
                 </View>
 
-                {/* Notes */}
                 {item.notes ? (
                   <View style={styles.notesBox}>
                     <Text style={styles.notesLabel}>PATIENT NOTES</Text>
@@ -222,7 +241,6 @@ export default function ProviderBookingsScreen() {
                   </View>
                 ) : null}
 
-                {/* Actions — only for pending */}
                 {item.status === 'pending' && (
                   <View style={styles.actions}>
                     {isActioning ? (
@@ -231,7 +249,7 @@ export default function ProviderBookingsScreen() {
                       <>
                         <TouchableOpacity
                           style={styles.declineButton}
-                          onPress={() => handleDecline(item)}
+                          onPress={() => openDeclineModal(item)}
                           accessibilityRole="button"
                         >
                           <Text style={styles.declineButtonText}>Decline</Text>
@@ -252,6 +270,80 @@ export default function ProviderBookingsScreen() {
           }}
         />
       )}
+
+      {/* Decline Reason Modal */}
+      <Modal
+        visible={declineModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setDeclineModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>Reason for Declining</Text>
+            <Text style={styles.modalSubtitle}>
+              Select a reason — this helps patients understand next steps.
+            </Text>
+
+            {DECLINE_REASONS.map((reason) => (
+              <TouchableOpacity
+                key={reason}
+                style={[
+                  styles.reasonOption,
+                  selectedReason === reason && styles.reasonOptionSelected,
+                ]}
+                onPress={() => setSelectedReason(reason)}
+                accessibilityRole="button"
+              >
+                <View style={[
+                  styles.reasonRadio,
+                  selectedReason === reason && styles.reasonRadioSelected,
+                ]} />
+                <Text style={[
+                  styles.reasonText,
+                  selectedReason === reason && styles.reasonTextSelected,
+                ]}>
+                  {reason}
+                </Text>
+              </TouchableOpacity>
+            ))}
+
+            {selectedReason === 'Other' && (
+              <TextInput
+                style={styles.otherInput}
+                placeholder="Please describe the reason..."
+                placeholderTextColor="#475569"
+                value={otherReason}
+                onChangeText={setOtherReason}
+                multiline
+                numberOfLines={3}
+                autoFocus
+              />
+            )}
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setDeclineModalVisible(false)}
+                accessibilityRole="button"
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalDeclineButton,
+                  !selectedReason && styles.modalDeclineButtonDisabled,
+                ]}
+                onPress={submitDecline}
+                disabled={!selectedReason}
+                accessibilityRole="button"
+              >
+                <Text style={styles.modalDeclineText}>Decline Request</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -308,4 +400,50 @@ const styles = StyleSheet.create({
   emptyIcon: { fontSize: 56, marginBottom: 16 },
   emptyTitle: { color: '#F8FAFC', fontSize: 20, fontWeight: '700', marginBottom: 8 },
   emptySubtext: { color: '#475569', fontSize: 14, textAlign: 'center' },
+
+  // Modal
+  modalOverlay: {
+    flex: 1, backgroundColor: '#00000088',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: '#1E293B',
+    borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    padding: 24, paddingBottom: 40, gap: 12,
+  },
+  modalTitle: { color: '#F8FAFC', fontSize: 18, fontWeight: '700' },
+  modalSubtitle: { color: '#64748B', fontSize: 13, marginBottom: 8 },
+  reasonOption: {
+    flexDirection: 'row', alignItems: 'center',
+    padding: 14, borderRadius: 10, gap: 12,
+    borderWidth: 1, borderColor: '#334155',
+  },
+  reasonOptionSelected: { borderColor: '#EF4444', backgroundColor: '#EF444410' },
+  reasonRadio: {
+    width: 18, height: 18, borderRadius: 9,
+    borderWidth: 2, borderColor: '#475569',
+  },
+  reasonRadioSelected: { borderColor: '#EF4444', backgroundColor: '#EF4444' },
+  reasonText: { color: '#94A3B8', fontSize: 14, flex: 1 },
+  reasonTextSelected: { color: '#F8FAFC' },
+  otherInput: {
+    backgroundColor: '#0F172A',
+    borderWidth: 1, borderColor: '#334155',
+    borderRadius: 10, padding: 14,
+    color: '#F8FAFC', fontSize: 14,
+    textAlignVertical: 'top', minHeight: 80,
+    marginTop: 4,
+  },
+  modalActions: { flexDirection: 'row', gap: 10, marginTop: 8 },
+  modalCancelButton: {
+    flex: 1, padding: 14, borderRadius: 10,
+    borderWidth: 1, borderColor: '#334155', alignItems: 'center',
+  },
+  modalCancelText: { color: '#94A3B8', fontSize: 14, fontWeight: '600' },
+  modalDeclineButton: {
+    flex: 2, padding: 14, borderRadius: 10,
+    backgroundColor: '#EF4444', alignItems: 'center',
+  },
+  modalDeclineButtonDisabled: { opacity: 0.4 },
+  modalDeclineText: { color: '#fff', fontSize: 14, fontWeight: '700' },
 });

@@ -10,7 +10,7 @@ import { useProviderAuth } from '../../context/ProviderAuthContext';
 
 export default function ProviderLoginScreen() {
   const router = useRouter();
-  const { isProvider, initializing} = useProviderAuth();
+  const { isProvider, initializing } = useProviderAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -31,6 +31,8 @@ export default function ProviderLoginScreen() {
     setError('');
     setLoading(true);
     try {
+      // Sign out any existing patient session before provider login
+      await signOut(auth).catch(() => {});
       await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
       // ProviderAuthContext will detect the claim and redirect via useEffect
     } catch (err: any) {
@@ -42,7 +44,6 @@ export default function ProviderLoginScreen() {
       } else {
         setError('Login failed. Please try again.');
       }
-      // Sign out in case partial auth happened
       await signOut(auth).catch(() => {});
     } finally {
       setLoading(false);
@@ -62,9 +63,6 @@ export default function ProviderLoginScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      {/* Background grid */}
-      <View style={styles.gridOverlay} pointerEvents="none" />
-
       <View style={styles.content}>
         {/* Logo mark */}
         <View style={styles.logoSection}>
@@ -136,10 +134,8 @@ export default function ProviderLoginScreen() {
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            Not a provider?{' '}
-          </Text>
-          <TouchableOpacity onPress={() => router.replace('/')}>
+          <Text style={styles.footerText}>Not a provider? </Text>
+          <TouchableOpacity onPress={() => router.replace('/login')}>
             <Text style={styles.footerLink}>Patient app →</Text>
           </TouchableOpacity>
         </View>
@@ -156,11 +152,6 @@ export default function ProviderLoginScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0F172A' },
   center: { justifyContent: 'center', alignItems: 'center' },
-  gridOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.04,
-    backgroundColor: 'transparent',
-  },
   content: {
     flex: 1,
     justifyContent: 'center',

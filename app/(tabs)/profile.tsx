@@ -283,15 +283,14 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={{ height: 40 }} />
+        {__DEV__ && (
+          <TouchableOpacity onPress={() => router.push('/provider-portal/login' as any)}>
+            <Text style={{ color: 'gray', fontSize: 12, textAlign: 'center', padding: 12 }}>
+              Provider Portal (dev)
+            </Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
-      {__DEV__ && (
-  <TouchableOpacity onPress={() => router.push('/provider-portal/login' as any)}>
-    <Text style={{ color: 'gray', fontSize: 12, textAlign: 'center', padding: 12 }}>
-      Provider Portal (dev)
-    </Text>
-  </TouchableOpacity>
-)}
     </View>
   );
 }
