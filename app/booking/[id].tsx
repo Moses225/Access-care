@@ -4,14 +4,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { addDoc, collection, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+  ActivityIndicator, Alert, ScrollView, StyleSheet,
+  Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { useTheme } from '../../context/ThemeContext';
@@ -22,14 +16,12 @@ import { sendBookingConfirmationSMS } from '../../utils/sms';
 
 const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
-// Generate 30-min slots between two "HH:MM" strings
 function generateSlotsForRange(open: string, close: string): string[] {
   const slots: string[] = [];
   const [openH, openM] = open.split(':').map(Number);
   const [closeH, closeM] = close.split(':').map(Number);
   const openMins = openH * 60 + openM;
   const closeMins = closeH * 60 + closeM;
-
   for (let m = openMins; m < closeMins; m += 30) {
     const h = Math.floor(m / 60);
     const min = m % 60;
@@ -55,6 +47,7 @@ export default function BookingScreen() {
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const [timeSlots, setTimeSlots] = useState<string[]>([]);
   const [dayIsClosed, setDayIsClosed] = useState(false);
+  const [closedDayName, setClosedDayName] = useState('');
 
   useEffect(() => {
     if (isGuest) setShowUpgradePrompt(true);
@@ -72,6 +65,7 @@ export default function BookingScreen() {
     const [year, month, day] = selectedDate.split('-').map(Number);
     const localDate = new Date(year, month - 1, day);
     const dayName = DAY_NAMES[localDate.getDay()];
+    const readableDayName = localDate.toLocaleDateString('en-US', { weekday: 'long' });
 
     const hours = provider?.hours;
     if (hours && hours[dayName]) {
@@ -79,12 +73,14 @@ export default function BookingScreen() {
       if (dayHours.closed) {
         setTimeSlots([]);
         setDayIsClosed(true);
+        setClosedDayName(readableDayName);
         setSelectedTime('');
         return;
       }
       if (dayHours.open && dayHours.close) {
         setTimeSlots(generateSlotsForRange(dayHours.open, dayHours.close));
         setDayIsClosed(false);
+        setClosedDayName('');
         setSelectedTime('');
         return;
       }
@@ -93,6 +89,7 @@ export default function BookingScreen() {
     // Fallback: no hours set → default 9am–5pm
     setTimeSlots(generateSlotsForRange('09:00', '17:00'));
     setDayIsClosed(false);
+    setClosedDayName('');
     setSelectedTime('');
   }, [selectedDate, provider]);
 
@@ -148,7 +145,6 @@ export default function BookingScreen() {
     setLoading(true);
     try {
       const user = auth.currentUser;
-
       const bookingData = {
         userId: user?.uid || '',
         providerId: id,
@@ -204,10 +200,7 @@ export default function BookingScreen() {
     return (
       <View style={[styles.container, styles.loadingContainer, { backgroundColor: colors.background }]}>
         <Text style={[styles.errorText, { color: colors.text }]}>Provider not found</Text>
-        <TouchableOpacity
-          style={[styles.backButton, { backgroundColor: colors.primary }]}
-          onPress={() => router.back()}
-        >
+        <TouchableOpacity style={[styles.backButton, { backgroundColor: colors.primary }]} onPress={() => router.back()}>
           <Text style={styles.backButtonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -223,7 +216,6 @@ export default function BookingScreen() {
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: colors.text }]}>Book Appointment</Text>
         </View>
-
         <View style={styles.guestWall}>
           <Text style={styles.lockIcon}>🔒</Text>
           <Text style={[styles.guestWallTitle, { color: colors.text }]}>Account Required to Book</Text>
@@ -237,20 +229,11 @@ export default function BookingScreen() {
           >
             <Text style={styles.createAccountButtonText}>Create Free Account</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.backToProviderButton}
-            onPress={() => router.back()}
-            accessibilityRole="button"
-          >
+          <TouchableOpacity style={styles.backToProviderButton} onPress={() => router.back()} accessibilityRole="button">
             <Text style={[styles.backToProviderText, { color: colors.subtext }]}>Go back to provider</Text>
           </TouchableOpacity>
         </View>
-
-        <GuestUpgradePrompt
-          visible={showUpgradePrompt}
-          onClose={() => setShowUpgradePrompt(false)}
-          reason="book appointments"
-        />
+        <GuestUpgradePrompt visible={showUpgradePrompt} onClose={() => setShowUpgradePrompt(false)} reason="book appointments" />
       </View>
     );
   }
@@ -286,9 +269,7 @@ export default function BookingScreen() {
               setSelectedDate(day.dateString);
               if (__DEV__) console.log('📅 Selected date:', day.dateString);
             }}
-            markedDates={{
-              [selectedDate]: { selected: true, selectedColor: colors.primary },
-            }}
+            markedDates={{ [selectedDate]: { selected: true, selectedColor: colors.primary } }}
             theme={{
               backgroundColor: colors.card,
               calendarBackground: colors.card,
@@ -305,9 +286,7 @@ export default function BookingScreen() {
           {selectedDate && (
             <View style={styles.selectedDateDisplay}>
               <Text style={[styles.selectedDateLabel, { color: colors.subtext }]}>Selected:</Text>
-              <Text style={[styles.selectedDateValue, { color: colors.text }]}>
-                {formatDate(selectedDate)}
-              </Text>
+              <Text style={[styles.selectedDateValue, { color: colors.text }]}>{formatDate(selectedDate)}</Text>
             </View>
           )}
         </View>
@@ -316,20 +295,15 @@ export default function BookingScreen() {
         {selectedDate && (
           <View style={[styles.section, { backgroundColor: colors.card }]}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Select Time</Text>
-
             {dayIsClosed ? (
               <View style={[styles.closedNotice, { backgroundColor: colors.background }]}>
                 <Text style={[styles.closedNoticeText, { color: colors.subtext }]}>
-                  🚫 This provider is not available on{' '}
-                  {new Date(...(selectedDate.split('-').map(Number) as [number, number, number])).toLocaleDateString('en-US', { weekday: 'long' })}s.
-                  Please select a different date.
+                  🚫 This provider is not available on {closedDayName}s. Please select a different date.
                 </Text>
               </View>
             ) : timeSlots.length === 0 ? (
               <View style={[styles.closedNotice, { backgroundColor: colors.background }]}>
-                <Text style={[styles.closedNoticeText, { color: colors.subtext }]}>
-                  No available slots for this date.
-                </Text>
+                <Text style={[styles.closedNoticeText, { color: colors.subtext }]}>No available slots for this date.</Text>
               </View>
             ) : (
               <View style={styles.timeSlots}>
@@ -417,7 +391,6 @@ export default function BookingScreen() {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Book Button */}
       {selectedDate && selectedTime && (
         <View style={[styles.footer, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
           <TouchableOpacity
@@ -427,9 +400,7 @@ export default function BookingScreen() {
             accessibilityRole="button"
             accessibilityLabel="Request appointment"
           >
-            <Text style={styles.bookButtonText}>
-              {loading ? 'Booking...' : 'Request Appointment'}
-            </Text>
+            <Text style={styles.bookButtonText}>{loading ? 'Booking...' : 'Request Appointment'}</Text>
           </TouchableOpacity>
         </View>
       )}

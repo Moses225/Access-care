@@ -1,9 +1,9 @@
 import { useRouter } from 'expo-router';
-import { collection, doc, getDocs, query, updateDoc, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator, Alert, FlatList, RefreshControl,
-  StyleSheet, Text, TouchableOpacity, View,
+  ActivityIndicator, StyleSheet, Text,
+  TouchableOpacity, View, FlatList,
 } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
@@ -18,11 +18,17 @@ interface Appointment {
   date: string;
   time: string;
   patientName: string;
-  patientPhone: string;
-  notes: string;
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
-  createdAt: string;
+  declineReason?: string;
+  cancelledBy?: string;
 }
+
+const STATUS_CONFIG: Record<string, { label: string; color: string; icon: string }> = {
+  pending:   { label: 'Pending',   color: '#F59E0B', icon: '⏳' },
+  confirmed: { label: 'Confirmed', color: '#22C55E', icon: '✅' },
+  cancelled: { label: 'Cancelled', color: '#EF4444', icon: '❌' },
+  completed: { label: 'Completed', color: '#818CF8', icon: '🎉' },
+};
 
 export default function AppointmentsScreen() {
   const router = useRouter();
@@ -31,93 +37,51 @@ export default function AppointmentsScreen() {
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
 
   useEffect(() => {
-    if (!isGuest) loadAppointments();
-    else setLoading(false);
+    if (isGuest) { setLoading(false); return; }
+
+    const user = auth.currentUser;
+    if (!user) { setLoading(false); return; }
+
+    // Real-time listener — status changes appear immediately
+    const q = query(collection(db, 'bookings'), where('userId', '==', user.uid));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const list: Appointment[] = snapshot.docs.map(d => ({
+        id: d.id, ...(d.data() as Omit<Appointment, 'id'>),
+      }));
+      list.sort((a, b) => {
+        // Sort: pending first, then by date descending
+        if (a.status === 'pending' && b.status !== 'pending') return -1;
+        if (a.status !== 'pending' && b.status === 'pending') return 1;
+        return new Date(b.date + ' ' + b.time).getTime() - new Date(a.date + ' ' + a.time).getTime();
+      });
+      setAppointments(list);
+      setLoading(false);
+    }, (error) => {
+      if (__DEV__) console.error('Appointments error:', error);
+      setLoading(false);
+    });
+
+    return unsubscribe;
   }, [isGuest]);
 
-  const loadAppointments = async () => {
-    try {
-      const user = auth.currentUser;
-      if (!user) { setLoading(false); return; }
-
-      const appointmentsQuery = query(
-        collection(db, 'bookings'),
-        where('userId', '==', user.uid)
-      );
-      const querySnapshot = await getDocs(appointmentsQuery);
-      const appointmentsList: Appointment[] = [];
-      querySnapshot.forEach((doc) => {
-        appointmentsList.push({ id: doc.id, ...doc.data() } as Appointment);
-      });
-      appointmentsList.sort((a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-      setAppointments(appointmentsList);
-    } catch (error) {
-      if (__DEV__) console.error('Error loading appointments:', error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    loadAppointments();
-  };
-
-  const cancelAppointment = (appointment: Appointment) => {
-    Alert.alert(
-      'Cancel Appointment',
-      `Cancel appointment with ${appointment.providerName} on ${formatDate(appointment.date)} at ${appointment.time}?`,
-      [
-        { text: 'No', style: 'cancel' },
-        {
-          text: 'Yes, Cancel',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await updateDoc(doc(db, 'bookings', appointment.id), { status: 'cancelled' });
-              Alert.alert('Cancelled', 'Appointment has been cancelled');
-            } catch (error) {
-              if (__DEV__) console.error('Cancel error:', error);
-              Alert.alert('Error', 'Failed to cancel appointment');
-            }
-          },
-        },
-      ]
-    );
-  };
-
+  // Timezone-safe date formatting
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
-    });
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'confirmed': return '#4caf50';
-      case 'pending': return '#ff9800';
-      case 'cancelled': return '#f44336';
-      default: return '#9e9e9e';
-    }
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const d = new Date(year, month - 1, day);
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   };
 
   if (loading) {
     return (
-      <View style={[styles.container, styles.centerContainer, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, styles.center, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
-  // ─── Guest wall ────────────────────────────────────────────────────────────
   if (isGuest) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -132,28 +96,25 @@ export default function AppointmentsScreen() {
             Create a free account to book and manage your appointments.
           </Text>
           <TouchableOpacity
-            style={[styles.createAccountButton, { backgroundColor: colors.primary }]}
+            style={[styles.primaryButton, { backgroundColor: colors.primary }]}
             onPress={() => setShowUpgradePrompt(true)}
             accessibilityRole="button"
           >
-            <Text style={styles.createAccountButtonText}>Create Free Account</Text>
+            <Text style={styles.primaryButtonText}>Create Free Account</Text>
           </TouchableOpacity>
         </View>
-        <GuestUpgradePrompt
-          visible={showUpgradePrompt}
-          onClose={() => setShowUpgradePrompt(false)}
-          reason="manage appointments"
-        />
+        <GuestUpgradePrompt visible={showUpgradePrompt} onClose={() => setShowUpgradePrompt(false)} reason="manage appointments" />
       </View>
     );
   }
 
-  // ─── Full account ──────────────────────────────────────────────────────────
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.card }]}>
         <Text style={[styles.title, { color: colors.text }]}>Appointments</Text>
-        <Text style={[styles.subtitle, { color: colors.subtext }]}>Your scheduled visits</Text>
+        <Text style={[styles.subtitle, { color: colors.subtext }]}>
+          {appointments.length > 0 ? `${appointments.length} appointment${appointments.length !== 1 ? 's' : ''}` : 'Your scheduled visits'}
+        </Text>
       </View>
 
       {appointments.length === 0 ? (
@@ -164,11 +125,11 @@ export default function AppointmentsScreen() {
             Book your first appointment to get started
           </Text>
           <TouchableOpacity
-            style={[styles.browseButton, { backgroundColor: colors.primary }]}
+            style={[styles.primaryButton, { backgroundColor: colors.primary }]}
             onPress={() => router.push('/(tabs)/' as any)}
             accessibilityRole="button"
           >
-            <Text style={styles.browseButtonText}>Browse Providers</Text>
+            <Text style={styles.primaryButtonText}>Browse Providers</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -176,47 +137,60 @@ export default function AppointmentsScreen() {
           data={appointments}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
-          renderItem={({ item }) => (
-            <View style={[styles.appointmentCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <View style={styles.appointmentHeader}>
-                <View style={styles.dateSection}>
-                  <Text style={[styles.dayText, { color: colors.subtext }]}>
-                    {new Date(item.date).toLocaleDateString('en-US', { weekday: 'short' })}
+          renderItem={({ item }) => {
+            const statusConfig = STATUS_CONFIG[item.status] || STATUS_CONFIG.pending;
+            const isCancelledByProvider = item.status === 'cancelled'
+              && item.cancelledBy !== 'patient'
+              && item.declineReason;
+
+            return (
+              <TouchableOpacity
+                style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
+                onPress={() => router.push(`/booking/confirmation?bookingId=${item.id}` as any)}
+                accessibilityRole="button"
+                accessibilityLabel={`View appointment with ${item.providerName}`}
+              >
+                {/* Date + time column */}
+                <View style={[styles.dateColumn, { borderRightColor: colors.border }]}>
+                  <Text style={[styles.dateDay, { color: colors.subtext }]}>
+                    {formatDate(item.date).split(',')[0]}
                   </Text>
-                  <Text style={[styles.dateText, { color: colors.text }]}>
-                    {new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  <Text style={[styles.dateNum, { color: colors.text }]}>
+                    {new Date(item.date.replace(/-/g, '/')).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   </Text>
-                  <Text style={[styles.timeText, { color: colors.primary }]}>{item.time}</Text>
+                  <Text style={[styles.dateTime, { color: colors.primary }]}>{item.time}</Text>
                 </View>
-                <View style={styles.providerSection}>
+
+                {/* Main info */}
+                <View style={styles.infoColumn}>
                   <Text style={[styles.providerName, { color: colors.text }]} numberOfLines={1}>
                     {item.providerName}
                   </Text>
                   <Text style={[styles.providerSpecialty, { color: colors.primary }]} numberOfLines={1}>
                     {item.providerSpecialty}
                   </Text>
-                  <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-                    <Text style={styles.statusText}>
-                      {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+
+                  {/* Status pill */}
+                  <View style={[styles.statusPill, { backgroundColor: statusConfig.color + '20' }]}>
+                    <Text style={styles.statusPillIcon}>{statusConfig.icon}</Text>
+                    <Text style={[styles.statusPillText, { color: statusConfig.color }]}>
+                      {statusConfig.label}
                     </Text>
                   </View>
-                </View>
-              </View>
 
-              {item.status === 'pending' && (
-                <View style={styles.actionButtons}>
-                  <TouchableOpacity
-                    style={[styles.actionButton, { borderColor: '#f44336' }]}
-                    onPress={() => cancelAppointment(item)}
-                    accessibilityRole="button"
-                  >
-                    <Text style={[styles.actionButtonText, { color: '#f44336' }]}>Cancel</Text>
-                  </TouchableOpacity>
+                  {/* Decline reason preview */}
+                  {isCancelledByProvider && (
+                    <Text style={[styles.declinePreview, { color: colors.subtext }]} numberOfLines={1}>
+                      Reason: {item.declineReason}
+                    </Text>
+                  )}
                 </View>
-              )}
-            </View>
-          )}
+
+                {/* Chevron */}
+                <Text style={[styles.chevron, { color: colors.subtext }]}>›</Text>
+              </TouchableOpacity>
+            );
+          }}
         />
       )}
     </View>
@@ -225,36 +199,47 @@ export default function AppointmentsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  centerContainer: { justifyContent: 'center', alignItems: 'center' },
+  center: { justifyContent: 'center', alignItems: 'center' },
   header: { paddingTop: 60, paddingBottom: 20, paddingHorizontal: 20 },
   title: { fontSize: 32, fontWeight: 'bold', marginBottom: 4 },
   subtitle: { fontSize: 14 },
-  list: { padding: 16, flexGrow: 1 },
-  appointmentCard: { borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1 },
-  appointmentHeader: { flexDirection: 'row', alignItems: 'center' },
-  dateSection: { marginRight: 16, alignItems: 'center', minWidth: 60 },
-  dayText: { fontSize: 14, fontWeight: 'bold', marginBottom: 2 },
-  dateText: { fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
-  timeText: { fontSize: 16, fontWeight: '600' },
-  providerSection: { flex: 1 },
-  providerName: { fontSize: 17, fontWeight: 'bold', marginBottom: 4 },
-  providerSpecialty: { fontSize: 14, fontWeight: '600', marginBottom: 8 },
-  statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, alignSelf: 'flex-start' },
-  statusText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
-  actionButtons: { flexDirection: 'row', marginTop: 12, gap: 8 },
-  actionButton: { flex: 1, paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, borderWidth: 2, alignItems: 'center' },
-  actionButtonText: { fontSize: 14, fontWeight: '600' },
+  list: { padding: 16, gap: 10 },
+
+  card: {
+    flexDirection: 'row', alignItems: 'center',
+    borderRadius: 14, borderWidth: 1,
+    overflow: 'hidden',
+  },
+  dateColumn: {
+    width: 72, paddingVertical: 16, alignItems: 'center',
+    borderRightWidth: 1,
+  },
+  dateDay: { fontSize: 11, fontWeight: '700', marginBottom: 2 },
+  dateNum: { fontSize: 15, fontWeight: '700', marginBottom: 4 },
+  dateTime: { fontSize: 13, fontWeight: '600' },
+  infoColumn: { flex: 1, padding: 14, gap: 4 },
+  providerName: { fontSize: 16, fontWeight: '700' },
+  providerSpecialty: { fontSize: 13, fontWeight: '600' },
+  statusPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: 20, marginTop: 4,
+  },
+  statusPillIcon: { fontSize: 11 },
+  statusPillText: { fontSize: 11, fontWeight: '700' },
+  declinePreview: { fontSize: 11, marginTop: 2, fontStyle: 'italic' },
+  chevron: { fontSize: 24, paddingHorizontal: 12 },
+
   emptyState: { alignItems: 'center', paddingTop: 100, paddingHorizontal: 40 },
   emptyIcon: { fontSize: 80, marginBottom: 20 },
   emptyTitle: { fontSize: 24, fontWeight: 'bold', marginBottom: 12, textAlign: 'center' },
   emptyText: { fontSize: 16, textAlign: 'center', lineHeight: 24, marginBottom: 30 },
-  browseButton: { paddingHorizontal: 32, paddingVertical: 16, borderRadius: 12 },
-  browseButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-  // Guest wall
+
+  primaryButton: { paddingHorizontal: 32, paddingVertical: 16, borderRadius: 12, alignItems: 'center' },
+  primaryButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+
   guestWall: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
   lockIcon: { fontSize: 64, marginBottom: 20 },
   guestWallTitle: { fontSize: 22, fontWeight: 'bold', marginBottom: 12, textAlign: 'center' },
   guestWallText: { fontSize: 15, lineHeight: 22, textAlign: 'center', marginBottom: 32 },
-  createAccountButton: { paddingVertical: 16, paddingHorizontal: 40, borderRadius: 12, width: '100%', alignItems: 'center' },
-  createAccountButtonText: { color: '#fff', fontSize: 17, fontWeight: 'bold' },
 });
