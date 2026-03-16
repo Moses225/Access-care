@@ -24,6 +24,7 @@ export default function ProfileScreen() {
   const [userName, setUserName] = useState('');
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [dependentCount, setDependentCount] = useState(0);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -35,13 +36,36 @@ export default function ProfileScreen() {
     try {
       const user = auth.currentUser;
       if (!user) return;
-      setUserEmail(user.email || 'No email');
-      const name = user.email?.split('@')[0] || 'User';
-      setUserName(name.charAt(0).toUpperCase() + name.slice(1));
+
+      setUserEmail(user.email || '');
+
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       if (userDoc.exists()) {
         const data = userDoc.data();
         setProfileImage(data.profileImage || null);
+
+        // Use stored name — priority: firstName + lastName → displayName → email prefix
+        if (data.firstName || data.lastName) {
+          const full = [data.firstName, data.lastName].filter(Boolean).join(' ').trim();
+          setUserName(full || user.email?.split('@')[0] || 'User');
+        } else if (data.displayName) {
+          setUserName(data.displayName.trim());
+        } else {
+          const prefix = user.email?.split('@')[0] || 'User';
+          setUserName(prefix.charAt(0).toUpperCase() + prefix.slice(1));
+        }
+      } else {
+        const prefix = user.email?.split('@')[0] || 'User';
+        setUserName(prefix.charAt(0).toUpperCase() + prefix.slice(1));
+      }
+
+      // Load dependent count for badge
+      try {
+        const { getDocs, collection } = await import('firebase/firestore');
+        const depsSnap = await getDocs(collection(db, 'users', user.uid, 'dependents'));
+        setDependentCount(depsSnap.size);
+      } catch {
+        // non-critical
       }
     } catch (error) {
       if (__DEV__) console.error('Error loading user data:', error);
@@ -85,6 +109,7 @@ export default function ProfileScreen() {
           <Text style={[styles.headerTitle, { color: colors.text }]}>Profile</Text>
         </View>
 
+        {/* Profile card */}
         <View style={[styles.profileSection, { backgroundColor: colors.card }]}>
           <TouchableOpacity onPress={() => router.push('/profile/edit')} activeOpacity={0.7}>
             {profileImage ? (
@@ -95,11 +120,16 @@ export default function ProfileScreen() {
               />
             ) : (
               <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
-                <Text style={styles.avatarText}>{userName.charAt(0)}</Text>
+                <Text style={styles.avatarText}>
+                  {userName ? userName.charAt(0).toUpperCase() : '?'}
+                </Text>
               </View>
             )}
           </TouchableOpacity>
-          <Text style={[styles.name, { color: colors.text }]}>{userEmail}</Text>
+          <Text style={[styles.name, { color: colors.text }]}>{userName}</Text>
+          {!!userEmail && (
+            <Text style={[styles.email, { color: colors.subtext }]}>{userEmail}</Text>
+          )}
           <Text style={[styles.subtitle, { color: colors.subtext }]}>AccessCare Member</Text>
         </View>
 
@@ -121,20 +151,29 @@ export default function ProfileScreen() {
             <Text style={[styles.chevron, { color: colors.subtext }]}>›</Text>
           </TouchableOpacity>
 
+          {/* My Family — new */}
           <TouchableOpacity
             style={[styles.menuItem, { backgroundColor: colors.card }]}
-            onPress={() => router.push('/profile/insurance')}
+            onPress={() => router.push('/profile/family' as any)}
           >
             <View style={styles.menuLeft}>
-              <Text style={styles.menuIcon}>💳</Text>
-              <View>
-                <Text style={[styles.menuTitle, { color: colors.text }]}>Insurance Information</Text>
-                <Text style={[styles.menuSubtitle, { color: colors.subtext }]}>Manage your insurance details</Text>
+              <Text style={styles.menuIcon}>👨‍👩‍👧</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.menuTitle, { color: colors.text }]}>My Family</Text>
+                <Text style={[styles.menuSubtitle, { color: colors.subtext }]}>
+                  {dependentCount > 0
+                    ? `${dependentCount} family member${dependentCount !== 1 ? 's' : ''} added`
+                    : 'Add dependents to book on their behalf'}
+                </Text>
               </View>
             </View>
+            {dependentCount > 0 && (
+              <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+                <Text style={styles.badgeText}>{dependentCount}</Text>
+              </View>
+            )}
             <Text style={[styles.chevron, { color: colors.subtext }]}>›</Text>
           </TouchableOpacity>
-
           <TouchableOpacity
             style={[styles.menuItem, { backgroundColor: colors.card }]}
             onPress={() => router.push('/profile/payments')}
@@ -229,7 +268,6 @@ export default function ProfileScreen() {
             <Text style={[styles.chevron, { color: colors.subtext }]}>›</Text>
           </TouchableOpacity>
 
-          {/* ── Privacy Policy (opens live webpage) ── */}
           <TouchableOpacity
             style={[styles.menuItem, { backgroundColor: colors.card }]}
             onPress={() => Linking.openURL('https://moses225.github.io/Access-care/')}
@@ -285,20 +323,36 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { paddingTop: 60, paddingBottom: 20, paddingHorizontal: 20 },
   headerTitle: { fontSize: 32, fontWeight: 'bold' },
-  profileSection: { alignItems: 'center', padding: 32, margin: 16, marginTop: 0, borderRadius: 16 },
+  profileSection: {
+    alignItems: 'center', padding: 32, margin: 16,
+    marginTop: 0, borderRadius: 16,
+  },
   profileImage: { width: 100, height: 100, borderRadius: 50, marginBottom: 16 },
-  avatar: { width: 100, height: 100, borderRadius: 50, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  avatar: {
+    width: 100, height: 100, borderRadius: 50,
+    justifyContent: 'center', alignItems: 'center', marginBottom: 16,
+  },
   avatarText: { color: '#fff', fontSize: 40, fontWeight: 'bold' },
-  name: { fontSize: 20, fontWeight: 'bold', marginBottom: 4 },
+  name: { fontSize: 20, fontWeight: 'bold', marginBottom: 2 },
+  email: { fontSize: 13, marginBottom: 4 },
   subtitle: { fontSize: 14 },
   section: { marginBottom: 24, paddingHorizontal: 16 },
   sectionTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 12, paddingHorizontal: 4 },
-  menuItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderRadius: 12, marginBottom: 8 },
+  menuItem: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    padding: 16, borderRadius: 12, marginBottom: 8,
+  },
   menuLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   menuIcon: { fontSize: 24, marginRight: 16 },
   menuTitle: { fontSize: 16, fontWeight: '600', marginBottom: 2 },
   menuSubtitle: { fontSize: 12 },
   chevron: { fontSize: 24 },
+  badge: {
+    minWidth: 22, height: 22, borderRadius: 11,
+    justifyContent: 'center', alignItems: 'center',
+    paddingHorizontal: 6, marginRight: 6,
+  },
+  badgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
   logoutButton: { padding: 16, borderRadius: 12, alignItems: 'center' },
   logoutText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
 });

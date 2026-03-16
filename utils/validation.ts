@@ -1,30 +1,44 @@
 import { z } from 'zod';
 
-// Phone number validation (US format: 10 digits)
+// ─── Password strength schema (reused across signup) ──────────────────────────
+// Requirements: 8+ chars, 1 uppercase, 1 lowercase, 1 digit, 1 special character
+const passwordSchema = z
+  .string()
+  .min(8, 'Password must be at least 8 characters')
+  .max(128, 'Password is too long')
+  .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+  .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+  .regex(/[0-9]/, 'Password must contain at least one number')
+  .regex(
+    /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/,
+    'Password must contain at least one special character (!@#$%...)'
+  );
+
+// ─── Phone number validation (US format: 10 digits) ───────────────────────────
 export const phoneSchema = z
   .string()
   .min(1, 'Phone number is required')
   .regex(/^\d{10}$/, 'Phone must be exactly 10 digits');
 
-// Email validation
+// ─── Email validation ─────────────────────────────────────────────────────────
 export const emailSchema = z
   .string()
   .min(1, 'Email is required')
   .email('Invalid email format');
 
-// Date validation (YYYY-MM-DD)
+// ─── Date validation (YYYY-MM-DD) ─────────────────────────────────────────────
 export const dateSchema = z
   .string()
   .min(1, 'Date is required')
   .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format');
 
-// Time validation (HH:MM)
+// ─── Time validation (HH:MM) ──────────────────────────────────────────────────
 export const timeSchema = z
   .string()
   .min(1, 'Time is required')
   .regex(/^\d{2}:\d{2}$/, 'Invalid time format');
 
-// Booking form validation schema
+// ─── Booking form validation ──────────────────────────────────────────────────
 export const bookingSchema = z.object({
   patientName: z
     .string()
@@ -45,7 +59,7 @@ export const bookingSchema = z.object({
     .or(z.literal('')),
 });
 
-// User profile validation
+// ─── User profile validation ──────────────────────────────────────────────────
 export const userProfileSchema = z.object({
   firstName: z
     .string()
@@ -67,33 +81,32 @@ export const userProfileSchema = z.object({
     .or(z.literal('')),
 });
 
-// Auth validation schemas
+// ─── Auth validation schemas ──────────────────────────────────────────────────
 export const loginSchema = z.object({
   email: emailSchema,
+  // Login only checks presence — don't reveal password rules to attackers
   password: z.string().min(1, 'Password is required'),
 });
 
 export const signupSchema = z.object({
   email: emailSchema,
-  password: z
-    .string()
-    .min(6, 'Password must be at least 6 characters')
-    .max(128, 'Password too long'),
+  password: passwordSchema,
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'Passwords do not match',
   path: ['confirmPassword'],
 });
 
-// Sanitize text input (remove dangerous characters)
+// ─── Sanitization helpers ─────────────────────────────────────────────────────
+
+// Sanitize general text input (strip injection vectors)
 export const sanitizeText = (text: string): string => {
   if (!text) return '';
-
   return text
     .trim()
-    .replace(/[<>]/g, '') // Remove < and >
-    .replace(/javascript:/gi, '') // Remove javascript: protocol
-    .replace(/on\w+=/gi, ''); // Remove event handlers
+    .replace(/[<>]/g, '')
+    .replace(/javascript:/gi, '')
+    .replace(/on\w+=/gi, '');
 };
 
 // Sanitize email (lowercase and trim)
@@ -108,7 +121,8 @@ export const sanitizePhone = (phone: string): string => {
   return phone.replace(/\D/g, '');
 };
 
-// Validate and return errors
+// ─── Validation runners ───────────────────────────────────────────────────────
+
 export const validateBooking = (data: unknown) => {
   try {
     bookingSchema.parse(data);
@@ -127,7 +141,6 @@ export const validateBooking = (data: unknown) => {
   }
 };
 
-// Validate login
 export const validateLogin = (data: unknown) => {
   try {
     loginSchema.parse(data);
@@ -146,7 +159,6 @@ export const validateLogin = (data: unknown) => {
   }
 };
 
-// Validate signup
 export const validateSignup = (data: unknown) => {
   try {
     signupSchema.parse(data);

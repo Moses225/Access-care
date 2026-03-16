@@ -1,0 +1,162 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper functions ──────────────────────────────────────────────────
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.admin == true;
+    }
+
+    function isFullAccount() {
+      return isAuthenticated() &&
+             request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+
+    function isProviderOwner(providerId) {
+      return isAuthenticated()
+          && request.auth.token.provider == true
+          && request.auth.token.providerId == providerId;
+    }
+
+    function isBookingPatient() {
+      return isAuthenticated()
+          && resource.data.userId == request.auth.uid;
+    }
+
+    function isBookingProvider() {
+      return isAuthenticated()
+          && request.auth.token.providerId == resource.data.providerId;
+    }
+
+    // ── Providers ─────────────────────────────────────────────────────────
+    match /providers/{providerId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || isProviderOwner(providerId);
+    }
+
+    // ── Users ─────────────────────────────────────────────────────────────
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+
+      // Dependents subcollection — only the account holder can manage
+      // their own family members. Full (non-anonymous) account required.
+      match /dependents/{dependentId} {
+        allow read:   if isOwner(userId) && isFullAccount();
+        allow create: if isOwner(userId) && isFullAccount()
+                   && request.resource.data.firstName is string
+                   && request.resource.data.firstName.size() <= 100
+                   && request.resource.data.lastName is string
+                   && request.resource.data.lastName.size() <= 100;
+        allow update: if isOwner(userId) && isFullAccount();
+        allow delete: if isOwner(userId) && isFullAccount();
+      }
+    }
+
+    // ── Bookings ──────────────────────────────────────────────────────────
+    match /bookings/{bookingId} {
+      // Patient sees own bookings; provider sees bookings for their
+      // practice; admin sees all
+      allow read: if isAuthenticated() &&
+                     (isBookingPatient() || isBookingProvider() || isAdmin());
+
+      // Only full (non-anonymous) accounts can create bookings.
+      // The userId in the document must match the authenticated user.
+      // Status must be 'pending' on creation.
+      allow create: if isFullAccount()
+           && request.resource.data.userId == request.auth.uid
+           && request.resource.data.status == 'pending'
+           && request.resource.data.patientName is string
+           && request.resource.data.patientName.size() <= 150
+           && request.resource.data.date is string
+           && request.resource.data.date.size() <= 20
+           && request.resource.data.time is string
+           && request.resource.data.time.size() <= 10;
+
+      // Patients can only flip status to 'cancelled' on their own bookings.
+      // Core booking fields (provider, date, time) cannot be changed.
+      // Providers can confirm, decline, or complete bookings for their practice.
+      // Admins can do anything.
+      allow update: if isAdmin()
+                 || isBookingProvider()
+                 || (isBookingPatient()
+                     && isFullAccount()
+                     && request.resource.data.status == 'cancelled'
+                     && request.resource.data.userId == resource.data.userId
+                     && request.resource.data.providerId == resource.data.providerId
+                     && request.resource.data.date == resource.data.date
+                     && request.resource.data.time == resource.data.time);
+
+      allow delete: if isAdmin();
+    }
+
+    // ── Slot availability ─────────────────────────────────────────────────
+    // Tracks booked time slots per provider per date.
+    // Structure: availability/{providerId}/slots/{YYYY-MM-DD}/{HH:MM}
+    // Any authenticated user can read (to see greyed-out slots).
+    // Only the booking system (full account creating a booking) can write.
+    match /availability/{providerId} {
+      allow read: if isAuthenticated();
+
+      match /slots/{date} {
+        allow read: if isAuthenticated();
+        allow write: if isFullAccount();
+      }
+    }
+
+    // ── Questions (Q&A) ───────────────────────────────────────────────────
+    match /questions/{questionId} {
+      allow read: if isAuthenticated();
+      allow create: if isFullAccount();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ── Insurance ─────────────────────────────────────────────────────────
+    match /insurance/{userId} {
+      allow read:  if isOwner(userId);
+      allow write: if isOwner(userId) && isFullAccount();
+    }
+        // ── Notifications ─────────────────────────────────────────────────────
+    match /notifications/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // ── Privacy settings ──────────────────────────────────────────────────
+    match /privacy/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // ── Payment methods ───────────────────────────────────────────────────
+    match /paymentMethods/{docId} {
+      allow read, delete: if isAuthenticated() &&
+                             resource.data.userId == request.auth.uid;
+      allow create: if isFullAccount();
+    }
+
+    // ── Support requests ──────────────────────────────────────────────────
+    match /supportRequests/{docId} {
+      allow read: if isAuthenticated() &&
+                     (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isFullAccount();
+    }
+
+    // ── Saved providers ───────────────────────────────────────────────────
+    match /savedProviders/{userId} {
+      allow read, write: if isOwner(userId) && isFullAccount();
+    }
+
+    // ── Deny everything else ──────────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

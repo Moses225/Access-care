@@ -10,7 +10,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { GuestUpgradePrompt } from '../../components/GuestUpgradePrompt';
-import { db } from '../../firebase';
+import { db, auth } from '../../firebase';
+
+// ─── Favorites key scoped to current user ─────────────────────────────────────
+const getFavoritesKey = (): string => {
+  const uid = auth.currentUser?.uid;
+  return uid ? `favorites_${uid}` : 'favorites';
+};
 
 export default function SavedProvidersScreen() {
   const router = useRouter();
@@ -30,8 +36,8 @@ export default function SavedProvidersScreen() {
     try {
       setLoading(true);
 
-      // Read from AsyncStorage — matches how provider/[id].tsx saves favorites
-      const favs = await AsyncStorage.getItem('favorites');
+      const key = getFavoritesKey();
+      const favs = await AsyncStorage.getItem(key);
       const favoriteIds: string[] = favs ? JSON.parse(favs) : [];
 
       if (favoriteIds.length === 0) {
@@ -59,8 +65,6 @@ export default function SavedProvidersScreen() {
     }
   }, [isGuest]);
 
-  // Reload every time the screen comes into focus
-  // so unfavoriting a provider is reflected immediately
   useFocusEffect(
     useCallback(() => {
       loadSavedProviders();
@@ -140,7 +144,9 @@ export default function SavedProvidersScreen() {
               onPress={() => router.back()}
               accessibilityRole="button"
             >
-              <Text style={[styles.backToProviderText, { color: colors.subtext }]}>Continue browsing</Text>
+              <Text style={[styles.backToProviderText, { color: colors.subtext }]}>
+                Continue browsing
+              </Text>
             </TouchableOpacity>
           </View>
 

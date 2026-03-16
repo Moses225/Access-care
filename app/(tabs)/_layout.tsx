@@ -35,7 +35,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="insurance"
         options={{
-          title: 'Insurance',
+          title: 'Coverage',
           tabBarIcon: ({ color }) => <FontAwesome size={24} name="shield" color={color} />,
         }}
       />

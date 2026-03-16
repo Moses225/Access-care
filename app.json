@@ -63,7 +63,15 @@
           "photosPermission": "AccessCare needs access to your photos to set your profile picture.",
           "cameraPermission": "AccessCare needs access to your camera to take profile pictures."
         }
-      ]
+      ],
+      [
+    "expo-notifications",
+    {
+      "icon": "./assets/images/icon.png",
+      "color": "#14B8A6",
+      "sounds": []
+    }
+  ]
     ],
     "extra": {
       "router": {

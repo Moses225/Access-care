@@ -7,6 +7,22 @@ import {
 } from 'react-native';
 import { auth } from '../../firebase';
 import { useProviderAuth } from '../../context/ProviderAuthContext';
+import { sanitizeEmail } from '../../utils/validation';
+
+// Provider portal uses invitation-only access — no signup flow.
+// Password strength rules are not enforced here intentionally:
+// revealing composition rules on login screens helps attackers enumerate accounts.
+
+const ERROR_MAP: Record<string, string> = {
+  'auth/invalid-credential': 'Invalid email or password.',
+  'auth/wrong-password': 'Invalid email or password.',
+  'auth/user-not-found': 'Invalid email or password.', // intentionally vague
+  'auth/invalid-email': 'Please enter a valid email address.',
+  'auth/user-disabled': 'This account has been disabled. Contact support.',
+  'auth/too-many-requests': 'Too many attempts. Please try again later.',
+  'auth/network-request-failed': 'Network error. Please check your connection.',
+  'auth/operation-not-allowed': 'Provider login is currently unavailable.',
+};
 
 export default function ProviderLoginScreen() {
   const router = useRouter();
@@ -24,27 +40,30 @@ export default function ProviderLoginScreen() {
   }, [isProvider, initializing]);
 
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      setError('Please enter your email and password.');
+    setError('');
+
+    const sanitizedEmail = sanitizeEmail(email);
+
+    if (!sanitizedEmail) {
+      setError('Please enter your email address.');
       return;
     }
-    setError('');
+    if (!password.trim()) {
+      setError('Please enter your password.');
+      return;
+    }
+
     setLoading(true);
     try {
       // Sign out any existing patient session before provider login
       await signOut(auth).catch(() => {});
-      await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
-      // ProviderAuthContext will detect the claim and redirect via useEffect
+      await signInWithEmailAndPassword(auth, sanitizedEmail, password);
+      // ProviderAuthContext detects the custom claim and redirects via useEffect
     } catch (err: any) {
       if (__DEV__) console.error('Provider login error:', err);
-      if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
-        setError('Invalid email or password.');
-      } else if (err.code === 'auth/too-many-requests') {
-        setError('Too many attempts. Please try again later.');
-      } else {
-        setError('Login failed. Please try again.');
-      }
+      // Always sign out on failure to avoid stale auth state
       await signOut(auth).catch(() => {});
+      setError(ERROR_MAP[err.code] ?? 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -97,7 +116,9 @@ export default function ProviderLoginScreen() {
               placeholder="you@practice.com"
               placeholderTextColor="#475569"
               autoCapitalize="none"
+              autoCorrect={false}
               keyboardType="email-address"
+              textContentType="emailAddress"
               editable={!loading}
               accessibilityLabel="Email address"
             />
@@ -112,6 +133,7 @@ export default function ProviderLoginScreen() {
               placeholder="••••••••"
               placeholderTextColor="#475569"
               secureTextEntry
+              textContentType="password"
               editable={!loading}
               onSubmitEditing={handleLogin}
               accessibilityLabel="Password"

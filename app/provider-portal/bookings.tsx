@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import {
-  collection, doc, onSnapshot, query,
+  collection, doc, getDoc, onSnapshot, query,
   serverTimestamp, updateDoc, where,
 } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { db } from '../../firebase';
 import { useProviderAuth } from '../../context/ProviderAuthContext';
+import { sendExpoPushToUser } from '../../utils/notifications';
 
 type Booking = {
   id: string;
@@ -21,6 +22,11 @@ type Booking = {
   notes?: string;
   status: string;
   createdAt: any;
+  userId?: string;
+  providerName?: string;
+  visitTypeLabel?: string;
+  serviceCategoryLabel?: string;
+  reasonForVisit?: string;
 };
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
@@ -39,7 +45,6 @@ const DECLINE_REASONS = [
   'Other',
 ];
 
-// Timezone-safe date formatter
 function formatDate(dateStr: string): string {
   if (!dateStr || !dateStr.includes('-')) return dateStr || '—';
   const parts = dateStr.split('-').map(Number);
@@ -50,20 +55,39 @@ function formatDate(dateStr: string): string {
   });
 }
 
+function formatDateLong(dateStr: string): string {
+  if (!dateStr || !dateStr.includes('-')) return dateStr || '—';
+  const parts = dateStr.split('-').map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) return dateStr;
+  const [year, month, day] = parts;
+  return new Date(year, month - 1, day).toLocaleDateString('en-US', {
+    weekday: 'long', month: 'long', day: 'numeric',
+  });
+}
+
+// ─── Helper: get provider's display name from Firestore ──────────────────────
+async function getProviderName(providerId: string): Promise<string> {
+  try {
+    const snap = await getDoc(doc(db, 'providers', providerId));
+    if (snap.exists()) return snap.data().name || 'Your provider';
+  } catch { /* non-critical */ }
+  return 'Your provider';
+}
+
 export default function ProviderBookingsScreen() {
   const router = useRouter();
   const { providerProfile, isProvider, initializing } = useProviderAuth();
 
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'pending' | 'confirmed' | 'all'>('pending');
+  const [bookings, setBookings]       = useState<Booking[]>([]);
+  const [loading, setLoading]         = useState(true);
+  const [filter, setFilter]           = useState<'pending' | 'confirmed' | 'all'>('pending');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   // Decline modal state
   const [declineModalVisible, setDeclineModalVisible] = useState(false);
-  const [declineTarget, setDeclineTarget] = useState<Booking | null>(null);
-  const [selectedReason, setSelectedReason] = useState('');
-  const [otherReason, setOtherReason] = useState('');
+  const [declineTarget, setDeclineTarget]             = useState<Booking | null>(null);
+  const [selectedReason, setSelectedReason]           = useState('');
+  const [otherReason, setOtherReason]                 = useState('');
 
   useEffect(() => {
     if (!initializing && !isProvider) {
@@ -88,7 +112,6 @@ export default function ProviderBookingsScreen() {
           ...(d.data() as Omit<Booking, 'id'>),
         }));
         data.sort((a, b) => {
-          // Pending first, then by date
           if (a.status === 'pending' && b.status !== 'pending') return -1;
           if (a.status !== 'pending' && b.status === 'pending') return 1;
           return a.date.localeCompare(b.date) || a.time.localeCompare(b.time);
@@ -105,6 +128,7 @@ export default function ProviderBookingsScreen() {
     return unsubscribe;
   }, [providerProfile?.providerId]);
 
+  // ── Confirm booking + notify patient ───────────────────────────────────────
   const handleConfirm = (booking: Booking) => {
     Alert.alert(
       'Confirm Appointment',
@@ -116,10 +140,30 @@ export default function ProviderBookingsScreen() {
           onPress: async () => {
             setActionLoading(booking.id);
             try {
+              // 1. Update Firestore
               await updateDoc(doc(db, 'bookings', booking.id), {
                 status: 'confirmed',
                 confirmedAt: serverTimestamp(),
               });
+
+              // 2. Send push notification to patient (fire and forget)
+              if (booking.userId) {
+                const providerName = booking.providerName
+                  || await getProviderName(providerProfile!.providerId);
+
+                sendExpoPushToUser({
+                  userId: booking.userId,
+                  title: '✅ Appointment Confirmed!',
+                  body: `${providerName} confirmed your appointment on ${formatDateLong(booking.date)} at ${booking.time}.`,
+                  data: {
+                    bookingId: booking.id,
+                    screen: 'confirmation',
+                    type: 'booking_confirmed',
+                  },
+                }).catch((err) => {
+                  if (__DEV__) console.warn('Push notification failed (non-critical):', err);
+                });
+              }
             } catch (error) {
               if (__DEV__) console.error('Confirm error:', error);
               Alert.alert('Error', 'Failed to confirm. Please try again.');
@@ -139,6 +183,7 @@ export default function ProviderBookingsScreen() {
     setDeclineModalVisible(true);
   };
 
+  // ── Decline booking + notify patient ───────────────────────────────────────
   const submitDecline = async () => {
     if (!declineTarget) return;
 
@@ -155,12 +200,32 @@ export default function ProviderBookingsScreen() {
     setActionLoading(declineTarget.id);
 
     try {
+      // 1. Update Firestore
       await updateDoc(doc(db, 'bookings', declineTarget.id), {
         status: 'cancelled',
         declinedAt: serverTimestamp(),
         declineReason: reason,
-        cancelledBy: 'provider',   // ← required for patient to see reason
+        cancelledBy: 'provider',
       });
+
+      // 2. Send push notification to patient (fire and forget)
+      if (declineTarget.userId) {
+        const providerName = declineTarget.providerName
+          || await getProviderName(providerProfile!.providerId);
+
+        sendExpoPushToUser({
+          userId: declineTarget.userId,
+          title: '❌ Appointment Declined',
+          body: `${providerName} declined your appointment on ${formatDateLong(declineTarget.date)} at ${declineTarget.time}. Reason: ${reason}`,
+          data: {
+            bookingId: declineTarget.id,
+            screen: 'confirmation',
+            type: 'booking_declined',
+          },
+        }).catch((err) => {
+          if (__DEV__) console.warn('Push notification failed (non-critical):', err);
+        });
+      }
     } catch (error) {
       if (__DEV__) console.error('Decline error:', error);
       Alert.alert('Error', 'Failed to decline. Please try again.');
@@ -249,6 +314,24 @@ export default function ProviderBookingsScreen() {
                   </View>
                 </View>
 
+                {/* Visit type / service */}
+                {(item.visitTypeLabel || item.serviceCategoryLabel) && (
+                  <View style={styles.visitTypeRow}>
+                    {item.visitTypeLabel && (
+                      <View style={styles.visitTypePill}>
+                        <Text style={styles.visitTypePillText}>{item.visitTypeLabel}</Text>
+                      </View>
+                    )}
+                    {item.serviceCategoryLabel && (
+                      <View style={[styles.visitTypePill, { backgroundColor: '#14B8A620' }]}>
+                        <Text style={[styles.visitTypePillText, { color: '#14B8A6' }]}>
+                          {item.serviceCategoryLabel}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+
                 <View style={styles.dateTimeRow}>
                   <View style={styles.dateTimeItem}>
                     <Text style={styles.dateTimeLabel}>DATE</Text>
@@ -261,7 +344,13 @@ export default function ProviderBookingsScreen() {
                   </View>
                 </View>
 
-                {item.notes ? (
+                {/* Reason for visit */}
+                {item.reasonForVisit ? (
+                  <View style={styles.notesBox}>
+                    <Text style={styles.notesLabel}>REASON FOR VISIT</Text>
+                    <Text style={styles.notesText}>{item.reasonForVisit}</Text>
+                  </View>
+                ) : item.notes ? (
                   <View style={styles.notesBox}>
                     <Text style={styles.notesLabel}>PATIENT NOTES</Text>
                     <Text style={styles.notesText}>{item.notes}</Text>
@@ -356,7 +445,6 @@ export default function ProviderBookingsScreen() {
                   autoFocus
                 />
               )}
-
               <View style={{ height: 8 }} />
             </ScrollView>
 
@@ -408,30 +496,28 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#334155',
     padding: 20, gap: 16,
   },
-  cardHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
-  },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   cardHeaderLeft: { flex: 1, marginRight: 12 },
   patientName: { color: '#F8FAFC', fontSize: 17, fontWeight: '700', marginBottom: 2 },
   patientPhone: { color: '#64748B', fontSize: 13 },
   statusPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   statusPillText: { fontSize: 12, fontWeight: '700' },
+  visitTypeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  visitTypePill: {
+    backgroundColor: '#334155', paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: 20,
+  },
+  visitTypePillText: { color: '#94A3B8', fontSize: 12, fontWeight: '600' },
   dateTimeRow: {
     flexDirection: 'row', backgroundColor: '#0F172A',
     borderRadius: 10, overflow: 'hidden',
   },
   dateTimeItem: { flex: 1, padding: 14, alignItems: 'center' },
   dateTimeDivider: { width: 1, backgroundColor: '#1E293B' },
-  dateTimeLabel: {
-    color: '#475569', fontSize: 10, fontWeight: '700',
-    letterSpacing: 1, marginBottom: 4,
-  },
+  dateTimeLabel: { color: '#475569', fontSize: 10, fontWeight: '700', letterSpacing: 1, marginBottom: 4 },
   dateTimeValue: { color: '#F8FAFC', fontSize: 15, fontWeight: '600' },
   notesBox: { backgroundColor: '#0F172A', borderRadius: 10, padding: 14 },
-  notesLabel: {
-    color: '#475569', fontSize: 10, fontWeight: '700',
-    letterSpacing: 1, marginBottom: 6,
-  },
+  notesLabel: { color: '#475569', fontSize: 10, fontWeight: '700', letterSpacing: 1, marginBottom: 6 },
   notesText: { color: '#94A3B8', fontSize: 14, lineHeight: 20 },
   actions: { flexDirection: 'row', gap: 10 },
   declineButton: {
@@ -448,16 +534,11 @@ const styles = StyleSheet.create({
   emptyIcon: { fontSize: 56, marginBottom: 16 },
   emptyTitle: { color: '#F8FAFC', fontSize: 20, fontWeight: '700', marginBottom: 8 },
   emptySubtext: { color: '#475569', fontSize: 14, textAlign: 'center' },
-
-  // Modal
-  modalOverlay: {
-    flex: 1, backgroundColor: '#00000088', justifyContent: 'flex-end',
-  },
+  modalOverlay: { flex: 1, backgroundColor: '#00000088', justifyContent: 'flex-end' },
   modalSheet: {
     backgroundColor: '#1E293B',
     borderTopLeftRadius: 20, borderTopRightRadius: 20,
-    padding: 24, paddingBottom: 40,
-    maxHeight: '85%',
+    padding: 24, paddingBottom: 40, maxHeight: '85%',
   },
   modalTitle: { color: '#F8FAFC', fontSize: 18, fontWeight: '700', marginBottom: 6 },
   modalSubtitle: { color: '#64748B', fontSize: 13, marginBottom: 16 },
@@ -465,8 +546,7 @@ const styles = StyleSheet.create({
   reasonOption: {
     flexDirection: 'row', alignItems: 'center',
     padding: 14, borderRadius: 10,
-    borderWidth: 1, borderColor: '#334155',
-    marginBottom: 8,
+    borderWidth: 1, borderColor: '#334155', marginBottom: 8,
   },
   reasonOptionSelected: { borderColor: '#EF4444', backgroundColor: '#EF444410' },
   reasonRadio: {
@@ -478,11 +558,9 @@ const styles = StyleSheet.create({
   reasonText: { color: '#94A3B8', fontSize: 14, flex: 1 },
   reasonTextSelected: { color: '#F8FAFC' },
   otherInput: {
-    backgroundColor: '#0F172A',
-    borderWidth: 1, borderColor: '#334155',
+    backgroundColor: '#0F172A', borderWidth: 1, borderColor: '#334155',
     borderRadius: 10, padding: 14,
-    color: '#F8FAFC', fontSize: 14,
-    minHeight: 80, marginBottom: 8,
+    color: '#F8FAFC', fontSize: 14, minHeight: 80, marginBottom: 8,
   },
   modalActions: { flexDirection: 'row', gap: 10, marginTop: 12 },
   modalCancelButton: {
