@@ -9,7 +9,7 @@ import { registerForPushNotifications } from '../utils/notifications';
 import * as Sentry from '@sentry/react-native';
 
 Sentry.init({
-  dsn: 'YOUR_SENTRY_DSN',
+  dsn: 'https://057034210ab85bab34ada8bbe4de9420@o4511057790042112.ingest.us.sentry.io/4511057791746048',
   environment: __DEV__ ? 'development' : 'production',
   // Never send PII to Sentry
   beforeSend: (event) => {

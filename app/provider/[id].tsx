@@ -59,6 +59,7 @@ interface Provider {
   officeNotes?: string;
   reviewCount?: number;
   reviewAverage?: number;
+  website?: string;
 }
 
 // ─── Tag color palettes ────────────────────────────────────────────────────────
@@ -140,12 +141,7 @@ const StaticMapCard = ({
 // Real co-pay data requires EHR/insurance verification (roadmap Month 3-6).
 const PricingCard = ({ colors }: { colors: any }) => (
   <View style={[styles.section, { backgroundColor: colors.card }]}>
-    <View style={styles.sectionHeader}>
-      <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 0 }]}>Pricing & Co-pay</Text>
-      <View style={[styles.providerConfigBadge, { backgroundColor: '#F59E0B20' }]}>
-        <Text style={[styles.providerConfigText, { color: '#F59E0B' }]}>Coming Soon</Text>
-      </View>
-    </View>
+    <Text style={[styles.sectionTitle, { color: colors.text }]}>Pricing & Co-pay</Text>
     <View style={[styles.pricingInfoBox, { backgroundColor: colors.background, borderColor: colors.border }]}>
       <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
       <Text style={[styles.pricingInfoText, { color: colors.text }]}>
@@ -186,12 +182,7 @@ const WaitTimeCard = ({
 
   return (
     <View style={[styles.section, { backgroundColor: colors.card }]}>
-      <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 0 }]}>Wait Times</Text>
-        <View style={[styles.providerConfigBadge, { backgroundColor: colors.border }]}>
-          <Text style={[styles.providerConfigText, { color: colors.subtext }]}>Provider reported</Text>
-        </View>
-      </View>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>Pricing & Co-pay</Text>
       <View style={styles.waitTimeGrid}>
         <View style={[styles.waitTimeItem, { backgroundColor: colors.background }]}>
           <Text style={[styles.waitTimeValue, { color: colors.primary }]}>{waitDisplay}</Text>
@@ -467,6 +458,7 @@ export default function ProviderDetailScreen() {
         officeNotes:   typeof data.officeNotes   === 'string' ? data.officeNotes   : '',
         reviewCount:   typeof data.reviewCount   === 'number' ? data.reviewCount   : undefined,
         reviewAverage: typeof data.reviewAverage === 'number' ? data.reviewAverage : undefined,
+        website: typeof data.website === 'string' && data.website ? data.website : '',
       });
     } catch (error) {
       if (__DEV__) console.error('Error loading provider:', error);
@@ -767,6 +759,21 @@ export default function ProviderDetailScreen() {
             <Ionicons name="videocam" size={20} color="#6366F1" />
             <Text style={[styles.infoText, { color: colors.text }]}>Telehealth / Virtual visits available</Text>
           </View>
+        )}
+        {!!provider.website && (
+          <TouchableOpacity
+            style={styles.infoRow}
+            onPress={() => Linking.openURL(
+              provider.website!.startsWith('http')
+                ? provider.website!
+                : `https://${provider.website!}`
+            )}
+          >
+            <Ionicons name="globe-outline" size={20} color={colors.primary} />
+            <Text style={[styles.infoText, { color: colors.primary }]} numberOfLines={1}>
+              {provider.website}
+            </Text>
+          </TouchableOpacity>
         )}
       </View>
 

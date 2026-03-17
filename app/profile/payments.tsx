@@ -34,13 +34,6 @@ export default function PaymentsScreen() {
               AccessCare is 100% free for SoonerCare and Medicaid members.
             </Text>
           </View>
-
-          <View style={[styles.card, { backgroundColor: colors.card }]}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>ℹ️ Coming Soon</Text>
-            <Text style={[styles.cardText, { color: colors.subtext }]}>
-              Payment options for premium features will be available in a future update.
-            </Text>
-          </View>
         </View>
       </View>
     </>

@@ -339,6 +339,8 @@ type ProviderData = {
   communicationStyles:string[]; whoISee:string[]; visitApproach:string[];
   typicalWaitDays:number; typicalWaitHours:number;
   avgVisitMinutes:number; officeNotes:string;
+  website:string;
+
 };
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
@@ -352,7 +354,7 @@ export default function ProviderProfileScreen() {
     acceptingPatients:true, hours:defaultWeekHours(),
     telehealth:false, inPerson:true, telehealthOnly:false,
     communicationStyles:[], whoISee:[], visitApproach:[],
-    typicalWaitDays:0, typicalWaitHours:0, avgVisitMinutes:30, officeNotes:'',
+    typicalWaitDays:0, typicalWaitHours:0, avgVisitMinutes:30, officeNotes:'', website:'',
   });
   const [loading,  setLoading]  = useState(true);
   const [saving,   setSaving]   = useState(false);
@@ -406,6 +408,7 @@ export default function ProviderProfileScreen() {
         typicalWaitHours: typeof d.typicalWaitHours === 'number' ? d.typicalWaitHours : 0,
         avgVisitMinutes:  typeof d.avgVisitMinutes  === 'number' ? d.avgVisitMinutes  : 30,
         officeNotes: typeof d.officeNotes === 'string' ? d.officeNotes : '',
+        website: typeof d.website === 'string' ? d.website : '',
       });
     } catch (error) {
       if (__DEV__) console.error('Error loading provider:', error);
@@ -432,7 +435,7 @@ export default function ProviderProfileScreen() {
         communicationStyles: data.communicationStyles,
         whoISee: data.whoISee, visitApproach: data.visitApproach,
         typicalWaitDays: data.typicalWaitDays, typicalWaitHours: data.typicalWaitHours,
-        avgVisitMinutes: data.avgVisitMinutes, officeNotes: data.officeNotes,
+        avgVisitMinutes: data.avgVisitMinutes, officeNotes: data.officeNotes, website: data.website,
         updatedAt: serverTimestamp(), lastUpdatedBy: 'provider',
       });
       await refreshProfile();
@@ -548,6 +551,7 @@ export default function ProviderProfileScreen() {
             <Field label="PHONE NUMBER" value={data.phone} onChange={v=>set('phone',v)} placeholder="(405) 555-0100" keyboardType="phone-pad" />
             <Field label="STREET ADDRESS" value={data.address} onChange={v=>set('address',v)} placeholder="123 Main St, Suite 200" />
             <Field label="CITY" value={data.city} onChange={v=>set('city',v)} placeholder="Oklahoma City" />
+            <Field label="WEBSITE" value={data.website} onChange={v=>set('website',v)} placeholder="https://www.yourpractice.com" keyboardType="url" />
 
             <Text style={styles.fieldLabel}>LANGUAGES SPOKEN</Text>
             <TextInput style={[styles.input,{marginBottom:20}]} value={data.languages} onChangeText={v=>set('languages',v)} placeholder="English, Spanish..." placeholderTextColor={C.textMuted} />

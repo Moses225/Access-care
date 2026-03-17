@@ -510,14 +510,21 @@ export default function HomeScreen() {
               >
                 SoonerCare / Medicaid
               </Text>
-              {(hasSavedSoonerCare || hasSavedInsurance) && (
-                <Text style={[styles.insuranceChipSub, {
-                  color: insuranceFilter === 'soonercare' ? '#fff' : colors.success,
-                }]}>
-                  {hasSavedSoonerCare ? 'Your saved plan' : patientPlan}
-                </Text>
-              )}
+              {hasSavedSoonerCare && (
+              <Text style={[styles.insuranceChipSub, {
+                color: insuranceFilter === 'soonercare' ? '#fff' : colors.success,
+              }]}>
+                Your saved plan
+              </Text>
+            )}
             </View>
+            {hasSavedInsurance && !hasSavedSoonerCare && (
+  <View style={[styles.savedPlanNote, { backgroundColor: colors.primary + '10', borderColor: colors.primary + '30' }]}>
+    <Text style={[styles.savedPlanNoteText, { color: colors.primary }]}>
+      💊 Your saved plan: <Text style={{ fontWeight: '700' }} numberOfLines={1}>{patientPlan}</Text>
+    </Text>
+  </View>
+)}
             {insuranceFilter === 'soonercare' && (
               <Text style={styles.insuranceChipCheck}>✓</Text>
             )}
@@ -890,4 +897,9 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 16, textAlign: 'center', lineHeight: 24, marginBottom: 24 },
   clearButton: { marginTop: 20, paddingHorizontal: 32, paddingVertical: 12, borderRadius: 8 },
   clearButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  savedPlanNote: {
+  borderWidth: 1, borderRadius: 8, padding: 8,
+  marginTop: 8, flexDirection: 'row', alignItems: 'center',
+},
+savedPlanNoteText: { fontSize: 12, flex: 1 },
 });
