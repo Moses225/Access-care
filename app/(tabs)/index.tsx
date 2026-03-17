@@ -481,6 +481,8 @@ export default function HomeScreen() {
     (patientPlan.toLowerCase().includes('soonercare') ||
      patientPlan.toLowerCase().includes('medicaid'));
   const isSavedUninsured = patientInsuranceType === 'uninsured';
+  // Any insured plan (not just SoonerCare) should show "Your saved plan"
+const hasSavedInsurance = patientInsuranceType === 'insured' && !!patientPlan;
 
   return (
     <ScrollView
@@ -521,11 +523,11 @@ export default function HomeScreen() {
               }]} numberOfLines={1}>
                 SoonerCare / Medicaid
               </Text>
-              {hasSavedSoonerCare && (
+              {(hasSavedSoonerCare || hasSavedInsurance) &&(
                 <Text style={[styles.insuranceChipSub, {
                   color: insuranceFilter === 'soonercare' ? '#fff' : colors.success,
                 }]}>
-                  Your saved plan
+                  {hasSavedSoonerCare ? 'Your saved plan' : patientPlan}
                 </Text>
               )}
             </View>

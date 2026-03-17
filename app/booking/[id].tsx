@@ -1,3 +1,4 @@
+import { logBookingCreated } from '../../utils/auditLog';
 import { validateBooking, sanitizeText, sanitizePhone } from '../../utils/validation';
 import { logError } from '../../utils/crashReporting';
 import { checkBookingRateLimit, recordBookingCreation } from '../../utils/rateLimit';
@@ -702,6 +703,8 @@ export default function BookingScreen() {
 
       // Record booking in rate limiter after successful creation
       await recordBookingCreation(user.uid);
+      logBookingCreated(user.uid, bookingRef.id, id as string, selectedVisitType);
+
 
       if (__DEV__) console.log('✅ Booking created:', bookingRef.id);
       await sendBookingConfirmationSMS(

@@ -1,3 +1,4 @@
+import { logBookingConfirmed, logBookingDeclined } from '../../utils/auditLog';
 import { useRouter } from 'expo-router';
 import {
   collection, doc, getDoc, onSnapshot, query,
@@ -9,7 +10,7 @@ import {
   Platform, ScrollView, StyleSheet, Text, TextInput,
   TouchableOpacity, View,
 } from 'react-native';
-import { db } from '../../firebase';
+import { auth,db } from '../../firebase';
 import { useProviderAuth } from '../../context/ProviderAuthContext';
 import { sendExpoPushToUser } from '../../utils/notifications';
 
@@ -146,6 +147,8 @@ export default function ProviderBookingsScreen() {
                 confirmedAt: serverTimestamp(),
               });
 
+              logBookingConfirmed(auth.currentUser!.uid, booking.id, providerProfile!.providerId);
+
               // 2. Send push notification to patient (fire and forget)
               if (booking.userId) {
                 const providerName = booking.providerName
@@ -207,6 +210,7 @@ export default function ProviderBookingsScreen() {
         declineReason: reason,
         cancelledBy: 'provider',
       });
+      logBookingDeclined(auth.currentUser!.uid, declineTarget.id, providerProfile!.providerId, selectedReason);
 
       // 2. Send push notification to patient (fire and forget)
       if (declineTarget.userId) {
