@@ -1,0 +1,16 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Serif+Display:ital@0;1&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+  html { font-family: 'DM Sans', sans-serif; }
+  body { @apply bg-white text-slate-900 antialiased m-0 p-0; }
+  #root { @apply w-full min-h-screen; }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+}
