@@ -465,9 +465,7 @@ export default function HomeScreen() {
     patientInsuranceType === 'insured' &&
     (patientPlan.toLowerCase().includes('soonercare') ||
      patientPlan.toLowerCase().includes('medicaid'));
-  // True for any insured patient — shows their plan name under the chip
   const hasSavedInsurance  = patientInsuranceType === 'insured' && !!patientPlan;
-  // True for uninsured patients — shows "Your saved plan" under the No Insurance chip
   const isSavedUninsured   = patientInsuranceType === 'uninsured';
 
   return (
@@ -501,7 +499,7 @@ export default function HomeScreen() {
             onPress={() => toggleInsuranceFilter('soonercare')}
           >
             <Text style={styles.insuranceChipIcon}>💊</Text>
-            <View>
+            <View style={{ flex: 1 }}>
               <Text
                 style={[styles.insuranceChipLabel, {
                   color: insuranceFilter === 'soonercare' ? '#fff' : colors.text,
@@ -511,20 +509,13 @@ export default function HomeScreen() {
                 SoonerCare / Medicaid
               </Text>
               {hasSavedSoonerCare && (
-              <Text style={[styles.insuranceChipSub, {
-                color: insuranceFilter === 'soonercare' ? '#fff' : colors.success,
-              }]}>
-                Your saved plan
-              </Text>
-            )}
+                <Text style={[styles.insuranceChipSub, {
+                  color: insuranceFilter === 'soonercare' ? '#fff' : colors.success,
+                }]}>
+                  Your saved plan
+                </Text>
+              )}
             </View>
-            {hasSavedInsurance && !hasSavedSoonerCare && (
-  <View style={[styles.savedPlanNote, { backgroundColor: colors.primary + '10', borderColor: colors.primary + '30' }]}>
-    <Text style={[styles.savedPlanNoteText, { color: colors.primary }]}>
-      💊 Your saved plan: <Text style={{ fontWeight: '700' }} numberOfLines={1}>{patientPlan}</Text>
-    </Text>
-  </View>
-)}
             {insuranceFilter === 'soonercare' && (
               <Text style={styles.insuranceChipCheck}>✓</Text>
             )}
@@ -540,7 +531,7 @@ export default function HomeScreen() {
             onPress={() => toggleInsuranceFilter('uninsured')}
           >
             <Text style={styles.insuranceChipIcon}>💵</Text>
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={[styles.insuranceChipLabel, {
                 color: insuranceFilter === 'uninsured' ? '#fff' : colors.text,
               }]}>
@@ -560,6 +551,21 @@ export default function HomeScreen() {
           </TouchableOpacity>
 
         </View>
+
+        {/* ── Saved plan note for non-SoonerCare insured patients ──────────
+            Shown BELOW both chips — not inside either chip.
+            Only visible when patient has saved a non-SoonerCare plan.        */}
+        {hasSavedInsurance && !hasSavedSoonerCare && (
+          <View style={[styles.savedPlanNote, {
+            backgroundColor: colors.primary + '10',
+            borderColor: colors.primary + '30',
+          }]}>
+            <Text style={[styles.savedPlanNoteText, { color: colors.primary }]}>
+              💊 Your saved plan:{' '}
+              <Text style={{ fontWeight: '700' }}>{patientPlan}</Text>
+            </Text>
+          </View>
+        )}
 
         {/* Contextual note for uninsured */}
         {insuranceFilter === 'uninsured' && (
@@ -829,6 +835,12 @@ const styles = StyleSheet.create({
   insuranceChipLabel: { fontSize: 11, fontWeight: '700', lineHeight: 14, flexShrink: 1 },
   insuranceChipSub: { fontSize: 10, fontWeight: '500', marginTop: 1 },
   insuranceChipCheck: { color: '#fff', fontSize: 14, fontWeight: 'bold', marginLeft: 'auto' },
+  // Saved plan note — shown below both chips for non-SoonerCare insured patients
+  savedPlanNote: {
+    borderWidth: 1, borderRadius: 8, padding: 10,
+    marginTop: 8, marginBottom: 4,
+  },
+  savedPlanNoteText: { fontSize: 12, lineHeight: 17 },
   uninsuredNote: { borderWidth: 1, borderRadius: 8, padding: 10, marginTop: 8 },
   uninsuredNoteText: { fontSize: 12, lineHeight: 17 },
   manageInsuranceLink: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.06)' },
@@ -897,9 +909,4 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 16, textAlign: 'center', lineHeight: 24, marginBottom: 24 },
   clearButton: { marginTop: 20, paddingHorizontal: 32, paddingVertical: 12, borderRadius: 8 },
   clearButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  savedPlanNote: {
-  borderWidth: 1, borderRadius: 8, padding: 8,
-  marginTop: 8, flexDirection: 'row', alignItems: 'center',
-},
-savedPlanNoteText: { fontSize: 12, flex: 1 },
 });

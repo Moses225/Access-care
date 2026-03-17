@@ -119,8 +119,10 @@ export default function AppointmentsScreen() {
 
   const today = new Date().toISOString().split('T')[0];
   const filteredAppointments = appointments.filter((a) => {
-    if (filter === 'upcoming') return a.date >= today && a.status !== 'cancelled';
-    if (filter === 'past') return a.date < today || a.status === 'completed' || a.status === 'cancelled';
+    if (filter === 'upcoming')
+      return (a.status === 'pending' || a.status === 'confirmed') && a.date >= today;
+    if (filter === 'past')
+      return a.status === 'completed' || a.status === 'cancelled' || a.date < today;
     return true;
   });
 

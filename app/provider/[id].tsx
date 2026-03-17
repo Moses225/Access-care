@@ -98,7 +98,8 @@ const StaticMapCard = ({
   location: { latitude: number; longitude: number };
   name: string; colors: any; onDirections: () => void;
 }) => {
-  const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_STATIC_KEY
+  || process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
   const { latitude, longitude } = location;
   const mapUrl = apiKey
     ? `https://maps.googleapis.com/maps/api/staticmap?center=${latitude},${longitude}&zoom=15&size=640x320&scale=2&markers=color:red%7C${latitude},${longitude}&key=${apiKey}`
