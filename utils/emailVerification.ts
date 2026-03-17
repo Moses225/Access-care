@@ -6,7 +6,7 @@ import { auth } from '../firebase';
 // Soft enforcement: warn unverified users but allow booking during beta.
 // Set HARD_ENFORCE = true before public App Store launch to block unverified
 // users from completing bookings.
-const HARD_ENFORCE = false;
+const HARD_ENFORCE = true;
 
 export type VerificationCheckResult = {
   canProceed: boolean;

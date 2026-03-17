@@ -165,14 +165,10 @@ export default function HomeScreen() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedCategoryName, setSelectedCategoryName] = useState<string>('');
 
-  // ── Insurance filter state ───────────────────────────────────────────────────
-  // 'soonercare' = filter by SoonerCare/Medicaid accepting providers
-  // 'uninsured'  = patient has no insurance — show all (no provider-level cash pay field yet)
-  // ''           = no insurance filter active
-  const [insuranceFilter, setInsuranceFilter] = useState<'soonercare' | 'uninsured' | ''>('');
-  // Patient's saved insurance type — used to smart-highlight the right chip
+  // ── Insurance filter state ────────────────────────────────────────────────
+  const [insuranceFilter, setInsuranceFilter]       = useState<'soonercare' | 'uninsured' | ''>('');
   const [patientInsuranceType, setPatientInsuranceType] = useState<'insured' | 'uninsured' | ''>('');
-  const [patientPlan, setPatientPlan]           = useState('');
+  const [patientPlan, setPatientPlan]               = useState('');
 
   const [userName, setUserName]                 = useState('');
   const [availableCategories, setAvailableCategories] = useState<string[]>(['all']);
@@ -180,9 +176,7 @@ export default function HomeScreen() {
   const [showDisclaimer, setShowDisclaimer]     = useState(true);
   const [disclaimerHeight]                      = useState(new Animated.Value(1));
 
-  // ── Load patient's saved insurance ────────────────────────────────────────────
-  // Runs on mount and on every focus — so returning from insurance settings
-  // immediately updates the filter chips to reflect any changes.
+  // ── Load patient's saved insurance on every focus ─────────────────────────
   const loadPatientInsurance = useCallback(async () => {
     try {
       const user = auth.currentUser;
@@ -194,7 +188,6 @@ export default function HomeScreen() {
         const plan = data.provider || '';
         setPatientInsuranceType(type);
         setPatientPlan(plan);
-        // Auto-apply SoonerCare filter if patient has it saved and no filter is active
         if (type === 'insured') {
           const hasSoonerCare =
             plan.toLowerCase().includes('soonercare') ||
@@ -208,9 +201,7 @@ export default function HomeScreen() {
   }, []);
 
   useFocusEffect(
-    useCallback(() => {
-      loadPatientInsurance();
-    }, [loadPatientInsurance])
+    useCallback(() => { loadPatientInsurance(); }, [loadPatientInsurance])
   );
 
   useEffect(() => {
@@ -218,7 +209,7 @@ export default function HomeScreen() {
     loadDisclaimerPreference();
   }, []);
 
-  // ── Client-side filtering ──────────────────────────────────────────────────
+  // ── Client-side filtering ─────────────────────────────────────────────────
   useEffect(() => {
     if (!providers.length) return;
     let filtered = [...providers];
@@ -226,10 +217,10 @@ export default function HomeScreen() {
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       filtered = filtered.filter((p) =>
-        (p.name        && p.name.toLowerCase().includes(q)) ||
-        (p.specialty   && p.specialty.toLowerCase().includes(q)) ||
-        (p.address     && p.address.toLowerCase().includes(q)) ||
-        (p.city        && p.city.toLowerCase().includes(q))
+        (p.name      && p.name.toLowerCase().includes(q)) ||
+        (p.specialty && p.specialty.toLowerCase().includes(q)) ||
+        (p.address   && p.address.toLowerCase().includes(q)) ||
+        (p.city      && p.city.toLowerCase().includes(q))
       );
     }
 
@@ -260,7 +251,6 @@ export default function HomeScreen() {
       }
     }
 
-    // SoonerCare/Medicaid filter
     if (insuranceFilter === 'soonercare') {
       filtered = filtered.filter(
         (p) =>
@@ -272,11 +262,6 @@ export default function HomeScreen() {
            ))
       );
     }
-
-    // Uninsured filter — show all providers for now since providers don't have
-    // an acceptsUninsured field yet. In a future update this will filter by
-    // provider.cashPay or provider.acceptsUninsured.
-    // When active, a banner informs the patient to confirm cash pay directly.
 
     setFilteredProviders(filtered);
     setDisplayCount(PAGE_SIZE);
@@ -471,18 +456,19 @@ export default function HomeScreen() {
     );
   }
 
-  const visibleProviders = filteredProviders.slice(0, displayCount);
-  const hasMore = displayCount < filteredProviders.length;
-  const remainingCount = filteredProviders.length - displayCount;
+  const visibleProviders  = filteredProviders.slice(0, displayCount);
+  const hasMore           = displayCount < filteredProviders.length;
+  const remainingCount    = filteredProviders.length - displayCount;
 
-  // Derive smart banner text based on patient's saved insurance
+  // ── Insurance chip helpers ────────────────────────────────────────────────
   const hasSavedSoonerCare =
     patientInsuranceType === 'insured' &&
     (patientPlan.toLowerCase().includes('soonercare') ||
      patientPlan.toLowerCase().includes('medicaid'));
-  const isSavedUninsured = patientInsuranceType === 'uninsured';
-  // Any insured plan (not just SoonerCare) should show "Your saved plan"
-const hasSavedInsurance = patientInsuranceType === 'insured' && !!patientPlan;
+  // True for any insured patient — shows their plan name under the chip
+  const hasSavedInsurance  = patientInsuranceType === 'insured' && !!patientPlan;
+  // True for uninsured patients — shows "Your saved plan" under the No Insurance chip
+  const isSavedUninsured   = patientInsuranceType === 'uninsured';
 
   return (
     <ScrollView
@@ -498,7 +484,7 @@ const hasSavedInsurance = patientInsuranceType === 'insured' && !!patientPlan;
         </Text>
       </View>
 
-      {/* ── Insurance filter chips ────────────────────────────────────────── */}
+      {/* ── Insurance filter chips ───────────────────────────────────────── */}
       <View style={[styles.insuranceSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <Text style={[styles.insuranceSectionTitle, { color: colors.text }]}>
           Filter by coverage
@@ -508,22 +494,23 @@ const hasSavedInsurance = patientInsuranceType === 'insured' && !!patientPlan;
           {/* SoonerCare / Medicaid chip */}
           <TouchableOpacity
             style={[styles.insuranceChip, {
-              backgroundColor: insuranceFilter === 'soonercare'
-                ? colors.success : colors.background,
-              borderColor: insuranceFilter === 'soonercare'
-                ? colors.success : colors.border,
-              borderWidth: insuranceFilter === 'soonercare' ? 2 : 1,
+              backgroundColor: insuranceFilter === 'soonercare' ? colors.success : colors.background,
+              borderColor:     insuranceFilter === 'soonercare' ? colors.success : colors.border,
+              borderWidth:     insuranceFilter === 'soonercare' ? 2 : 1,
             }]}
             onPress={() => toggleInsuranceFilter('soonercare')}
           >
             <Text style={styles.insuranceChipIcon}>💊</Text>
             <View>
-              <Text style={[styles.insuranceChipLabel, {
-                color: insuranceFilter === 'soonercare' ? '#fff' : colors.text,
-              }]} numberOfLines={1}>
+              <Text
+                style={[styles.insuranceChipLabel, {
+                  color: insuranceFilter === 'soonercare' ? '#fff' : colors.text,
+                }]}
+                numberOfLines={1}
+              >
                 SoonerCare / Medicaid
               </Text>
-              {(hasSavedSoonerCare || hasSavedInsurance) &&(
+              {(hasSavedSoonerCare || hasSavedInsurance) && (
                 <Text style={[styles.insuranceChipSub, {
                   color: insuranceFilter === 'soonercare' ? '#fff' : colors.success,
                 }]}>
@@ -536,14 +523,12 @@ const hasSavedInsurance = patientInsuranceType === 'insured' && !!patientPlan;
             )}
           </TouchableOpacity>
 
-          {/* No Insurance / Out of Pocket chip */}
+          {/* No Insurance chip */}
           <TouchableOpacity
             style={[styles.insuranceChip, {
-              backgroundColor: insuranceFilter === 'uninsured'
-                ? '#F59E0B' : colors.background,
-              borderColor: insuranceFilter === 'uninsured'
-                ? '#F59E0B' : colors.border,
-              borderWidth: insuranceFilter === 'uninsured' ? 2 : 1,
+              backgroundColor: insuranceFilter === 'uninsured' ? '#F59E0B' : colors.background,
+              borderColor:     insuranceFilter === 'uninsured' ? '#F59E0B' : colors.border,
+              borderWidth:     insuranceFilter === 'uninsured' ? 2 : 1,
             }]}
             onPress={() => toggleInsuranceFilter('uninsured')}
           >
@@ -555,12 +540,12 @@ const hasSavedInsurance = patientInsuranceType === 'insured' && !!patientPlan;
                 No Insurance
               </Text>
               {isSavedUninsured && (
-              <Text style={[styles.insuranceChipSub, {
-                color: insuranceFilter === 'uninsured' ? '#fff' : '#F59E0B',
-              }]}>
-                Your saved plan
-              </Text>
-            )}
+                <Text style={[styles.insuranceChipSub, {
+                  color: insuranceFilter === 'uninsured' ? '#fff' : '#F59E0B',
+                }]}>
+                  {insuranceFilter === 'uninsured' ? 'Active' : 'Your saved plan'}
+                </Text>
+              )}
             </View>
             {insuranceFilter === 'uninsured' && (
               <Text style={styles.insuranceChipCheck}>✓</Text>
@@ -569,7 +554,7 @@ const hasSavedInsurance = patientInsuranceType === 'insured' && !!patientPlan;
 
         </View>
 
-        {/* Contextual note for uninsured filter */}
+        {/* Contextual note for uninsured */}
         {insuranceFilter === 'uninsured' && (
           <View style={[styles.uninsuredNote, { backgroundColor: '#F59E0B15', borderColor: '#F59E0B40' }]}>
             <Text style={[styles.uninsuredNoteText, { color: '#F59E0B' }]}>
@@ -578,10 +563,10 @@ const hasSavedInsurance = patientInsuranceType === 'insured' && !!patientPlan;
           </View>
         )}
 
-        {/* Link to insurance settings */}
+        {/* Link to Coverage tab */}
         <TouchableOpacity
           style={styles.manageInsuranceLink}
-          onPress={() => router.push('/profile/insurance' as any)}
+          onPress={() => router.push('/(tabs)/insurance' as any)}
         >
           <Text style={[styles.manageInsuranceLinkText, { color: colors.primary }]}>
             {patientInsuranceType ? 'Update insurance settings →' : 'Save your insurance for faster filtering →'}
@@ -823,7 +808,6 @@ const styles = StyleSheet.create({
   header: { paddingTop: 60, paddingBottom: 12, paddingHorizontal: 20 },
   title: { fontSize: 28, fontWeight: 'bold', marginBottom: 2 },
   subtitle: { fontSize: 13 },
-  // Insurance section
   insuranceSection: {
     marginHorizontal: 16, marginTop: 8, marginBottom: 12,
     padding: 14, borderRadius: 14, borderWidth: 1,
@@ -842,7 +826,6 @@ const styles = StyleSheet.create({
   uninsuredNoteText: { fontSize: 12, lineHeight: 17 },
   manageInsuranceLink: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.06)' },
   manageInsuranceLinkText: { fontSize: 12, fontWeight: '600' },
-  // Search
   searchContainer: { paddingHorizontal: 16, marginBottom: 10 },
   searchBar: { flexDirection: 'row', alignItems: 'center', padding: 10, borderRadius: 10, borderWidth: 1 },
   searchIcon: { fontSize: 18, marginRight: 8 },
