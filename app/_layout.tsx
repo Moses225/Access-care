@@ -6,6 +6,18 @@ import { ThemeProvider } from '../context/ThemeContext';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { registerForPushNotifications } from '../utils/notifications';
+import * as Sentry from '@sentry/react-native';
+
+Sentry.init({
+  dsn: 'YOUR_SENTRY_DSN',
+  environment: __DEV__ ? 'development' : 'production',
+  // Never send PII to Sentry
+  beforeSend: (event) => {
+    // Strip any user data from events
+    delete event.user;
+    return event;
+  },
+});
 
 function RootNavigator() {
   const router = useRouter();

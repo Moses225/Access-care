@@ -90,7 +90,7 @@ const VISIT_APPROACH_COLORS: Record<string, string> = {
   'Education-focused':             '#3B82F6',
 };
 
-// ─── Static Map Card ───────────────────────────────────────────────────────────
+// ─── Static Map Card ──────────────────────────────────────────────────────────
 const StaticMapCard = ({
   location, name, colors, onDirections,
 }: {
@@ -135,42 +135,31 @@ const StaticMapCard = ({
   );
 };
 
-// ─── Pricing Estimate Card ─────────────────────────────────────────────────────
-const PricingEstimateCard = ({ colors }: { colors: any }) => {
-  const [showInfo, setShowInfo] = useState(false);
-  return (
-    <View style={[styles.section, { backgroundColor: colors.card }]}>
-      <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Pricing Estimate</Text>
-        <TouchableOpacity onPress={() => setShowInfo(!showInfo)}>
-          <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
-        </TouchableOpacity>
+// ─── Pricing Card ─────────────────────────────────────────────────────────────
+// Shows honest pricing info — no static amounts.
+// Real co-pay data requires EHR/insurance verification (roadmap Month 3-6).
+const PricingCard = ({ colors }: { colors: any }) => (
+  <View style={[styles.section, { backgroundColor: colors.card }]}>
+    <View style={styles.sectionHeader}>
+      <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 0 }]}>Pricing & Co-pay</Text>
+      <View style={[styles.providerConfigBadge, { backgroundColor: '#F59E0B20' }]}>
+        <Text style={[styles.providerConfigText, { color: '#F59E0B' }]}>Coming Soon</Text>
       </View>
-      <View style={styles.pricingGrid}>
-        <View style={styles.pricingItem}>
-          <Text style={[styles.pricingLabel, { color: colors.subtext }]}>SoonerCare/Medicaid</Text>
-          <Text style={[styles.pricingValue, { color: colors.success }]}>$0 Copay</Text>
-        </View>
-        <View style={styles.pricingItem}>
-          <Text style={[styles.pricingLabel, { color: colors.subtext }]}>Estimated Range</Text>
-          <Text style={[styles.pricingValue, { color: colors.text }]}>$120 – $200</Text>
-        </View>
-      </View>
-      {showInfo && (
-        <View style={[styles.infoBox, { backgroundColor: colors.background }]}>
-          <Text style={[styles.infoBoxText, { color: colors.text }]}>
-            This is an estimate. Actual costs may vary. Always verify with the provider office before your appointment.
-          </Text>
-          <TouchableOpacity onPress={() => setShowInfo(false)}>
-            <Text style={[styles.infoClose, { color: colors.primary }]}>Got it</Text>
-          </TouchableOpacity>
-        </View>
-      )}
     </View>
-  );
-};
+    <View style={[styles.pricingInfoBox, { backgroundColor: colors.background, borderColor: colors.border }]}>
+      <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
+      <Text style={[styles.pricingInfoText, { color: colors.text }]}>
+        Pricing and co-pay information will be available once insurance verification is live.
+        Contact the provider`&apos;`s office directly for cost estimates.
+      </Text>
+    </View>
+    <Text style={[styles.pricingNote, { color: colors.subtext }]}>
+      Most SoonerCare and Medicaid plans have $0 co-pay for primary care visits. Always confirm with your provider.
+    </Text>
+  </View>
+);
 
-// ─── Wait Time Card ────────────────────────────────────────────────────────────
+// ─── Wait Time Card ───────────────────────────────────────────────────────────
 const WaitTimeCard = ({
   typicalWaitDays, typicalWaitHours, avgVisitMinutes, colors,
 }: {
@@ -198,7 +187,7 @@ const WaitTimeCard = ({
   return (
     <View style={[styles.section, { backgroundColor: colors.card }]}>
       <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Wait Times</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 0 }]}>Wait Times</Text>
         <View style={[styles.providerConfigBadge, { backgroundColor: colors.border }]}>
           <Text style={[styles.providerConfigText, { color: colors.subtext }]}>Provider reported</Text>
         </View>
@@ -222,8 +211,7 @@ const WaitTimeCard = ({
   );
 };
 
-// ─── Communication Style Card ──────────────────────────────────────────────────
-// Merges communicationStyles, whoISee, and visitApproach into grouped chip display.
+// ─── Communication Style Card ─────────────────────────────────────────────────
 const CommunicationStyleCard = ({
   communicationStyles, personalityTags, whoISee, visitApproach, colors,
 }: {
@@ -241,15 +229,13 @@ const CommunicationStyleCard = ({
   return (
     <View style={[styles.section, { backgroundColor: colors.card }]}>
       <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Communication Style</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 0 }]}>Communication Style</Text>
         <View style={[styles.providerConfigBadge, { backgroundColor: colors.border }]}>
           <Text style={[styles.providerConfigText, { color: colors.subtext }]}>Provider reported</Text>
         </View>
       </View>
-
       {hasAny ? (
         <View style={{ gap: 12 }}>
-          {/* Style tags */}
           {styleTags.length > 0 && (
             <View style={styles.tagGrid}>
               {styleTags.map((tag) => {
@@ -264,8 +250,6 @@ const CommunicationStyleCard = ({
               })}
             </View>
           )}
-
-          {/* Who I see */}
           {whoTags.length > 0 && (
             <>
               <Text style={[styles.tagGroupLabel, { color: colors.subtext }]}>WHO I SEE</Text>
@@ -283,8 +267,6 @@ const CommunicationStyleCard = ({
               </View>
             </>
           )}
-
-          {/* Visit approach */}
           {approachTags.length > 0 && (
             <>
               <Text style={[styles.tagGroupLabel, { color: colors.subtext }]}>VISIT APPROACH</Text>
@@ -305,7 +287,7 @@ const CommunicationStyleCard = ({
         </View>
       ) : (
         <Text style={[styles.waitTimePlaceholder, { color: colors.subtext }]}>
-          This provider has not yet added their communication style. Check back after the provider portal is fully configured.
+          This provider has not yet added their communication style.
         </Text>
       )}
     </View>
@@ -345,7 +327,7 @@ const ReviewsCard = ({
           <Text style={styles.reviewPlaceholderIcon}>⭐</Text>
           <Text style={[styles.reviewPlaceholderTitle, { color: colors.text }]}>No reviews yet</Text>
           <Text style={[styles.reviewPlaceholderText, { color: colors.subtext }]}>
-            Reviews will appear here once patients who have completed verified bookings leave feedback. Book an appointment to be the first.
+            Reviews appear after patients complete verified bookings. Book an appointment to be the first.
           </Text>
           <TouchableOpacity style={[styles.reviewBookBtn, { borderColor: colors.primary }]} onPress={onBooking}>
             <Text style={[styles.reviewBookBtnText, { color: colors.primary }]}>
@@ -358,7 +340,7 @@ const ReviewsCard = ({
   );
 };
 
-// ─── Interview Consult Card ────────────────────────────────────────────────────
+// ─── Interview Consult Card ───────────────────────────────────────────────────
 const InterviewConsultCard = ({
   interviewConsult, colors,
 }: { interviewConsult: Provider['interviewConsult']; colors: any }) => {
@@ -368,8 +350,12 @@ const InterviewConsultCard = ({
       <Text style={[styles.sectionTitle, { color: colors.text }]}>Meet & Greet Available</Text>
       <View style={[styles.consultBox, { backgroundColor: colors.background }]}>
         <View style={styles.consultHeader}>
-          <Text style={[styles.consultPrice, { color: colors.primary }]}>${interviewConsult.price}</Text>
-          <Text style={[styles.consultDuration, { color: colors.subtext }]}>{interviewConsult.duration} minutes</Text>
+          <Text style={[styles.consultPrice, { color: colors.primary }]}>
+            {interviewConsult.price > 0 ? `$${interviewConsult.price}` : 'Free'}
+          </Text>
+          <Text style={[styles.consultDuration, { color: colors.subtext }]}>
+            {interviewConsult.duration} minutes
+          </Text>
         </View>
         <Text style={[styles.consultDescription, { color: colors.text }]}>
           {interviewConsult.description || 'Schedule a brief consultation to meet the provider and discuss your healthcare needs.'}
@@ -379,14 +365,26 @@ const InterviewConsultCard = ({
   );
 };
 
-// ─── Main Screen ───────────────────────────────────────────────────────────────
+// ─── Unverified Disclaimer Banner ─────────────────────────────────────────────
+// Shows on profiles that haven't been claimed by the provider yet.
+// Protects AccessCare legally — data is from public sources, may be outdated.
+const UnverifiedDisclaimer = ({ colors }: { colors: any }) => (
+  <View style={[styles.unverifiedBanner, { backgroundColor: '#F59E0B15', borderColor: '#F59E0B40' }]}>
+    <Ionicons name="alert-circle-outline" size={18} color="#F59E0B" />
+    <Text style={[styles.unverifiedText, { color: '#92400E' }]}>
+      This profile has not been claimed by the provider. Information is sourced from public records and may be outdated. Verify details directly with the provider before booking.
+    </Text>
+  </View>
+);
+
+// ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function ProviderDetailScreen() {
   const params = useLocalSearchParams();
   const router = useRouter();
   const { colors } = useTheme();
 
   const [provider, setProvider] = useState<Provider | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading]   = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
 
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -454,12 +452,11 @@ export default function ProviderDetailScreen() {
           ? data.bio
           : typeof data.aboutMe === 'string' ? data.aboutMe : '',
         languages: resolvedLanguages,
-        specialInterests:   Array.isArray(data.specialInterests)   ? data.specialInterests   : [],
-        education:          Array.isArray(data.education)          ? data.education          : [],
-        languagesSpoken:    Array.isArray(data.languagesSpoken)    ? data.languagesSpoken    : [],
-        boardCertifications:Array.isArray(data.boardCertifications)? data.boardCertifications: [],
+        specialInterests:    Array.isArray(data.specialInterests)    ? data.specialInterests    : [],
+        education:           Array.isArray(data.education)           ? data.education           : [],
+        languagesSpoken:     Array.isArray(data.languagesSpoken)     ? data.languagesSpoken     : [],
+        boardCertifications: Array.isArray(data.boardCertifications) ? data.boardCertifications : [],
         interviewConsult: data.interviewConsult || null,
-        // Portal-configured fields
         communicationStyles: Array.isArray(data.communicationStyles) ? data.communicationStyles : [],
         personalityTags:     Array.isArray(data.personalityTags)     ? data.personalityTags     : [],
         whoISee:       Array.isArray(data.whoISee)       ? data.whoISee       : [],
@@ -467,9 +464,9 @@ export default function ProviderDetailScreen() {
         typicalWaitDays:  typeof data.typicalWaitDays  === 'number' ? data.typicalWaitDays  : undefined,
         typicalWaitHours: typeof data.typicalWaitHours === 'number' ? data.typicalWaitHours : undefined,
         avgVisitMinutes:  typeof data.avgVisitMinutes  === 'number' ? data.avgVisitMinutes  : undefined,
-        officeNotes:  typeof data.officeNotes  === 'string' ? data.officeNotes  : '',
-        reviewCount:  typeof data.reviewCount  === 'number' ? data.reviewCount  : undefined,
-        reviewAverage:typeof data.reviewAverage === 'number' ? data.reviewAverage : undefined,
+        officeNotes:   typeof data.officeNotes   === 'string' ? data.officeNotes   : '',
+        reviewCount:   typeof data.reviewCount   === 'number' ? data.reviewCount   : undefined,
+        reviewAverage: typeof data.reviewAverage === 'number' ? data.reviewAverage : undefined,
       });
     } catch (error) {
       if (__DEV__) console.error('Error loading provider:', error);
@@ -550,7 +547,7 @@ export default function ProviderDetailScreen() {
     provider.insuranceAccepted.includes('SoonerCare') ||
     provider.insuranceAccepted.includes('Medicaid');
   const acceptingPatients = provider.acceptsNewPatients ?? provider.acceptingNewPatients ?? true;
-  const isTelehealthOnly = provider.telehealthOnly === true;
+  const isTelehealthOnly  = provider.telehealthOnly === true;
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -574,12 +571,25 @@ export default function ProviderDetailScreen() {
               <Text style={[styles.name, { color: colors.text }]} numberOfLines={2}>
                 {provider.name}
               </Text>
-              {provider.verified && (
-                <View style={[styles.verifiedBadge, { backgroundColor: colors.success }]}>
-                  <Text style={styles.verifiedText}>✓</Text>
-                </View>
-              )}
             </View>
+
+            {/* Verified badge — prominent row below name */}
+            {provider.verified ? (
+              <View style={styles.verifiedRow}>
+                <View style={[styles.verifiedBadgeLarge, { backgroundColor: colors.success }]}>
+                  <Ionicons name="checkmark-circle" size={14} color="#fff" />
+                  <Text style={styles.verifiedTextLarge}>Verified Provider</Text>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.verifiedRow}>
+                <View style={[styles.unverifiedBadge, { backgroundColor: '#F59E0B20', borderColor: '#F59E0B40' }]}>
+                  <Ionicons name="alert-circle-outline" size={13} color="#F59E0B" />
+                  <Text style={[styles.unverifiedBadgeText, { color: '#92400E' }]}>Profile not yet claimed</Text>
+                </View>
+              </View>
+            )}
+
             <Text style={[styles.specialty, { color: colors.primary }]}>{provider.specialty}</Text>
             <View style={styles.badgeRow}>
               {isTelehealthOnly ? (
@@ -615,6 +625,9 @@ export default function ProviderDetailScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Unverified disclaimer — shown below header for unclaimed profiles */}
+      {!provider.verified && <UnverifiedDisclaimer colors={colors} />}
+
       {/* Virtual Care Only banner */}
       {isTelehealthOnly && (
         <View style={[styles.telehealthOnlyBanner, {
@@ -622,7 +635,7 @@ export default function ProviderDetailScreen() {
         }]}>
           <Ionicons name="videocam" size={18} color="#3B82F6" />
           <Text style={[styles.telehealthOnlyText, { color: '#3B82F6' }]}>
-            This provider offers virtual care only. In-person visits are not available. Lab work and imaging must be scheduled separately.
+            This provider offers virtual care only. In-person visits are not available.
           </Text>
         </View>
       )}
@@ -650,7 +663,6 @@ export default function ProviderDetailScreen() {
         </View>
       )}
 
-      {/* Communication Style — now shows all three arrays */}
       <CommunicationStyleCard
         communicationStyles={provider.communicationStyles}
         personalityTags={provider.personalityTags}
@@ -659,7 +671,6 @@ export default function ProviderDetailScreen() {
         colors={colors}
       />
 
-      {/* Wait Times */}
       <WaitTimeCard
         typicalWaitDays={provider.typicalWaitDays}
         typicalWaitHours={provider.typicalWaitHours}
@@ -667,7 +678,6 @@ export default function ProviderDetailScreen() {
         colors={colors}
       />
 
-      {/* Reviews */}
       <ReviewsCard
         reviewCount={provider.reviewCount}
         reviewAverage={provider.reviewAverage}
@@ -675,7 +685,6 @@ export default function ProviderDetailScreen() {
         onBooking={handleBooking}
       />
 
-      {/* Special Interests */}
       {provider.specialInterests && provider.specialInterests.length > 0 && (
         <View style={[styles.section, { backgroundColor: colors.card }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Special Interests</Text>
@@ -689,7 +698,6 @@ export default function ProviderDetailScreen() {
         </View>
       )}
 
-      {/* Education */}
       {provider.education && provider.education.length > 0 && (
         <View style={[styles.section, { backgroundColor: colors.card }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Education</Text>
@@ -702,7 +710,6 @@ export default function ProviderDetailScreen() {
         </View>
       )}
 
-      {/* Languages */}
       {!!provider.languages && (
         <View style={[styles.section, { backgroundColor: colors.card }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Languages Spoken</Text>
@@ -710,7 +717,6 @@ export default function ProviderDetailScreen() {
         </View>
       )}
 
-      {/* Board Certifications */}
       {provider.boardCertifications && provider.boardCertifications.length > 0 && (
         <View style={[styles.section, { backgroundColor: colors.card }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Board Certifications</Text>
@@ -720,7 +726,6 @@ export default function ProviderDetailScreen() {
         </View>
       )}
 
-      {/* Call button */}
       <View style={styles.actionsContainer}>
         <TouchableOpacity
           style={[styles.actionButton, { backgroundColor: colors.primary }]}
@@ -731,7 +736,6 @@ export default function ProviderDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Contact Info */}
       <View style={[styles.section, { backgroundColor: colors.card }]}>
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Contact Information</Text>
         {!!provider.address && (
@@ -766,7 +770,6 @@ export default function ProviderDetailScreen() {
         )}
       </View>
 
-      {/* Insurance */}
       <View style={[styles.section, { backgroundColor: colors.card }]}>
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Insurance Accepted</Text>
         {hasSoonerCare && (
@@ -781,7 +784,9 @@ export default function ProviderDetailScreen() {
         )}
       </View>
 
-      <PricingEstimateCard colors={colors} />
+      {/* Pricing — no static amounts, honest info only */}
+      <PricingCard colors={colors} />
+
       <InterviewConsultCard interviewConsult={provider.interviewConsult} colors={colors} />
 
       {acceptingPatients ? (
@@ -798,7 +803,6 @@ export default function ProviderDetailScreen() {
         </View>
       )}
 
-      {/* Map — hidden for virtual-only providers */}
       {provider.location && !isTelehealthOnly && (
         <StaticMapCard
           location={provider.location} name={provider.name}
@@ -806,7 +810,6 @@ export default function ProviderDetailScreen() {
         />
       )}
 
-      {/* Book Button */}
       <View style={styles.bookContainer}>
         <TouchableOpacity
           style={[styles.bookButton, {
@@ -843,8 +846,27 @@ const styles = StyleSheet.create({
   headerText: { flex: 1 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
   name: { fontSize: 18, fontWeight: 'bold', flex: 1 },
-  verifiedBadge: { width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
-  verifiedText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
+  // ── Verified / Unverified badges ─────────────────────────────────────────
+  verifiedRow: { marginBottom: 4 },
+  verifiedBadgeLarge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: 20,
+  },
+  verifiedTextLarge: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  unverifiedBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: 20, borderWidth: 1,
+  },
+  unverifiedBadgeText: { fontSize: 11, fontWeight: '600' },
+  // ── Unverified disclaimer banner ─────────────────────────────────────────
+  unverifiedBanner: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+    marginHorizontal: 16, marginTop: 12, padding: 14,
+    borderRadius: 10, borderWidth: 1,
+  },
+  unverifiedText: { flex: 1, fontSize: 13, lineHeight: 18 },
   specialty: { fontSize: 14, fontWeight: '600', marginBottom: 6 },
   badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   visitBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
@@ -859,11 +881,18 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 17, fontWeight: 'bold', marginBottom: 12 },
   providerConfigBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
   providerConfigText: { fontSize: 10, fontWeight: '600' },
-  waitTimeGrid: { flexDirection: 'row', gap: 12, marginBottom: 4 },
+  // ── Pricing card ─────────────────────────────────────────────────────────
+  pricingInfoBox: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+    padding: 12, borderRadius: 10, borderWidth: 1, marginBottom: 10,
+  },
+  pricingInfoText: { flex: 1, fontSize: 13, lineHeight: 18 },
+  pricingNote: { fontSize: 12, lineHeight: 17, fontStyle: 'italic' },
+  waitTimeGrid: { flexDirection: 'row', gap: 12, marginBottom: 4, marginTop: 4 },
   waitTimeItem: { flex: 1, padding: 14, borderRadius: 10, alignItems: 'center' },
   waitTimeValue: { fontSize: 28, fontWeight: 'bold', marginBottom: 4 },
   waitTimeLabel: { fontSize: 11, textAlign: 'center', lineHeight: 14 },
-  waitTimePlaceholder: { fontSize: 13, lineHeight: 18, fontStyle: 'italic' },
+  waitTimePlaceholder: { fontSize: 13, lineHeight: 18, fontStyle: 'italic', marginTop: 4 },
   tagGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   tagGroupLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1.5, marginTop: 4 },
   styleTag: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1 },
@@ -903,13 +932,6 @@ const styles = StyleSheet.create({
   soonerCareHighlight: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, marginBottom: 12 },
   soonerCareText: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
   insuranceList: { fontSize: 14, lineHeight: 20 },
-  pricingGrid: { flexDirection: 'row', gap: 12 },
-  pricingItem: { flex: 1 },
-  pricingLabel: { fontSize: 12, marginBottom: 4 },
-  pricingValue: { fontSize: 20, fontWeight: 'bold' },
-  infoBox: { marginTop: 12, padding: 12, borderRadius: 8 },
-  infoBoxText: { fontSize: 13, lineHeight: 18, marginBottom: 8 },
-  infoClose: { fontSize: 14, fontWeight: '600' },
   consultBox: { padding: 16, borderRadius: 8 },
   consultHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   consultPrice: { fontSize: 24, fontWeight: 'bold' },
