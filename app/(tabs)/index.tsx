@@ -10,6 +10,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../context/ThemeContext';
 import { auth, db } from '../../firebase';
+import * as Location from 'expo-location';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const COMPACT_CARD_WIDTH = SCREEN_WIDTH * 0.45;
@@ -56,6 +57,25 @@ interface CategoryData {
   color: string;
   searchTerms: string[];
   count: number;
+}
+
+type LatLng = { lat: number; lng: number };
+
+// ─── Pure distance helper (outside component — stable, never recreated) ───────
+function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 3958.8;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function getDistanceToProvider(p: Provider, loc: LatLng | null): number | null {
+  if (!loc || !p.latitude || !p.longitude) return null;
+  return haversineDistance(loc.lat, loc.lng, p.latitude, p.longitude);
 }
 
 // ─── Compact Category Carousel ────────────────────────────────────────────────
@@ -176,6 +196,14 @@ export default function HomeScreen() {
   const [showDisclaimer, setShowDisclaimer]     = useState(true);
   const [disclaimerHeight]                      = useState(new Animated.Value(1));
 
+  // ── Location state ────────────────────────────────────────────────────────
+  const [userLocation, setUserLocation]         = useState<LatLng | null>(null);
+  const [locationSearch, setLocationSearch]     = useState('');
+  const [searchLocation, setSearchLocation]     = useState<LatLng | null>(null);
+  const [radiusFilter, setRadiusFilter]         = useState<number>(0);
+  const [locationLoading, setLocationLoading]   = useState(false);
+  const [sortByDistance, setSortByDistance]     = useState(false);
+
   // ── Load patient's saved insurance on every focus ─────────────────────────
   const loadPatientInsurance = useCallback(async () => {
     try {
@@ -189,10 +217,10 @@ export default function HomeScreen() {
         setPatientInsuranceType(type);
         setPatientPlan(plan);
         if (type === 'insured') {
-          const hasSoonerCare =
+          const isSoonerCare =
             plan.toLowerCase().includes('soonercare') ||
             plan.toLowerCase().includes('medicaid');
-          if (hasSoonerCare) setInsuranceFilter('soonercare');
+          if (isSoonerCare) setInsuranceFilter('soonercare');
         } else if (type === 'uninsured') {
           setInsuranceFilter('uninsured');
         }
@@ -209,11 +237,12 @@ export default function HomeScreen() {
     loadDisclaimerPreference();
   }, []);
 
-  // ── Client-side filtering ─────────────────────────────────────────────────
+  // ── Client-side filtering — runs after all state dependencies change ───────
   useEffect(() => {
     if (!providers.length) return;
     let filtered = [...providers];
 
+    // Text search
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       filtered = filtered.filter((p) =>
@@ -224,6 +253,7 @@ export default function HomeScreen() {
       );
     }
 
+    // Category filter
     if (selectedCategory && selectedCategory !== 'all') {
       const matchingCategory = Object.entries(CATEGORY_CONFIG).find(([, config]) =>
         config.searchTerms.some((term) => term.toLowerCase() === selectedCategory.toLowerCase())
@@ -251,6 +281,7 @@ export default function HomeScreen() {
       }
     }
 
+    // Insurance filter
     if (insuranceFilter === 'soonercare') {
       filtered = filtered.filter(
         (p) =>
@@ -263,9 +294,27 @@ export default function HomeScreen() {
       );
     }
 
+    // Distance filter
+    const activeLoc = searchLocation ?? userLocation;
+    if (activeLoc && radiusFilter > 0) {
+      filtered = filtered.filter((p) => {
+        const dist = getDistanceToProvider(p, activeLoc);
+        return dist !== null && dist <= radiusFilter;
+      });
+    }
+
+    // Sort by distance
+    if (sortByDistance && activeLoc) {
+      filtered = [...filtered].sort((a, b) => {
+        const da = getDistanceToProvider(a, activeLoc) ?? 9999;
+        const db2 = getDistanceToProvider(b, activeLoc) ?? 9999;
+        return da - db2;
+      });
+    }
+
     setFilteredProviders(filtered);
     setDisplayCount(PAGE_SIZE);
-  }, [providers, searchQuery, selectedCategory, insuranceFilter]);
+  }, [providers, searchQuery, selectedCategory, insuranceFilter, searchLocation, userLocation, radiusFilter, sortByDistance]);
 
   const loadDisclaimerPreference = async () => {
     try {
@@ -436,15 +485,72 @@ export default function HomeScreen() {
     setSearchQuery('');
   };
 
-  const handleClearFilters = () => {
+  const handleClearLocation = useCallback(() => {
+    setLocationSearch('');
+    setSearchLocation(null);
+    setUserLocation(null);
+    setSortByDistance(false);
+    setRadiusFilter(0);
+  }, []);
+
+  const handleClearFilters = useCallback(() => {
     setSelectedCategory('all');
     setSelectedCategoryName('');
     setSearchQuery('');
     setInsuranceFilter('');
-  };
+    handleClearLocation();
+  }, [handleClearLocation]);
 
   const toggleInsuranceFilter = (type: 'soonercare' | 'uninsured') => {
     setInsuranceFilter(prev => prev === type ? '' : type);
+  };
+
+  const handleUseMyLocation = async () => {
+    setLocationLoading(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Allow location access to find providers near you.');
+        return;
+      }
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const coords: LatLng = { lat: loc.coords.latitude, lng: loc.coords.longitude };
+      setUserLocation(coords);
+      setSearchLocation(coords);
+      setSortByDistance(true);
+      setLocationSearch('My location');
+    } catch {
+      Alert.alert('Error', 'Could not get your location. Try searching by city instead.');
+    } finally {
+      setLocationLoading(false);
+    }
+  };
+
+  const handleLocationSearch = async () => {
+    const trimmed = locationSearch.trim();
+    if (!trimmed || trimmed === 'My location') return;
+    setLocationLoading(true);
+    try {
+      const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+      if (!apiKey) throw new Error('Maps API key not configured');
+      const encoded = encodeURIComponent(trimmed + ', Oklahoma');
+      const res = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encoded}&key=${apiKey}`
+      );
+      if (!res.ok) throw new Error('Geocoding request failed');
+      const data = await res.json();
+      if (data.results?.length > 0) {
+        const { lat, lng } = data.results[0].geometry.location;
+        setSearchLocation({ lat, lng });
+        setSortByDistance(true);
+      } else {
+        Alert.alert('Not found', 'Could not find that location. Try a city name or ZIP code.');
+      }
+    } catch {
+      Alert.alert('Error', 'Could not search that location. Check your connection.');
+    } finally {
+      setLocationLoading(false);
+    }
   };
 
   if (loading) {
@@ -456,17 +562,18 @@ export default function HomeScreen() {
     );
   }
 
-  const visibleProviders  = filteredProviders.slice(0, displayCount);
-  const hasMore           = displayCount < filteredProviders.length;
-  const remainingCount    = filteredProviders.length - displayCount;
+  const visibleProviders = filteredProviders.slice(0, displayCount);
+  const hasMore          = displayCount < filteredProviders.length;
+  const remainingCount   = filteredProviders.length - displayCount;
+  const activeLoc        = searchLocation ?? userLocation;
 
   // ── Insurance chip helpers ────────────────────────────────────────────────
   const hasSavedSoonerCare =
     patientInsuranceType === 'insured' &&
     (patientPlan.toLowerCase().includes('soonercare') ||
      patientPlan.toLowerCase().includes('medicaid'));
-  const hasSavedInsurance  = patientInsuranceType === 'insured' && !!patientPlan;
-  const isSavedUninsured   = patientInsuranceType === 'uninsured';
+  const hasSavedInsurance = patientInsuranceType === 'insured' && !!patientPlan;
+  const isSavedUninsured  = patientInsuranceType === 'uninsured';
 
   return (
     <ScrollView
@@ -488,8 +595,6 @@ export default function HomeScreen() {
           Filter by coverage
         </Text>
         <View style={styles.insuranceChips}>
-
-          {/* SoonerCare / Medicaid chip */}
           <TouchableOpacity
             style={[styles.insuranceChip, {
               backgroundColor: insuranceFilter === 'soonercare' ? colors.success : colors.background,
@@ -500,28 +605,18 @@ export default function HomeScreen() {
           >
             <Text style={styles.insuranceChipIcon}>💊</Text>
             <View style={{ flex: 1 }}>
-              <Text
-                style={[styles.insuranceChipLabel, {
-                  color: insuranceFilter === 'soonercare' ? '#fff' : colors.text,
-                }]}
-                numberOfLines={1}
-              >
+              <Text style={[styles.insuranceChipLabel, { color: insuranceFilter === 'soonercare' ? '#fff' : colors.text }]} numberOfLines={1}>
                 SoonerCare / Medicaid
               </Text>
               {hasSavedSoonerCare && (
-                <Text style={[styles.insuranceChipSub, {
-                  color: insuranceFilter === 'soonercare' ? '#fff' : colors.success,
-                }]}>
+                <Text style={[styles.insuranceChipSub, { color: insuranceFilter === 'soonercare' ? '#fff' : colors.success }]}>
                   Your saved plan
                 </Text>
               )}
             </View>
-            {insuranceFilter === 'soonercare' && (
-              <Text style={styles.insuranceChipCheck}>✓</Text>
-            )}
+            {insuranceFilter === 'soonercare' && <Text style={styles.insuranceChipCheck}>✓</Text>}
           </TouchableOpacity>
 
-          {/* No Insurance chip */}
           <TouchableOpacity
             style={[styles.insuranceChip, {
               backgroundColor: insuranceFilter === 'uninsured' ? '#F59E0B' : colors.background,
@@ -532,34 +627,21 @@ export default function HomeScreen() {
           >
             <Text style={styles.insuranceChipIcon}>💵</Text>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.insuranceChipLabel, {
-                color: insuranceFilter === 'uninsured' ? '#fff' : colors.text,
-              }]}>
+              <Text style={[styles.insuranceChipLabel, { color: insuranceFilter === 'uninsured' ? '#fff' : colors.text }]}>
                 No Insurance
               </Text>
               {isSavedUninsured && (
-                <Text style={[styles.insuranceChipSub, {
-                  color: insuranceFilter === 'uninsured' ? '#fff' : '#F59E0B',
-                }]}>
+                <Text style={[styles.insuranceChipSub, { color: insuranceFilter === 'uninsured' ? '#fff' : '#F59E0B' }]}>
                   {insuranceFilter === 'uninsured' ? 'Active' : 'Your saved plan'}
                 </Text>
               )}
             </View>
-            {insuranceFilter === 'uninsured' && (
-              <Text style={styles.insuranceChipCheck}>✓</Text>
-            )}
+            {insuranceFilter === 'uninsured' && <Text style={styles.insuranceChipCheck}>✓</Text>}
           </TouchableOpacity>
-
         </View>
 
-        {/* ── Saved plan note for non-SoonerCare insured patients ──────────
-            Shown BELOW both chips — not inside either chip.
-            Only visible when patient has saved a non-SoonerCare plan.        */}
         {hasSavedInsurance && !hasSavedSoonerCare && (
-          <View style={[styles.savedPlanNote, {
-            backgroundColor: colors.primary + '10',
-            borderColor: colors.primary + '30',
-          }]}>
+          <View style={[styles.savedPlanNote, { backgroundColor: colors.primary + '10', borderColor: colors.primary + '30' }]}>
             <Text style={[styles.savedPlanNoteText, { color: colors.primary }]}>
               💊 Your saved plan:{' '}
               <Text style={{ fontWeight: '700' }}>{patientPlan}</Text>
@@ -567,7 +649,6 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* Contextual note for uninsured */}
         {insuranceFilter === 'uninsured' && (
           <View style={[styles.uninsuredNote, { backgroundColor: '#F59E0B15', borderColor: '#F59E0B40' }]}>
             <Text style={[styles.uninsuredNoteText, { color: '#F59E0B' }]}>
@@ -576,17 +657,14 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* Link to Coverage tab */}
-        <TouchableOpacity
-          style={styles.manageInsuranceLink}
-          onPress={() => router.push('/(tabs)/insurance' as any)}
-        >
+        <TouchableOpacity style={styles.manageInsuranceLink} onPress={() => router.push('/(tabs)/insurance' as any)}>
           <Text style={[styles.manageInsuranceLinkText, { color: colors.primary }]}>
             {patientInsuranceType ? 'Update insurance settings →' : 'Save your insurance for faster filtering →'}
           </Text>
         </TouchableOpacity>
       </View>
 
+      {/* ── Keyword search ───────────────────────────────────────────────── */}
       <View style={styles.searchContainer}>
         <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={styles.searchIcon}>🔍</Text>
@@ -605,6 +683,86 @@ export default function HomeScreen() {
         </View>
       </View>
 
+      {/* ── Location search ──────────────────────────────────────────────── */}
+      <View style={[styles.locationSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={styles.locationRow}>
+          <TouchableOpacity
+            style={[styles.myLocationBtn, {
+              borderColor: colors.primary,
+              backgroundColor: (activeLoc && locationSearch === 'My location') ? colors.primary : 'transparent',
+            }]}
+            onPress={handleUseMyLocation}
+            disabled={locationLoading}
+          >
+            {locationLoading && locationSearch !== 'My location' ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Text style={[styles.myLocationBtnText, {
+                color: (activeLoc && locationSearch === 'My location') ? '#fff' : colors.primary,
+              }]}>
+                📍 Near me
+              </Text>
+            )}
+          </TouchableOpacity>
+
+          <View style={[styles.locationInput, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <TextInput
+              style={[styles.locationInputText, { color: colors.text }]}
+              placeholder="Search near city or ZIP..."
+              placeholderTextColor={colors.subtext}
+              value={locationSearch === 'My location' ? '' : locationSearch}
+              onChangeText={(v) => {
+                setLocationSearch(v);
+                setSortByDistance(false);
+                setSearchLocation(null);
+              }}
+              onSubmitEditing={handleLocationSearch}
+              returnKeyType="search"
+            />
+            {locationLoading && locationSearch !== 'My location' && (
+              <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: 4 }} />
+            )}
+            {locationSearch.length > 0 && locationSearch !== 'My location' && !locationLoading && (
+              <TouchableOpacity onPress={handleClearLocation}>
+                <Text style={{ color: colors.subtext, fontSize: 16, padding: 4 }}>✕</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        {activeLoc && (
+          <View style={styles.radiusRow}>
+            <Text style={[styles.radiusLabel, { color: colors.subtext }]}>Radius:</Text>
+            {[5, 10, 25, 50, 0].map((r) => (
+              <TouchableOpacity
+                key={r}
+                style={[styles.radiusPill, {
+                  backgroundColor: radiusFilter === r ? colors.primary : colors.background,
+                  borderColor:     radiusFilter === r ? colors.primary : colors.border,
+                }]}
+                onPress={() => setRadiusFilter(r)}
+              >
+                <Text style={[styles.radiusPillText, { color: radiusFilter === r ? '#fff' : colors.text }]}>
+                  {r === 0 ? 'Any' : `${r} mi`}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {activeLoc && (
+          <View style={styles.locationBadge}>
+            <Text style={[styles.locationBadgeText, { color: colors.primary }]} numberOfLines={1}>
+              📍 Near {locationSearch || 'your search'}
+              {radiusFilter > 0 ? ` · within ${radiusFilter} mi` : ' · sorted by distance'}
+            </Text>
+            <TouchableOpacity onPress={handleClearLocation}>
+              <Text style={{ color: colors.subtext, fontSize: 12 }}>Clear</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+
       {selectedCategoryName && selectedCategory !== 'all' && (
         <View style={styles.filterBadgeContainer}>
           <View style={[styles.filterBadge, { backgroundColor: colors.primary }]}>
@@ -617,13 +775,11 @@ export default function HomeScreen() {
       )}
 
       {showDisclaimer && (
-        <Animated.View
-          style={[styles.disclaimerContainer, {
-            backgroundColor: colors.card,
-            opacity: disclaimerHeight,
-            transform: [{ scaleY: disclaimerHeight }],
-          }]}
-        >
+        <Animated.View style={[styles.disclaimerContainer, {
+          backgroundColor: colors.card,
+          opacity: disclaimerHeight,
+          transform: [{ scaleY: disclaimerHeight }],
+        }]}>
           <View style={styles.disclaimerContent}>
             <Text style={styles.disclaimerIcon}>ℹ️</Text>
             <Text style={[styles.disclaimerText, { color: colors.subtext }]}>
@@ -698,10 +854,11 @@ export default function HomeScreen() {
         </ScrollView>
       </View>
 
-      {(searchQuery.trim() || selectedCategory !== 'all' || insuranceFilter) && (
+      {(searchQuery.trim() || selectedCategory !== 'all' || insuranceFilter || activeLoc) && (
         <Text style={[styles.resultsCount, { color: colors.subtext }]}>
           {filteredProviders.length} result{filteredProviders.length !== 1 ? 's' : ''}
           {filteredProviders.length > displayCount ? ` · showing ${displayCount}` : ''}
+          {activeLoc && sortByDistance ? ' · sorted by distance' : ''}
         </Text>
       )}
 
@@ -709,12 +866,13 @@ export default function HomeScreen() {
         {visibleProviders.length > 0 ? (
           <>
             {visibleProviders.map((item) => {
-              if (!item || !item.id) return null;
+              if (!item?.id) return null;
               const hasSoonerCare =
                 item.insuranceAccepted.includes('SoonerCare') ||
                 item.insuranceAccepted.includes('Medicaid');
               const acceptingPatients = item.acceptsNewPatients ?? item.acceptingNewPatients ?? true;
               const isVerified = item.verified ?? false;
+              const dist = getDistanceToProvider(item, activeLoc);
 
               return (
                 <TouchableOpacity
@@ -756,6 +914,13 @@ export default function HomeScreen() {
                             💊 SoonerCare
                           </Text>
                         </View>
+                      )}
+                      {dist !== null && (
+                        <Text style={[styles.distanceText, { color: colors.subtext }]}>
+                          📍 {dist < 1
+                            ? `${(dist * 5280).toFixed(0)} ft away`
+                            : `${dist.toFixed(1)} mi away`}
+                        </Text>
                       )}
                       <View style={styles.ratingRow}>
                         <Text style={styles.star}>⭐</Text>
@@ -799,7 +964,11 @@ export default function HomeScreen() {
             <Text style={styles.emptyIcon}>🔍</Text>
             <Text style={[styles.emptyTitle, { color: colors.text }]}>No Providers Found</Text>
             <Text style={[styles.emptyText, { color: colors.subtext }]}>
-              {searchQuery ? `No results for "${searchQuery}"` : 'Try adjusting your filters'}
+              {activeLoc && radiusFilter > 0
+                ? `No providers within ${radiusFilter} miles. Try a larger radius.`
+                : searchQuery
+                  ? `No results for "${searchQuery}"`
+                  : 'Try adjusting your filters'}
             </Text>
             <TouchableOpacity
               style={[styles.clearButton, { backgroundColor: colors.primary }]}
@@ -821,25 +990,15 @@ const styles = StyleSheet.create({
   header: { paddingTop: 60, paddingBottom: 12, paddingHorizontal: 20 },
   title: { fontSize: 28, fontWeight: 'bold', marginBottom: 2 },
   subtitle: { fontSize: 13 },
-  insuranceSection: {
-    marginHorizontal: 16, marginTop: 8, marginBottom: 12,
-    padding: 14, borderRadius: 14, borderWidth: 1,
-  },
+  insuranceSection: { marginHorizontal: 16, marginTop: 8, marginBottom: 12, padding: 14, borderRadius: 14, borderWidth: 1 },
   insuranceSectionTitle: { fontSize: 13, fontWeight: '700', marginBottom: 10 },
   insuranceChips: { flexDirection: 'row', gap: 10, marginBottom: 4 },
-  insuranceChip: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6,
-    padding: 10, borderRadius: 12, overflow: 'hidden',
-  },
+  insuranceChip: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, padding: 10, borderRadius: 12, overflow: 'hidden' },
   insuranceChipIcon: { fontSize: 20 },
   insuranceChipLabel: { fontSize: 11, fontWeight: '700', lineHeight: 14, flexShrink: 1 },
   insuranceChipSub: { fontSize: 10, fontWeight: '500', marginTop: 1 },
   insuranceChipCheck: { color: '#fff', fontSize: 14, fontWeight: 'bold', marginLeft: 'auto' },
-  // Saved plan note — shown below both chips for non-SoonerCare insured patients
-  savedPlanNote: {
-    borderWidth: 1, borderRadius: 8, padding: 10,
-    marginTop: 8, marginBottom: 4,
-  },
+  savedPlanNote: { borderWidth: 1, borderRadius: 8, padding: 10, marginTop: 8, marginBottom: 4 },
   savedPlanNoteText: { fontSize: 12, lineHeight: 17 },
   uninsuredNote: { borderWidth: 1, borderRadius: 8, padding: 10, marginTop: 8 },
   uninsuredNoteText: { fontSize: 12, lineHeight: 17 },
@@ -850,6 +1009,19 @@ const styles = StyleSheet.create({
   searchIcon: { fontSize: 18, marginRight: 8 },
   searchInput: { flex: 1, fontSize: 14 },
   clearIcon: { fontSize: 18, color: '#999', padding: 4 },
+  locationSection: { marginHorizontal: 16, marginBottom: 10, padding: 12, borderRadius: 12, borderWidth: 1 },
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  myLocationBtn: { borderWidth: 1.5, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7, flexShrink: 0 },
+  myLocationBtnText: { fontSize: 12, fontWeight: '700' },
+  locationInput: { flex: 1, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, height: 36 },
+  locationInputText: { flex: 1, fontSize: 13 },
+  radiusRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, flexWrap: 'wrap' },
+  radiusLabel: { fontSize: 12, fontWeight: '600' },
+  radiusPill: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 10, paddingVertical: 4 },
+  radiusPillText: { fontSize: 12, fontWeight: '600' },
+  locationBadge: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.06)' },
+  locationBadgeText: { fontSize: 12, fontWeight: '600', flex: 1, marginRight: 8 },
+  distanceText: { fontSize: 11, marginBottom: 2 },
   filterBadgeContainer: { paddingHorizontal: 16, marginBottom: 12 },
   filterBadge: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, gap: 8 },
   filterBadgeText: { color: '#fff', fontSize: 14, fontWeight: '600' },
