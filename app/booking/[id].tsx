@@ -1,4 +1,5 @@
 import { logBookingCreated } from '../../utils/auditLog';
+import { logAnalyticsEvent } from '../../utils/analytics';
 import { validateBooking, sanitizeText, sanitizePhone } from '../../utils/validation';
 import { logError } from '../../utils/crashReporting';
 import { checkBookingRateLimit, recordBookingCreation } from '../../utils/rateLimit';
@@ -704,6 +705,12 @@ export default function BookingScreen() {
       // Record booking in rate limiter after successful creation
       await recordBookingCreation(user.uid);
       logBookingCreated(user.uid, bookingRef.id, id as string, selectedVisitType);
+      logAnalyticsEvent('booking_created', {
+        specialty: provider.specialty || '',
+        visitType: selectedVisitType,
+        bookingFor: selectedPatientId === 'self' ? 'self' : 'dependent',
+        isMinor: selectedPatient?.isMinor ?? false,
+      });
 
 
       if (__DEV__) console.log('✅ Booking created:', bookingRef.id);

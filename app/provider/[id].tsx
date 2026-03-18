@@ -9,6 +9,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { Ionicons } from '@expo/vector-icons';
 import { db, auth } from '../../firebase';
 import { useTheme } from '../../context/ThemeContext';
+import { logAnalyticsEvent } from '../../utils/analytics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const getFavoritesKey = (): string => {
@@ -460,6 +461,11 @@ export default function ProviderDetailScreen() {
         reviewCount:   typeof data.reviewCount   === 'number' ? data.reviewCount   : undefined,
         reviewAverage: typeof data.reviewAverage === 'number' ? data.reviewAverage : undefined,
         website: typeof data.website === 'string' && data.website ? data.website : '',
+      });
+      logAnalyticsEvent('provider_viewed', {
+        providerId: typeof id === 'string' ? id : '',
+        specialty: data.specialty || '',
+        verified: data.verified ?? false,
       });
     } catch (error) {
       if (__DEV__) console.error('Error loading provider:', error);

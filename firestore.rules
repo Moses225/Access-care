@@ -134,8 +134,14 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /analytics_events/{docId} {
+      allow create: if isAuthenticated();
+      allow read:   if isAdmin();
+      allow update: if false;
+      allow delete: if false;
+    }
     match /{document=**} {
       allow read, write: if false;
-    }
+  }
   }
 }

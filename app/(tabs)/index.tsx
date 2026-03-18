@@ -1,3 +1,5 @@
+import * as Location from 'expo-location';
+import { logAnalyticsEvent } from '../../utils/analytics';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
@@ -10,7 +12,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../context/ThemeContext';
 import { auth, db } from '../../firebase';
-import * as Location from 'expo-location';
+
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const COMPACT_CARD_WIDTH = SCREEN_WIDTH * 0.45;
@@ -503,6 +505,7 @@ export default function HomeScreen() {
 
   const toggleInsuranceFilter = (type: 'soonercare' | 'uninsured') => {
     setInsuranceFilter(prev => prev === type ? '' : type);
+    logAnalyticsEvent('insurance_filter', { type });
   };
 
   const handleUseMyLocation = async () => {
@@ -519,6 +522,7 @@ export default function HomeScreen() {
       setSearchLocation(coords);
       setSortByDistance(true);
       setLocationSearch('My location');
+      logAnalyticsEvent('location_search', { method: 'near_me' });
     } catch {
       Alert.alert('Error', 'Could not get your location. Try searching by city instead.');
     } finally {
@@ -543,6 +547,7 @@ export default function HomeScreen() {
         const { lat, lng } = data.results[0].geometry.location;
         setSearchLocation({ lat, lng });
         setSortByDistance(true);
+        logAnalyticsEvent('location_search', { method: 'city_zip', query: trimmed });
       } else {
         Alert.alert('Not found', 'Could not find that location. Try a city name or ZIP code.');
       }
