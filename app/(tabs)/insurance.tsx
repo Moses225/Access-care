@@ -1,3 +1,4 @@
+import { logInsuranceUpdated } from '../../utils/auditLog';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -276,6 +277,7 @@ export default function CoverageScreen() {
         updatedAt: serverTimestamp(),
       }, { merge: true });
       Alert.alert('Saved ✓', 'Your coverage details have been updated.');
+      logInsuranceUpdated(user!.uid);
     } catch (error) {
       if (__DEV__) console.error('Error saving coverage:', error);
       Alert.alert('Error', 'Failed to save. Please try again.');

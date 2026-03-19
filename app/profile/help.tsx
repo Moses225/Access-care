@@ -1,13 +1,14 @@
-import { Stack, useRouter } from 'expo-router';
-import React from 'react';
+import { Stack, useRouter } from "expo-router";
+import React from "react";
 import {
+  Linking,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { useTheme } from '../../context/ThemeContext';
+} from "react-native";
+import { useTheme } from "../../context/ThemeContext";
 
 export default function HelpScreen() {
   const router = useRouter();
@@ -15,20 +16,24 @@ export default function HelpScreen() {
 
   const faqs = [
     {
-      question: 'How do I book an appointment?',
-      answer: 'Search for a provider, tap on their profile, and click "Book Appointment". Select your preferred date and time, then confirm.'
+      question: "How do I book an appointment?",
+      answer:
+        'Search for a provider, tap on their profile, and click "Book Appointment". Select your preferred date and time, then confirm.',
     },
     {
-      question: 'What insurance do you accept?',
-      answer: 'AccessCare focuses on SoonerCare and Medicaid providers. All providers shown accept these insurances. Some also accept additional plans.'
+      question: "What insurance do you accept?",
+      answer:
+        "AccessCare focuses on SoonerCare and Medicaid providers. All providers shown accept these insurances. Some also accept additional plans.",
     },
     {
-      question: 'How do I cancel an appointment?',
-      answer: 'Go to the Appointments tab, find your appointment, and tap "Cancel Appointment".'
+      question: "How do I cancel an appointment?",
+      answer:
+        'Go to the Appointments tab, find your appointment, and tap "Cancel Appointment".',
     },
     {
-      question: 'Is my information secure?',
-      answer: 'Yes! We use industry-standard encryption and never share your personal health information without your consent.'
+      question: "Is my information secure?",
+      answer:
+        "Yes! We use industry-standard encryption and never share your personal health information without your consent.",
     },
   ];
 
@@ -38,18 +43,51 @@ export default function HelpScreen() {
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={[styles.header, { backgroundColor: colors.card }]}>
           <TouchableOpacity onPress={() => router.back()}>
-            <Text style={[styles.backText, { color: colors.primary }]}>← Back</Text>
+            <Text style={[styles.backText, { color: colors.primary }]}>
+              ← Back
+            </Text>
           </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.content}>
-          <Text style={[styles.title, { color: colors.text }]}>Help Center</Text>
+          <Text style={[styles.title, { color: colors.text }]}>
+            Help Center
+          </Text>
           <Text style={[styles.subtitle, { color: colors.subtext }]}>
             Frequently asked questions
           </Text>
 
+          <View style={[styles.faqCard, { backgroundColor: colors.card }]}>
+            <Text style={[styles.question, { color: colors.text }]}>
+              Contact Us
+            </Text>
+            <TouchableOpacity
+              onPress={() => Linking.openURL("mailto:support@myaccesscare.com")}
+            >
+              <Text style={[styles.answer, { color: colors.primary }]}>
+                📧 support@myaccesscare.com
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{ marginTop: 8 }}
+              onPress={() => Linking.openURL("tel:+14055550100")}
+            >
+              <Text style={[styles.answer, { color: colors.primary }]}>
+                📞 (405) 555-0100
+              </Text>
+            </TouchableOpacity>
+            <Text
+              style={[styles.answer, { color: colors.subtext, marginTop: 8 }]}
+            >
+              Mon–Fri, 9am–5pm CST
+            </Text>
+          </View>
+
           {faqs.map((faq, index) => (
-            <View key={index} style={[styles.faqCard, { backgroundColor: colors.card }]}>
+            <View
+              key={index}
+              style={[styles.faqCard, { backgroundColor: colors.card }]}
+            >
               <Text style={[styles.question, { color: colors.text }]}>
                 {faq.question}
               </Text>
@@ -75,7 +113,7 @@ const styles = StyleSheet.create({
   },
   backText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   content: {
     flex: 1,
@@ -83,7 +121,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 8,
   },
   subtitle: {
@@ -97,7 +135,7 @@ const styles = StyleSheet.create({
   },
   question: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 8,
   },
   answer: {

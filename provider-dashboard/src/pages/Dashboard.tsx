@@ -18,6 +18,7 @@ interface Booking {
   bookingFor?: string;
   isMinorPatient?: boolean;
   declineReason?: string;
+  providerId?: string;
 }
 
 const DECLINE_REASONS = [
@@ -82,6 +83,7 @@ export default function Dashboard() {
   });
 
   const handleConfirm = async (booking: Booking) => {
+    if (booking.providerId !== providerProfile?.providerId) return;
     setActionLoading(booking.id);
     try {
       await updateDoc(doc(db, 'bookings', booking.id), {
@@ -98,6 +100,8 @@ export default function Dashboard() {
 
   const handleDecline = async () => {
     if (!declineId || !declineReason) return;
+    const booking = bookings.find(b => b.id === declineId);
+    if (booking?.providerId !== providerProfile?.providerId) return;
     setActionLoading(declineId);
     try {
       await updateDoc(doc(db, 'bookings', declineId), {
