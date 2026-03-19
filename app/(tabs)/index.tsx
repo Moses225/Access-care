@@ -99,6 +99,41 @@ const CATEGORY_CONFIG: Record<
     searchTerms: ["orthopedic", "orthopedics", "bone", "joint"],
   },
 };
+const OKLAHOMA_FACILITIES = [
+  { name: "OU Medical Center", city: "Oklahoma City", region: "okc" },
+  { name: "Mercy Hospital OKC", city: "Oklahoma City", region: "okc" },
+  {
+    name: "Integris Baptist Medical Center",
+    city: "Oklahoma City",
+    region: "okc",
+  },
+  { name: "SSM Health St. Anthony", city: "Oklahoma City", region: "okc" },
+  { name: "Oklahoma Heart Hospital", city: "Oklahoma City", region: "okc" },
+  { name: "Lakeside Women's Hospital", city: "Oklahoma City", region: "okc" },
+  { name: "Saint Francis Health System", city: "Tulsa", region: "tulsa" },
+  { name: "Hillcrest Medical Center", city: "Tulsa", region: "tulsa" },
+  { name: "Ascension St. John", city: "Tulsa", region: "tulsa" },
+  { name: "OSU Medical Center", city: "Tulsa", region: "tulsa" },
+  { name: "Norman Regional Health System", city: "Norman", region: "other" },
+  { name: "Classen Medical Complex", city: "Norman", region: "other" },
+  {
+    name: "Cherokee Nation Health Services",
+    city: "Statewide",
+    region: "tribal",
+  },
+  {
+    name: "Choctaw Nation Health Services",
+    city: "Statewide",
+    region: "tribal",
+  },
+  {
+    name: "Community Health Centers Inc.",
+    city: "Oklahoma City",
+    region: "fqhc",
+  },
+  { name: "Community Health Connection", city: "Tulsa", region: "fqhc" },
+];
+
 function normalizeProviderName(name: string): string {
   if (!name) return "";
   if (name === name.toUpperCase()) {
@@ -316,6 +351,9 @@ export default function HomeScreen() {
   // ── Location state ────────────────────────────────────────────────────────
   const [userLocation, setUserLocation] = useState<LatLng | null>(null);
   const [locationSearch, setLocationSearch] = useState("");
+  const [showFacilityModal, setShowFacilityModal] = useState(false);
+  const [facilitySearch, setFacilitySearch] = useState("");
+  const [selectedFacility, setSelectedFacility] = useState("");
   const [searchLocation, setSearchLocation] = useState<LatLng | null>(null);
   const [radiusFilter, setRadiusFilter] = useState<number>(0);
   const [locationLoading, setLocationLoading] = useState(false);
@@ -424,6 +462,18 @@ export default function HomeScreen() {
       );
     }
 
+    // Facility filter
+    if (selectedFacility) {
+      filtered = filtered.filter(
+        (p) =>
+          p.hospitalAffiliation
+            ?.toLowerCase()
+            .includes(selectedFacility.toLowerCase()) ||
+          p.address?.toLowerCase().includes(selectedFacility.toLowerCase()) ||
+          p.name?.toLowerCase().includes(selectedFacility.toLowerCase()),
+      );
+    }
+
     // Distance filter
     const activeLoc = searchLocation ?? userLocation;
     if (activeLoc && radiusFilter > 0) {
@@ -453,6 +503,7 @@ export default function HomeScreen() {
     userLocation,
     radiusFilter,
     sortByDistance,
+    selectedFacility,
   ]);
 
   const loadDisclaimerPreference = async () => {
@@ -1125,6 +1176,41 @@ export default function HomeScreen() {
         )}
       </View>
 
+      {/* ── Facility search button ──────────────────────────────────────── */}
+      <TouchableOpacity
+        style={[
+          styles.facilityBtn,
+          {
+            backgroundColor: selectedFacility ? colors.primary : colors.card,
+            borderColor: selectedFacility ? colors.primary : colors.border,
+          },
+        ]}
+        onPress={() => setShowFacilityModal(true)}
+      >
+        <Text style={{ fontSize: 16 }}>🏥</Text>
+        <Text
+          style={[
+            styles.facilityBtnText,
+            {
+              color: selectedFacility ? "#fff" : colors.text,
+            },
+          ]}
+        >
+          {selectedFacility
+            ? `Hospital: ${selectedFacility}`
+            : "Find by hospital or facility"}
+        </Text>
+        {selectedFacility ? (
+          <TouchableOpacity onPress={() => setSelectedFacility("")}>
+            <Text style={{ color: "#fff", fontSize: 16, paddingHorizontal: 4 }}>
+              ✕
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <Text style={{ color: colors.subtext, fontSize: 16 }}>›</Text>
+        )}
+      </TouchableOpacity>
+
       {selectedCategoryName && selectedCategory !== "all" && (
         <View style={styles.filterBadgeContainer}>
           <View
@@ -1373,12 +1459,6 @@ export default function HomeScreen() {
                             : `${dist.toFixed(1)} mi away`}
                         </Text>
                       )}
-                      <View style={styles.ratingRow}>
-                        <Text style={styles.star}>⭐</Text>
-                        <Text style={[styles.rating, { color: colors.text }]}>
-                          {item.rating.toFixed(1)}
-                        </Text>
-                      </View>
                     </View>
                     <Text style={[styles.chevron, { color: colors.subtext }]}>
                       ›
@@ -1438,6 +1518,218 @@ export default function HomeScreen() {
           </View>
         )}
       </View>
+      {/* ── Facility Search Modal ────────────────────────────────────────── */}
+      {showFacilityModal && (
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalSheet, { backgroundColor: colors.card }]}>
+            <View
+              style={[styles.modalHandle, { backgroundColor: colors.border }]}
+            />
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              Find by Hospital or Facility
+            </Text>
+            <Text style={[styles.modalSubtitle, { color: colors.subtext }]}>
+              Search for a hospital, clinic, or health center in Oklahoma
+            </Text>
+
+            <View
+              style={[
+                styles.facilitySearchBar,
+                {
+                  backgroundColor: colors.background,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              <Text style={{ fontSize: 16, marginRight: 8 }}>🔍</Text>
+              <TextInput
+                style={[{ flex: 1, fontSize: 14, color: colors.text }]}
+                placeholder="Search hospitals and clinics..."
+                placeholderTextColor={colors.subtext}
+                value={facilitySearch}
+                onChangeText={setFacilitySearch}
+                autoFocus
+              />
+              {facilitySearch.length > 0 && (
+                <TouchableOpacity onPress={() => setFacilitySearch("")}>
+                  <Text style={{ color: colors.subtext, fontSize: 16 }}>✕</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <ScrollView
+              style={{ maxHeight: 400 }}
+              showsVerticalScrollIndicator={false}
+            >
+              {[
+                {
+                  label: "OKC Area",
+                  facilities: OKLAHOMA_FACILITIES.filter(
+                    (f) => f.region === "okc",
+                  ),
+                },
+                {
+                  label: "Tulsa Area",
+                  facilities: OKLAHOMA_FACILITIES.filter(
+                    (f) => f.region === "tulsa",
+                  ),
+                },
+                {
+                  label: "Other Cities",
+                  facilities: OKLAHOMA_FACILITIES.filter(
+                    (f) => f.region === "other",
+                  ),
+                },
+                {
+                  label: "Tribal Health",
+                  facilities: OKLAHOMA_FACILITIES.filter(
+                    (f) => f.region === "tribal",
+                  ),
+                },
+                {
+                  label: "Community Health Centers",
+                  facilities: OKLAHOMA_FACILITIES.filter(
+                    (f) => f.region === "fqhc",
+                  ),
+                },
+              ]
+                .map((group) => ({
+                  ...group,
+                  facilities: group.facilities.filter(
+                    (f) =>
+                      !facilitySearch ||
+                      f.name
+                        .toLowerCase()
+                        .includes(facilitySearch.toLowerCase()) ||
+                      f.city
+                        .toLowerCase()
+                        .includes(facilitySearch.toLowerCase()),
+                  ),
+                }))
+                .filter((group) => group.facilities.length > 0)
+                .map((group) => (
+                  <View key={group.label} style={{ marginBottom: 16 }}>
+                    <Text
+                      style={[
+                        styles.facilityGroupLabel,
+                        { color: colors.subtext },
+                      ]}
+                    >
+                      {group.label.toUpperCase()}
+                    </Text>
+                    {group.facilities.map((facility) => {
+                      const isSelected = selectedFacility === facility.name;
+                      return (
+                        <TouchableOpacity
+                          key={facility.name}
+                          style={[
+                            styles.facilityOption,
+                            {
+                              backgroundColor: isSelected
+                                ? colors.primary + "15"
+                                : colors.background,
+                              borderColor: isSelected
+                                ? colors.primary
+                                : colors.border,
+                              borderWidth: isSelected ? 2 : 1,
+                            },
+                          ]}
+                          onPress={() => {
+                            setSelectedFacility(
+                              isSelected ? "" : facility.name,
+                            );
+                            setShowFacilityModal(false);
+                            setFacilitySearch("");
+                          }}
+                        >
+                          <View style={{ flex: 1 }}>
+                            <Text
+                              style={[
+                                styles.facilityOptionName,
+                                {
+                                  color: isSelected
+                                    ? colors.primary
+                                    : colors.text,
+                                },
+                              ]}
+                            >
+                              {facility.name}
+                            </Text>
+                            <Text
+                              style={[
+                                styles.facilityOptionCity,
+                                { color: colors.subtext },
+                              ]}
+                            >
+                              {facility.city}
+                            </Text>
+                          </View>
+                          {isSelected && (
+                            <Text
+                              style={{
+                                color: colors.primary,
+                                fontSize: 18,
+                                fontWeight: "bold",
+                              }}
+                            >
+                              ✓
+                            </Text>
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                ))}
+              {facilitySearch.length > 0 &&
+                OKLAHOMA_FACILITIES.filter(
+                  (f) =>
+                    f.name
+                      .toLowerCase()
+                      .includes(facilitySearch.toLowerCase()) ||
+                    f.city.toLowerCase().includes(facilitySearch.toLowerCase()),
+                ).length === 0 && (
+                  <View style={{ padding: 24, alignItems: "center" }}>
+                    <Text style={{ fontSize: 32, marginBottom: 8 }}>🏥</Text>
+                    <Text
+                      style={[
+                        { fontSize: 15, fontWeight: "600", marginBottom: 6 },
+                        { color: colors.text },
+                      ]}
+                    >
+                      Not in our list yet
+                    </Text>
+                    <Text
+                      style={[
+                        { fontSize: 13, textAlign: "center", lineHeight: 18 },
+                        { color: colors.subtext },
+                      ]}
+                    >
+                      Try searching by provider name or city instead. We are
+                      adding more facilities regularly.
+                    </Text>
+                  </View>
+                )}
+            </ScrollView>
+
+            <TouchableOpacity
+              style={[styles.modalCloseBtn, { borderColor: colors.border }]}
+              onPress={() => {
+                setShowFacilityModal(false);
+                setFacilitySearch("");
+              }}
+            >
+              <Text
+                style={[
+                  { fontSize: 15, fontWeight: "600" },
+                  { color: colors.subtext },
+                ]}
+              >
+                Close
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -1728,4 +2020,73 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   clearButtonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  facilityBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginHorizontal: 16,
+    marginBottom: 10,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  facilityBtnText: { flex: 1, fontSize: 14, fontWeight: "600" },
+  modalOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+    zIndex: 100,
+  },
+  modalSheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 40,
+    maxHeight: "85%",
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: "center",
+    marginBottom: 20,
+  },
+  modalTitle: { fontSize: 20, fontWeight: "bold", marginBottom: 6 },
+  modalSubtitle: { fontSize: 13, lineHeight: 18, marginBottom: 16 },
+  facilitySearchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 42,
+    marginBottom: 16,
+  },
+  facilityGroupLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  facilityOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  facilityOptionName: { fontSize: 14, fontWeight: "600", marginBottom: 2 },
+  facilityOptionCity: { fontSize: 12 },
+  modalCloseBtn: {
+    marginTop: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    borderWidth: 1.5,
+  },
 });

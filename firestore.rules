@@ -140,8 +140,13 @@ service cloud.firestore {
       allow update: if false;
       allow delete: if false;
     }
+    match /providerApplications/{docId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
     match /{document=**} {
       allow read, write: if false;
-  }
+    }
   }
 }
