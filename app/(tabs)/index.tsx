@@ -99,6 +99,16 @@ const CATEGORY_CONFIG: Record<
     searchTerms: ["orthopedic", "orthopedics", "bone", "joint"],
   },
 };
+function normalizeProviderName(name: string): string {
+  if (!name) return "";
+  if (name === name.toUpperCase()) {
+    return name.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+  if (name === name.toLowerCase()) {
+    return name.replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+  return name;
+}
 
 interface Provider {
   id: string;
@@ -118,6 +128,7 @@ interface Provider {
   city?: string;
   state?: string;
   verified?: boolean;
+  hospitalAffiliation?: string;
 }
 
 interface CategoryData {
@@ -1289,7 +1300,9 @@ export default function HomeScreen() {
                         ]}
                       >
                         <Text style={styles.avatarText}>
-                          {item.name ? item.name.charAt(0) : "P"}
+                          {item.name
+                            ? normalizeProviderName(item.name).charAt(0)
+                            : "P"}
                         </Text>
                       </View>
                     </View>
@@ -1299,7 +1312,7 @@ export default function HomeScreen() {
                           style={[styles.providerName, { color: colors.text }]}
                           numberOfLines={1}
                         >
-                          {item.name}
+                          {normalizeProviderName(item.name)}
                         </Text>
                         {isVerified && (
                           <View
