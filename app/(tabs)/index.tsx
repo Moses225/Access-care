@@ -1634,12 +1634,47 @@ export default function HomeScreen() {
                               borderWidth: isSelected ? 2 : 1,
                             },
                           ]}
-                          onPress={() => {
-                            setSelectedFacility(
-                              isSelected ? "" : facility.name,
-                            );
+                          onPress={async () => {
+                            if (isSelected) {
+                              setSelectedFacility("");
+                              setShowFacilityModal(false);
+                              setFacilitySearch("");
+                              return;
+                            }
+                            setSelectedFacility(facility.name);
                             setShowFacilityModal(false);
                             setFacilitySearch("");
+                            if (
+                              facility.city &&
+                              facility.city !== "Statewide"
+                            ) {
+                              setLocationLoading(true);
+                              try {
+                                const apiKey =
+                                  process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+                                const encoded = encodeURIComponent(
+                                  facility.name +
+                                    ", " +
+                                    facility.city +
+                                    ", Oklahoma",
+                                );
+                                const res = await fetch(
+                                  `https://maps.googleapis.com/maps/api/geocode/json?address=${encoded}&key=${apiKey}`,
+                                );
+                                const data = await res.json();
+                                if (data.results?.length > 0) {
+                                  const { lat, lng } =
+                                    data.results[0].geometry.location;
+                                  setSearchLocation({ lat, lng });
+                                  setSortByDistance(true);
+                                  setLocationSearch(facility.city);
+                                }
+                              } catch {
+                                /* non-critical */
+                              } finally {
+                                setLocationLoading(false);
+                              }
+                            }
                           }}
                         >
                           <View style={{ flex: 1 }}>
