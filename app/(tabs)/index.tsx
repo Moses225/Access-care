@@ -615,6 +615,10 @@ export default function HomeScreen() {
           city: data.city || "",
           state: data.state || "Oklahoma",
           verified: data.verified ?? false,
+          hospitalAffiliation:
+            typeof data.hospitalAffiliation === "string"
+              ? data.hospitalAffiliation
+              : "",
         });
 
         if (data.specialty) specialtiesSet.add(data.specialty);

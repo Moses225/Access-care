@@ -92,3 +92,4 @@ Thumbs.db
 .env.production
 scripts/serviceAccountKey.staging.json
 scripts/serviceAccountKey.production.json
+scripts/*.json
