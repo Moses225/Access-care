@@ -7,25 +7,25 @@ export async function sendBookingConfirmationSMS(
   providerName: string,
   date: string,
   time: string,
-  bookingId: string
+  bookingId: string,
 ): Promise<boolean> {
   if (__DEV__) {
     console.log(`
   📱 SMS CONFIRMATION (Beta - Logged Only)
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   To: ${phoneNumber}
-  
-  AccessCare Appointment Request
-  
+
+  Morava Appointment Request
+
   ✅ Provider: ${providerName}
   📅 Date: ${date}
   ⏰ Time: ${time}
   🆔 Booking ID: ${bookingId}
-  
+
   Status: Pending Confirmation
-  
+
   We'll text you when the provider confirms!
-  
+
   Reply STOP to unsubscribe.
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     `);
@@ -39,20 +39,20 @@ export async function sendBookingConfirmedSMS(
   phoneNumber: string,
   providerName: string,
   date: string,
-  time: string
+  time: string,
 ): Promise<boolean> {
   if (__DEV__) {
     console.log(`
   📱 SMS CONFIRMED (Beta - Logged Only)
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   To: ${phoneNumber}
-  
+
   ✅ Appointment CONFIRMED!
-  
+
   Provider: ${providerName}
   Date: ${date}
   Time: ${time}
-  
+
   See you soon! Reply if you need to reschedule.
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     `);
@@ -65,22 +65,22 @@ export async function sendBookingReminderSMS(
   phoneNumber: string,
   providerName: string,
   date: string,
-  time: string
+  time: string,
 ): Promise<boolean> {
   if (__DEV__) {
     console.log(`
   📱 SMS REMINDER (Beta - Logged Only)
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   To: ${phoneNumber}
-  
+
   ⏰ Appointment Reminder
-  
+
   Tomorrow at ${time}
   Provider: ${providerName}
-  
+
   📍 Arrive 10 minutes early
   🆔 Bring your ID and insurance card
-  
+
   Reply CONFIRM or CANCEL
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     `);

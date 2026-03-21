@@ -1,13 +1,13 @@
-import { Stack, useRouter } from 'expo-router';
-import React from 'react';
+import { Stack, useRouter } from "expo-router";
+import React from "react";
 import {
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { useTheme } from '../../context/ThemeContext';
+} from "react-native";
+import { useTheme } from "../../context/ThemeContext";
 
 export default function AboutScreen() {
   const router = useRouter();
@@ -19,19 +19,25 @@ export default function AboutScreen() {
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={[styles.header, { backgroundColor: colors.card }]}>
           <TouchableOpacity onPress={() => router.back()}>
-            <Text style={[styles.backText, { color: colors.primary }]}>← Back</Text>
+            <Text style={[styles.backText, { color: colors.primary }]}>
+              ← Back
+            </Text>
           </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.content}>
-          <Text style={[styles.title, { color: colors.text }]}>About AccessCare</Text>
-          
+          <Text style={[styles.title, { color: colors.text }]}>
+            About Morava
+          </Text>
+
           <View style={[styles.section, { backgroundColor: colors.card }]}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
               Our Mission
             </Text>
             <Text style={[styles.sectionText, { color: colors.subtext }]}>
-              Finding a doctor shouldn't take hours of calling offices, searching websites, and hoping they accept your insurance. AccessCare was created to remove those barriers.
+              Finding a doctor should not take hours of calling offices,
+              searching websites, and hoping they accept your insurance. Morava
+              was created to remove those barriers.
             </Text>
           </View>
 
@@ -40,10 +46,9 @@ export default function AboutScreen() {
               What We Do
             </Text>
             <Text style={[styles.sectionText, { color: colors.subtext }]}>
-              • Find care near you{'\n'}
-              • Filter by insurance{'\n'}
-              • Request appointments quickly{'\n'}
-              • Access essential services for your family
+              • Find care near you{"\n"}• Filter by insurance{"\n"}• Request
+              appointments quickly{"\n"}• Access essential services for your
+              family
             </Text>
           </View>
 
@@ -52,7 +57,9 @@ export default function AboutScreen() {
               Our Commitment
             </Text>
             <Text style={[styles.sectionText, { color: colors.subtext }]}>
-              We're especially focused on supporting SoonerCare and Medicaid members, expecting mothers, and families facing healthcare access challenges in Oklahoma.
+              We are especially focused on supporting SoonerCare and Medicaid
+              members, expecting mothers, and families facing healthcare access
+              challenges in Oklahoma.
             </Text>
           </View>
 
@@ -61,7 +68,8 @@ export default function AboutScreen() {
               Our Belief
             </Text>
             <Text style={[styles.sectionText, { color: colors.subtext }]}>
-              Healthcare isn't a luxury—it's a necessity. Everyone deserves simple, transparent access to quality care.
+              Healthcare is not a luxury - it is a necessity. Everyone deserves
+              simple, transparent access to quality care.
             </Text>
           </View>
 
@@ -85,7 +93,7 @@ const styles = StyleSheet.create({
   },
   backText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   content: {
     flex: 1,
@@ -93,7 +101,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 24,
   },
   section: {
@@ -103,7 +111,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 12,
   },
   sectionText: {
@@ -111,7 +119,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   version: {
-    textAlign: 'center',
+    textAlign: "center",
     fontSize: 12,
     marginTop: 24,
     marginBottom: 40,

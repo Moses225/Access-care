@@ -1,12 +1,7 @@
-import { Stack, useRouter } from 'expo-router';
-import React from 'react';
-import {
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { useTheme } from '../../context/ThemeContext';
+import { Stack, useRouter } from "expo-router";
+import React from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useTheme } from "../../context/ThemeContext";
 
 export default function PaymentsScreen() {
   const router = useRouter();
@@ -18,20 +13,26 @@ export default function PaymentsScreen() {
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={[styles.header, { backgroundColor: colors.card }]}>
           <TouchableOpacity onPress={() => router.back()}>
-            <Text style={[styles.backText, { color: colors.primary }]}>← Back</Text>
+            <Text style={[styles.backText, { color: colors.primary }]}>
+              ← Back
+            </Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.content}>
-          <Text style={[styles.title, { color: colors.text }]}>Payment Methods</Text>
+          <Text style={[styles.title, { color: colors.text }]}>
+            Payment Methods
+          </Text>
           <Text style={[styles.subtitle, { color: colors.subtext }]}>
             Manage your payment options
           </Text>
 
           <View style={[styles.card, { backgroundColor: colors.card }]}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>💳 No Payment Needed</Text>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>
+              💳 No Payment Needed
+            </Text>
             <Text style={[styles.cardText, { color: colors.subtext }]}>
-              AccessCare is 100% free for SoonerCare and Medicaid members.
+              Morava is 100% free for SoonerCare and Medicaid members.
             </Text>
           </View>
         </View>
@@ -51,7 +52,7 @@ const styles = StyleSheet.create({
   },
   backText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   content: {
     flex: 1,
@@ -59,7 +60,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 8,
   },
   subtitle: {
@@ -73,7 +74,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 8,
   },
   cardText: {

@@ -23,7 +23,7 @@ export default function HelpScreen() {
     {
       question: "What insurance do you accept?",
       answer:
-        "AccessCare focuses on SoonerCare and Medicaid providers. All providers shown accept these insurances. Some also accept additional plans.",
+        "Morava focuses on SoonerCare and Medicaid providers. All providers shown accept these insurances. Some also accept additional plans.",
     },
     {
       question: "How do I cancel an appointment?",
@@ -62,10 +62,10 @@ export default function HelpScreen() {
               Contact Us
             </Text>
             <TouchableOpacity
-              onPress={() => Linking.openURL("mailto:support@myaccesscare.com")}
+              onPress={() => Linking.openURL("mailto:support@moravacare.com")}
             >
               <Text style={[styles.answer, { color: colors.primary }]}>
-                📧 support@myaccesscare.com
+                📧 support@moravacare.com
               </Text>
             </TouchableOpacity>
             <TouchableOpacity

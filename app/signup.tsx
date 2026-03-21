@@ -234,7 +234,7 @@ export default function SignupScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Image
-          source={require("../assets/images/AccessCare-logo.png")}
+          source={require("../assets/images/Morava-logo.png")}
           style={styles.logo}
           resizeMode="contain"
         />
@@ -243,7 +243,7 @@ export default function SignupScreen() {
           Create Account
         </Text>
         <Text style={[styles.subtitle, { color: colors.subtext }]}>
-          Join AccessCare today
+          Join Morava today
         </Text>
 
         {/* ── Name row ───────────────────────────────────────────────────── */}

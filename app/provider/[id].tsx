@@ -508,7 +508,7 @@ const InterviewConsultCard = ({
 
 // ─── Unverified Disclaimer Banner ─────────────────────────────────────────────
 // Shows on profiles that haven't been claimed by the provider yet.
-// Protects AccessCare legally — data is from public sources, may be outdated.
+// Protects Morava legally — data is from public sources, may be outdated.
 const UnverifiedDisclaimer = ({ colors }: { colors: any }) => (
   <View
     style={[

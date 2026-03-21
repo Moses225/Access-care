@@ -793,7 +793,7 @@ export default function HomeScreen() {
         if (!inOklahoma) {
           Alert.alert(
             "Outside Oklahoma",
-            "AccessCare currently serves Oklahoma providers only. Try an Oklahoma city or ZIP code.",
+            "Morava currently serves Oklahoma providers only. Try an Oklahoma city or ZIP code.",
           );
           setLocationLoading(false);
           return;

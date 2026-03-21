@@ -1,27 +1,25 @@
 {
   "expo": {
-    "name": "AccessCare",
-    "slug": "accesscare",
+    "name": "Morava",
+    "slug": "morava",
     "version": "1.1.0",
-    "scheme": "accesscare",
+    "scheme": "morava",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#2E75B6"
+      "backgroundColor": "#00BCD4"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.accesscare.app",
+      "bundleIdentifier": "com.moravacare.app",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "AccessCare needs your location to show nearby healthcare providers.",
-        "NSCameraUsageDescription": "AccessCare needs access to your camera to take profile pictures.",
-        "NSPhotoLibraryUsageDescription": "AccessCare needs access to your photos to set your profile picture."
+        "NSLocationWhenInUseUsageDescription": "Morava needs your location to show nearby healthcare providers.",
+        "NSCameraUsageDescription": "Morava needs access to your camera to take profile pictures.",
+        "NSPhotoLibraryUsageDescription": "Morava needs access to your photos to set your profile picture."
       }
     },
     "android": {
@@ -30,7 +28,7 @@
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png"
       },
-      "package": "com.accesscare.app",
+      "package": "com.moravacare.app",
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
@@ -41,7 +39,7 @@
       ],
       "config": {
         "googleMaps": {
-          "apiKey": "YAIzaSyCYh1TzWIAonLgs32hW84fEQeatfDGlS54"
+          "apiKey": "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY"
         }
       }
     },
@@ -54,8 +52,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "AccessCare needs access to your photos to set your profile picture.",
-          "cameraPermission": "AccessCare needs access to your camera to take profile pictures."
+          "photosPermission": "Morava needs access to your photos to set your profile picture.",
+          "cameraPermission": "Morava needs access to your camera to take profile pictures."
         }
       ],
       [
@@ -69,7 +67,7 @@
       [
         "@sentry/react-native/expo",
         {
-          "organization": "accesscare",
+          "organization": "morava",
           "project": "react-native"
         }
       ]
