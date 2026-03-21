@@ -1450,6 +1450,16 @@ export default function HomeScreen() {
                           </Text>
                         </View>
                       )}
+                      {!!item.hospitalAffiliation && (
+                        <Text
+                          style={[
+                            styles.distanceText,
+                            { color: colors.subtext },
+                          ]}
+                        >
+                          🏥 {item.hospitalAffiliation}
+                        </Text>
+                      )}
                       {dist !== null && (
                         <Text
                           style={[

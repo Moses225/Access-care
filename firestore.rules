@@ -81,13 +81,18 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       match /slots/{date} {
         allow read: if isAuthenticated();
-        allow write: if isFullAccount();
+        // FIXED: was isFullAccount() — any patient could overwrite provider slots
+        allow write: if isAdmin() || isProviderOwner(providerId);
       }
     }
 
     match /questions/{questionId} {
       allow read: if isAuthenticated();
-      allow create: if isFullAccount();
+      // FIXED: added userId binding and content size limit
+      allow create: if isFullAccount()
+                 && request.resource.data.userId == request.auth.uid
+                 && request.resource.data.content is string
+                 && request.resource.data.content.size() <= 2000;
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }
@@ -108,13 +113,19 @@ service cloud.firestore {
     match /paymentMethods/{docId} {
       allow read, delete: if isAuthenticated() &&
                              resource.data.userId == request.auth.uid;
-      allow create: if isFullAccount();
+      // FIXED: added userId binding — user can't create a payment method for someone else
+      allow create: if isFullAccount()
+                 && request.resource.data.userId == request.auth.uid;
     }
 
     match /supportRequests/{docId} {
       allow read: if isAuthenticated() &&
                      (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isFullAccount();
+      // FIXED: added userId binding and message size limit
+      allow create: if isFullAccount()
+                 && request.resource.data.userId == request.auth.uid
+                 && request.resource.data.message is string
+                 && request.resource.data.message.size() <= 5000;
     }
 
     match /savedProviders/{userId} {
@@ -122,13 +133,16 @@ service cloud.firestore {
     }
 
     match /providerUsers/{userId} {
-      allow read:  if isOwner(userId) && isVerifiedProvider();
+      // FIXED: separated read from write — removed circular exists() dependency on reads
+      allow read:  if isOwner(userId) && request.auth.token.provider == true;
       allow write: if isOwner(userId) && isVerifiedProvider();
     }
 
     match /auditLog/{entryId} {
+      // FIXED: added timestamp validation — prevents falsified audit entries
       allow create: if isFullAccount()
-                 && request.resource.data.actorUid == request.auth.uid;
+                 && request.resource.data.actorUid == request.auth.uid
+                 && request.resource.data.createdAt == request.time;
       allow read:   if isAdmin();
       allow update: if false;
       allow delete: if false;
@@ -140,6 +154,7 @@ service cloud.firestore {
       allow update: if false;
       allow delete: if false;
     }
+
     match /providerApplications/{docId} {
       allow create: if true;
       allow read, update, delete: if isAdmin();
