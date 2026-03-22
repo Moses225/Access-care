@@ -42,7 +42,7 @@ const validateName = (name: string, field: string): string | null => {
 export default function SignupScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { isGuest, upgradeGuest } = useAuth();
+  const { isGuest, upgradeGuest, setIsVerifying } = useAuth();
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -112,6 +112,7 @@ export default function SignupScreen() {
 
           if (!currentUser.emailVerified) {
             await sendEmailVerification(currentUser);
+            setIsVerifying(true);
             setVerificationSent(true);
           }
         }
@@ -140,6 +141,7 @@ export default function SignupScreen() {
         });
 
         await sendEmailVerification(user);
+        setIsVerifying(true);
         setVerificationSent(true);
       }
     } catch (error: any) {
@@ -189,7 +191,10 @@ export default function SignupScreen() {
           {/* Routes to onboarding on first signup instead of directly to tabs */}
           <TouchableOpacity
             style={[styles.continueButton, { backgroundColor: colors.primary }]}
-            onPress={() => router.replace("/onboarding" as any)}
+            onPress={() => {
+              setIsVerifying(false);
+              router.replace("/onboarding" as any);
+            }}
             accessibilityRole="button"
           >
             <Text style={styles.continueButtonText}>Continue →</Text>

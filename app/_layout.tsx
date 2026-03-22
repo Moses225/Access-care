@@ -25,7 +25,7 @@ function RootNavigator() {
   const router = useRouter();
   const segments = useSegments();
   const pathname = usePathname();
-  const { user, initializing } = useAuth();
+  const { user, initializing, isVerifying } = useAuth();
   const isNavigating = useRef(false);
   // Track which UID we've already registered for — prevents re-registering
   // on every render or auth state refresh
@@ -46,6 +46,12 @@ function RootNavigator() {
   useEffect(() => {
     if (initializing) {
       if (__DEV__) console.log("⏳ Still initializing, not navigating yet...");
+      return;
+    }
+
+    if (isVerifying) {
+      if (__DEV__)
+        console.log("📧 Verification in progress, skipping navigation");
       return;
     }
 
@@ -127,7 +133,7 @@ function RootNavigator() {
         isNavigating.current = false;
       }, 500);
     }
-  }, [user, segments, pathname, initializing, router]);
+  }, [user, segments, pathname, initializing, isVerifying, router]);
 
   if (initializing) {
     return (
