@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Morava",
-    "slug": "morava",
+    "slug": "accesscare",
     "version": "1.1.0",
     "scheme": "morava",
     "orientation": "portrait",
@@ -67,7 +67,7 @@
       [
         "@sentry/react-native/expo",
         {
-          "organization": "morava",
+          "organization": "accesscare",
           "project": "react-native"
         }
       ]
