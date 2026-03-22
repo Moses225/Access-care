@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
 import { auth, db } from "../../firebase";
 import { logAnalyticsEvent } from "../../utils/analytics";
@@ -57,6 +58,7 @@ interface Provider {
     price: number;
     description: string;
   };
+  voucherParticipant?: boolean;
   communicationStyles?: string[];
   personalityTags?: string[];
   whoISee?: string[];
@@ -478,20 +480,58 @@ const ReviewsCard = ({
 const InterviewConsultCard = ({
   interviewConsult,
   colors,
+  voucherParticipant,
+  voucherEligible,
+  voucherUsed,
+  onBookVoucher,
 }: {
   interviewConsult: Provider["interviewConsult"];
   colors: any;
+  voucherParticipant?: boolean;
+  voucherEligible?: boolean;
+  voucherUsed?: boolean;
+  onBookVoucher?: () => void;
 }) => {
   if (!interviewConsult?.offered) return null;
+  const showFreeVoucher = voucherParticipant && voucherEligible && !voucherUsed;
   return (
     <View style={[styles.section, { backgroundColor: colors.card }]}>
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        Meet & Greet Available
-      </Text>
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 8,
+          marginBottom: 8,
+        }}
+      >
+        <Text
+          style={[styles.sectionTitle, { color: colors.text, marginBottom: 0 }]}
+        >
+          Meet & Greet Available
+        </Text>
+        {showFreeVoucher && (
+          <View
+            style={{
+              backgroundColor: "#00BCD4",
+              borderRadius: 99,
+              paddingHorizontal: 8,
+              paddingVertical: 2,
+            }}
+          >
+            <Text style={{ color: "#fff", fontSize: 11, fontWeight: "700" }}>
+              FREE with voucher
+            </Text>
+          </View>
+        )}
+      </View>
       <View style={[styles.consultBox, { backgroundColor: colors.background }]}>
         <View style={styles.consultHeader}>
           <Text style={[styles.consultPrice, { color: colors.primary }]}>
-            {interviewConsult.price > 0 ? `$${interviewConsult.price}` : "Free"}
+            {showFreeVoucher
+              ? "Free"
+              : interviewConsult.price > 0
+                ? `$${interviewConsult.price}`
+                : "Free"}
           </Text>
           <Text style={[styles.consultDuration, { color: colors.subtext }]}>
             {interviewConsult.duration} minutes
@@ -501,6 +541,22 @@ const InterviewConsultCard = ({
           {interviewConsult.description ||
             "Schedule a brief consultation to meet the provider and discuss your healthcare needs."}
         </Text>
+        {showFreeVoucher && onBookVoucher && (
+          <TouchableOpacity
+            onPress={onBookVoucher}
+            style={{
+              marginTop: 12,
+              backgroundColor: "#00BCD4",
+              borderRadius: 10,
+              padding: 12,
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>
+              Book Free Meet & Greet
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -531,9 +587,12 @@ export default function ProviderDetailScreen() {
   const router = useRouter();
   const { colors } = useTheme();
 
+  const { user } = useAuth();
   const [provider, setProvider] = useState<Provider | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [voucherEligible, setVoucherEligible] = useState(false);
+  const [voucherUsed, setVoucherUsed] = useState(false);
 
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
@@ -627,6 +686,7 @@ export default function ProviderDetailScreen() {
           ? data.boardCertifications
           : [],
         interviewConsult: data.interviewConsult || null,
+        voucherParticipant: data.voucherParticipant === true,
         communicationStyles: Array.isArray(data.communicationStyles)
           ? data.communicationStyles
           : [],
@@ -685,10 +745,25 @@ export default function ProviderDetailScreen() {
     }
   }, [id]);
 
+  const fetchVoucherStatus = useCallback(async () => {
+    if (!user || user.isAnonymous) return;
+    try {
+      const userSnap = await getDoc(doc(db, "users", user.uid));
+      if (userSnap.exists()) {
+        const data = userSnap.data();
+        setVoucherEligible(data.voucherEligible === true);
+        setVoucherUsed(data.voucherUsed === true);
+      }
+    } catch (e) {
+      if (__DEV__) console.warn("Voucher fetch failed:", e);
+    }
+  }, [user]);
+
   useEffect(() => {
     loadProvider();
     checkIfFavorite();
-  }, [loadProvider, checkIfFavorite]);
+    fetchVoucherStatus();
+  }, [loadProvider, checkIfFavorite, fetchVoucherStatus]);
 
   const handleCall = () => {
     if (provider?.phone) Linking.openURL(`tel:${provider.phone}`);
@@ -1166,6 +1241,10 @@ export default function ProviderDetailScreen() {
       <InterviewConsultCard
         interviewConsult={provider.interviewConsult}
         colors={colors}
+        voucherParticipant={provider.voucherParticipant}
+        voucherEligible={voucherEligible}
+        voucherUsed={voucherUsed}
+        onBookVoucher={handleBooking}
       />
 
       {acceptingPatients ? (
