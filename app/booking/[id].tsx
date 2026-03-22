@@ -1840,6 +1840,18 @@ export default function BookingScreen() {
       setShowUpgradePrompt(true);
       return;
     }
+
+    // ── Intake form check ───────────────────────────────────────────────────
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+      const userSnap = await getDoc(doc(db, "users", currentUser.uid));
+      const intakeComplete =
+        userSnap.exists() && userSnap.data().intakeComplete === true;
+      if (!intakeComplete) {
+        router.push(`/intake?redirect=/booking/${id}` as any);
+        return;
+      }
+    }
     if (!selectedVisitType) {
       Alert.alert("Visit Type Required", "Please select the type of visit.");
       return;

@@ -283,6 +283,23 @@ export default function ProfileScreen() {
 
           <TouchableOpacity
             style={[styles.menuItem, { backgroundColor: colors.card }]}
+            onPress={() => router.push("/intake")}
+          >
+            <View style={styles.menuLeft}>
+              <Text style={styles.menuIcon}>🏥</Text>
+              <View>
+                <Text style={[styles.menuTitle, { color: colors.text }]}>
+                  Health Profile
+                </Text>
+                <Text style={[styles.menuSubtitle, { color: colors.subtext }]}>
+                  Medications, allergies, conditions
+                </Text>
+              </View>
+            </View>
+            <Text style={[styles.chevron, { color: colors.subtext }]}>›</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.menuItem, { backgroundColor: colors.card }]}
             onPress={() => router.push("/profile/privacy")}
           >
             <View style={styles.menuLeft}>
