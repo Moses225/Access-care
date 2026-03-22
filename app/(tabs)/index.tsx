@@ -17,6 +17,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
 import { auth, db } from "../../firebase";
 import { logAnalyticsEvent } from "../../utils/analytics";
@@ -316,6 +317,10 @@ const CompactCategoryCarousel = ({
 
 // ─── Main Home Screen ─────────────────────────────────────────────────────────
 export default function HomeScreen() {
+  const { user } = useAuth();
+  const [voucherEligible, setVoucherEligible] = useState(false);
+  const [voucherUsed, setVoucherUsed] = useState(false);
+  const [voucherBannerDismissed, setVoucherBannerDismissed] = useState(false);
   const router = useRouter();
   const { colors } = useTheme();
 
@@ -362,9 +367,9 @@ export default function HomeScreen() {
   // ── Load patient's saved insurance on every focus ─────────────────────────
   const loadPatientInsurance = useCallback(async () => {
     try {
-      const user = auth.currentUser;
-      if (!user || user.isAnonymous) return;
-      const snap = await getDoc(doc(db, "insurance", user.uid));
+      const currentUser = auth.currentUser;
+      if (!currentUser || currentUser.isAnonymous) return;
+      const snap = await getDoc(doc(db, "insurance", currentUser.uid));
       if (snap.exists()) {
         const data = snap.data();
         const type = data.insuranceType || "";
@@ -395,6 +400,27 @@ export default function HomeScreen() {
     loadUserName();
     loadDisclaimerPreference();
   }, []);
+
+  useEffect(() => {
+    if (!user || user.isAnonymous) return;
+    const fetchVoucher = async () => {
+      try {
+        const userSnap = await getDoc(doc(db, "users", user.uid));
+        if (userSnap.exists()) {
+          const data = userSnap.data();
+          setVoucherEligible(data.voucherEligible === true);
+          setVoucherUsed(data.voucherUsed === true);
+        }
+        const dismissed = await AsyncStorage.getItem(
+          `voucherBannerDismissed_${user.uid}`,
+        );
+        if (dismissed === "true") setVoucherBannerDismissed(true);
+      } catch (e) {
+        if (__DEV__) console.warn("Voucher fetch failed:", e);
+      }
+    };
+    fetchVoucher();
+  }, [user]);
 
   // ── Client-side filtering — runs after all state dependencies change ───────
   useEffect(() => {
@@ -530,9 +556,9 @@ export default function HomeScreen() {
 
   const loadUserName = async () => {
     try {
-      const user = auth.currentUser;
-      if (!user || user.isAnonymous) return;
-      const userDoc = await getDoc(doc(db, "users", user.uid));
+      const currentUser = auth.currentUser;
+      if (!currentUser || currentUser.isAnonymous) return;
+      const userDoc = await getDoc(doc(db, "users", currentUser.uid));
       if (userDoc.exists()) {
         const data = userDoc.data();
         if (data.firstName && typeof data.firstName === "string") {
@@ -540,14 +566,14 @@ export default function HomeScreen() {
         } else if (data.displayName && typeof data.displayName === "string") {
           setUserName(data.displayName.trim().split(" ")[0]);
         } else {
-          const email = data.email || user.email;
+          const email = data.email || currentUser.email;
           if (email) {
             const prefix = email.split("@")[0];
             setUserName(prefix.charAt(0).toUpperCase() + prefix.slice(1));
           }
         }
-      } else if (user.email) {
-        const prefix = user.email.split("@")[0];
+      } else if (currentUser.email) {
+        const prefix = currentUser.email.split("@")[0];
         setUserName(prefix.charAt(0).toUpperCase() + prefix.slice(1));
       }
     } catch {
@@ -847,6 +873,7 @@ export default function HomeScreen() {
     patientInsuranceType === "insured" &&
     (patientPlan.toLowerCase().includes("soonercare") ||
       patientPlan.toLowerCase().includes("medicaid"));
+
   const hasSavedInsurance = patientInsuranceType === "insured" && !!patientPlan;
   const isSavedUninsured = patientInsuranceType === "uninsured";
 
@@ -863,6 +890,48 @@ export default function HomeScreen() {
           {providers.length}+ providers in Oklahoma
         </Text>
       </View>
+
+      {/* ── Voucher banner ──────────────────────────────────────────────── */}
+      {voucherEligible && !voucherUsed && !voucherBannerDismissed && (
+        <TouchableOpacity
+          onPress={async () => {
+            if (user) {
+              await AsyncStorage.setItem(
+                `voucherBannerDismissed_${user.uid}`,
+                "true",
+              );
+            }
+            setVoucherBannerDismissed(true);
+          }}
+          style={{
+            margin: 12,
+            padding: 14,
+            borderRadius: 12,
+            backgroundColor: "#00BCD4",
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <View style={{ flex: 1 }}>
+            <Text
+              style={{
+                color: "#fff",
+                fontWeight: "700",
+                fontSize: 14,
+                marginBottom: 2,
+              }}
+            >
+              🎉 You are one of Morava founding 100 members
+            </Text>
+            <Text style={{ color: "#e0f7fa", fontSize: 12 }}>
+              Your first Meet & Greet consult is free. Tap any provider to book
+              it.
+            </Text>
+          </View>
+          <Text style={{ color: "#fff", fontSize: 18, marginLeft: 8 }}>×</Text>
+        </TouchableOpacity>
+      )}
 
       {/* ── Insurance filter chips ───────────────────────────────────────── */}
       <View
