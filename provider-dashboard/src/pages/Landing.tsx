@@ -7,6 +7,18 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-white font-sans">
+      {/* ── Patient redirect banner ──────────────────────────────────── */}
+      <div className="w-full bg-teal-50 border-b border-teal-100 py-2 px-4 text-center text-sm text-teal-800">
+        Looking for care as a patient?{" "}
+        <a
+          href="https://moravacare.com"
+          className="font-semibold text-teal-600 underline hover:text-teal-800"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Download the Morava patient app →
+        </a>
+      </div>
       {/* ── Nav ──────────────────────────────────────────────────────── */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-sm border-b border-slate-100">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -14,9 +26,7 @@ export default function Landing() {
             <div className="w-8 h-8 rounded-lg bg-teal-500 flex items-center justify-center">
               <span className="text-white text-sm font-bold">A</span>
             </div>
-            <span className="font-display text-xl text-slate-900">
-              Morava
-            </span>
+            <span className="font-display text-xl text-slate-900">Morava</span>
             <span className="text-xs font-medium text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full ml-1">
               for Providers
             </span>
@@ -148,10 +158,9 @@ export default function Landing() {
                 Built for providers who accept Medicaid
               </h2>
               <p className="text-slate-500 mb-8 leading-relaxed">
-                Morava is purpose-built for the Oklahoma SoonerCare
-                ecosystem. We understand the unique challenges of serving
-                Medicaid patients and we've designed every feature with that in
-                mind.
+                Morava is purpose-built for the Oklahoma SoonerCare ecosystem.
+                We understand the unique challenges of serving Medicaid patients
+                and we've designed every feature with that in mind.
               </p>
               <ul className="space-y-4">
                 {[
@@ -269,8 +278,7 @@ export default function Landing() {
             <span className="font-display text-white">Morava</span>
           </div>
           <p className="text-slate-500 text-sm">
-            © 2026 Morava. Serving Oklahoma SoonerCare patients and
-            providers.
+            © 2026 Morava. Serving Oklahoma SoonerCare patients and providers.
           </p>
           <div className="flex gap-6">
             <a
