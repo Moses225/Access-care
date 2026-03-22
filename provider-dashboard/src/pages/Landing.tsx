@@ -20,11 +20,11 @@ export default function Landing() {
         </a>
       </div>
       {/* ── Nav ──────────────────────────────────────────────────────── */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-sm border-b border-slate-100">
+      <nav className="fixed top-10 left-0 right-0 z-50 bg-white/90 backdrop-blur-sm border-b border-slate-100">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-teal-500 flex items-center justify-center">
-              <span className="text-white text-sm font-bold">A</span>
+              <span className="text-white text-sm font-bold">M</span>
             </div>
             <span className="font-display text-xl text-slate-900">Morava</span>
             <span className="text-xs font-medium text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full ml-1">
@@ -273,7 +273,7 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded bg-teal-500 flex items-center justify-center">
-              <span className="text-white text-xs font-bold">A</span>
+              <span className="text-white text-xs font-bold">M</span>
             </div>
             <span className="font-display text-white">Morava</span>
           </div>
