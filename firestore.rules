@@ -160,6 +160,16 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
+    match /platform/{docId} {
+      allow read: if isAuthenticated();
+      allow create: if isFullAccount()
+                 && request.resource.data.totalSignups == 1;
+      allow update: if isFullAccount()
+                 && request.resource.data.totalSignups ==
+                    resource.data.totalSignups + 1;
+      allow delete: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
