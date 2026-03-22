@@ -81,8 +81,8 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       match /slots/{date} {
         allow read: if isAuthenticated();
-        // FIXED: was isFullAccount() — any patient could overwrite provider slots
-        allow write: if isAdmin() || isProviderOwner(providerId);
+        allow create, delete: if isAdmin() || isProviderOwner(providerId);
+        allow update: if isFullAccount() || isAdmin() || isProviderOwner(providerId);
       }
     }
 
@@ -166,7 +166,8 @@ service cloud.firestore {
                  && request.resource.data.userId == request.auth.uid
                  && request.resource.data.medications is string
                  && request.resource.data.allergies is string
-                 && request.resource.data.conditions is string;
+                 && request.resource.data.conditions is string
+                 && request.resource.data.surgeries is string;
       allow delete: if false;
     }
 
