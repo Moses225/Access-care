@@ -4,7 +4,12 @@ import {
   sendEmailVerification,
   updateProfile,
 } from "firebase/auth";
-import { doc, serverTimestamp, setDoc } from "firebase/firestore";
+import {
+  doc,
+  runTransaction,
+  serverTimestamp,
+  setDoc,
+} from "firebase/firestore";
 import React, { useState } from "react";
 import {
   Alert,
@@ -38,6 +43,30 @@ const validateName = (name: string, field: string): string | null => {
     return `${field} contains invalid characters.`;
   return null;
 };
+
+async function assignVoucherIfEligible(uid: string): Promise<void> {
+  const statsRef = doc(db, "platform", "stats");
+  const userRef = doc(db, "users", uid);
+  try {
+    await runTransaction(db, async (tx) => {
+      const statsSnap = await tx.get(statsRef);
+      const current = statsSnap.exists()
+        ? (statsSnap.data().totalSignups ?? 0)
+        : 0;
+      const next = current + 1;
+      tx.set(statsRef, { totalSignups: next }, { merge: true });
+      if (next <= 100) {
+        tx.update(userRef, {
+          voucherEligible: true,
+          voucherUsed: false,
+        });
+      }
+    });
+  } catch (e) {
+    // Non-critical — don't block signup if this fails
+    if (__DEV__) console.warn("Voucher assignment failed:", e);
+  }
+}
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -120,6 +149,7 @@ export default function SignupScreen() {
               displayName: `${firstNameClean} ${lastNameClean}`,
               email: sanitizedEmail,
               emailVerified: false,
+              birthYear: yearNum,
               createdAt: serverTimestamp(),
               updatedAt: serverTimestamp(),
               accountType: "patient",
@@ -132,38 +162,39 @@ export default function SignupScreen() {
             displayName: `${firstNameClean} ${lastNameClean}`,
           });
 
+          await assignVoucherIfEligible(currentUser.uid);
+
           if (!currentUser.emailVerified) {
+            setIsVerifying(true); // ← set BEFORE sending verification
             await sendEmailVerification(currentUser);
-            setIsVerifying(true);
             setVerificationSent(true);
           }
         }
       } else {
         // ── Create brand new account ─────────────────────────────────────────
+        setIsVerifying(true); // set BEFORE account creation to block _layout.tsx navigation
         const { user } = await createUserWithEmailAndPassword(
           auth,
           sanitizedEmail,
           password,
         );
-
         await setDoc(doc(db, "users", user.uid), {
           firstName: firstNameClean,
           lastName: lastNameClean,
           displayName: `${firstNameClean} ${lastNameClean}`,
           email: sanitizedEmail,
           emailVerified: false,
+          birthYear: yearNum,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
           accountType: "patient",
           isActive: true,
         });
-
         await updateProfile(user, {
           displayName: `${firstNameClean} ${lastNameClean}`,
         });
-
+        await assignVoucherIfEligible(user.uid);
         await sendEmailVerification(user);
-        setIsVerifying(true);
         setVerificationSent(true);
       }
     } catch (error: any) {
@@ -316,6 +347,26 @@ export default function SignupScreen() {
             maxLength={50}
           />
         </View>
+
+        {/* ── Birth year ──────────────────────────────────────────────────── */}
+        <TextInput
+          style={[
+            styles.input,
+            {
+              backgroundColor: colors.card,
+              color: colors.text,
+              borderColor: colors.border,
+            },
+          ]}
+          placeholder="Birth Year (e.g. 1990)"
+          placeholderTextColor={colors.subtext}
+          value={birthYear}
+          onChangeText={setBirthYear}
+          keyboardType="number-pad"
+          maxLength={4}
+          editable={!loading}
+          accessibilityLabel="Birth year"
+        />
 
         {/* ── Email & password ────────────────────────────────────────────── */}
         <TextInput
