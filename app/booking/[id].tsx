@@ -1841,8 +1841,9 @@ export default function BookingScreen() {
       return;
     }
 
-    // ── Intake form check ───────────────────────────────────────────────────
+    // ── Intake form check + fetch summary ──────────────────────────────────
     const currentUser = auth.currentUser;
+    let intakeSummary: Record<string, any> | null = null;
     if (currentUser) {
       const userSnap = await getDoc(doc(db, "users", currentUser.uid));
       const intakeComplete =
@@ -1850,6 +1851,25 @@ export default function BookingScreen() {
       if (!intakeComplete) {
         router.push(`/intake?redirect=/booking/${id}` as any);
         return;
+      }
+      // Fetch intake summary to attach to booking
+      try {
+        const intakeSnap = await getDoc(
+          doc(db, "intakeForms", currentUser.uid),
+        );
+        if (intakeSnap.exists()) {
+          const d = intakeSnap.data();
+          intakeSummary = {
+            medications: d.medications || "",
+            allergies: d.allergies || "",
+            conditions: d.conditions || "",
+            surgeries: d.surgeries || "",
+            bloodType: d.bloodType || "",
+            emergencyContact: d.emergencyContact || null,
+          };
+        }
+      } catch {
+        // Non-critical — booking proceeds without intake
       }
     }
     if (!selectedVisitType) {

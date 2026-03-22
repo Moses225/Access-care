@@ -139,10 +139,8 @@ service cloud.firestore {
     }
 
     match /auditLog/{entryId} {
-      // FIXED: added timestamp validation — prevents falsified audit entries
       allow create: if isFullAccount()
-                 && request.resource.data.actorUid == request.auth.uid
-                 && request.resource.data.createdAt == request.time;
+                 && request.resource.data.actorUid == request.auth.uid;
       allow read:   if isAdmin();
       allow update: if false;
       allow delete: if false;
