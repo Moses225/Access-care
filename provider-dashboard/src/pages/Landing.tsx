@@ -15,7 +15,7 @@ export default function Landing() {
               <span className="text-white text-sm font-bold">A</span>
             </div>
             <span className="font-display text-xl text-slate-900">
-              AccessCare
+              Morava
             </span>
             <span className="text-xs font-medium text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full ml-1">
               for Providers
@@ -50,7 +50,7 @@ export default function Landing() {
             <span className="italic text-teal-500">most.</span>
           </h1>
           <p className="text-xl text-slate-500 max-w-2xl mx-auto mb-10 leading-relaxed">
-            AccessCare connects Oklahoma SoonerCare and Medicaid patients with
+            Morava connects Oklahoma SoonerCare and Medicaid patients with
             providers like you. List your practice for free and start receiving
             appointments today.
           </p>
@@ -148,7 +148,7 @@ export default function Landing() {
                 Built for providers who accept Medicaid
               </h2>
               <p className="text-slate-500 mb-8 leading-relaxed">
-                AccessCare is purpose-built for the Oklahoma SoonerCare
+                Morava is purpose-built for the Oklahoma SoonerCare
                 ecosystem. We understand the unique challenges of serving
                 Medicaid patients and we've designed every feature with that in
                 mind.
@@ -266,10 +266,10 @@ export default function Landing() {
             <div className="w-6 h-6 rounded bg-teal-500 flex items-center justify-center">
               <span className="text-white text-xs font-bold">A</span>
             </div>
-            <span className="font-display text-white">AccessCare</span>
+            <span className="font-display text-white">Morava</span>
           </div>
           <p className="text-slate-500 text-sm">
-            © 2026 AccessCare. Serving Oklahoma SoonerCare patients and
+            © 2026 Morava. Serving Oklahoma SoonerCare patients and
             providers.
           </p>
           <div className="flex gap-6">
@@ -282,7 +282,7 @@ export default function Landing() {
               Privacy Policy
             </a>
             <a
-              href="mailto:accesscareapp@gmail.com"
+              href="mailto:support@moravacare.com"
               className="text-slate-400 hover:text-white text-sm transition-colors"
             >
               Contact
@@ -331,7 +331,7 @@ function ApplyForm() {
     } catch (err) {
       console.error("Application submission error:", err);
       alert(
-        "Something went wrong. Please try again or email us directly at moise@myaccesscare.com",
+        "Something went wrong. Please try again or email us directly at support@moravacare.com",
       );
     } finally {
       setSubmitting(false);

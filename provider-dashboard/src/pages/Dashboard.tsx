@@ -132,7 +132,7 @@ export default function Dashboard() {
               <span className="text-white text-sm font-bold">A</span>
             </div>
             <div>
-              <span className="font-display text-slate-900 text-lg">AccessCare</span>
+              <span className="font-display text-slate-900 text-lg">Morava</span>
               <span className="text-slate-400 text-sm ml-2">Provider Portal</span>
             </div>
           </div>

@@ -34,7 +34,7 @@ export default function Login() {
             <div className="w-10 h-10 rounded-xl bg-teal-500 flex items-center justify-center">
               <span className="text-white font-bold text-lg">A</span>
             </div>
-            <span className="font-display text-2xl text-slate-900">AccessCare</span>
+            <span className="font-display text-2xl text-slate-900">Morava</span>
           </button>
           <h1 className="font-display text-3xl text-slate-900 mb-2">Provider sign in</h1>
           <p className="text-slate-500 text-sm">Access your dashboard to manage appointments</p>
