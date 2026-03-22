@@ -116,6 +116,20 @@ export default function Dashboard() {
         confirmedAt: serverTimestamp(),
         confirmedBy: user?.uid,
       });
+      // Mark voucher as used if this was a Meet & Greet booking with a voucher
+      if (
+        booking.visitTypeLabel?.toLowerCase().includes("meet") &&
+        booking.patientIntakeSummary &&
+        booking.userId
+      ) {
+        try {
+          await updateDoc(doc(db, "users", booking.userId), {
+            voucherUsed: true,
+          });
+        } catch {
+          // Non-critical — don't block confirmation
+        }
+      }
     } catch (e) {
       console.error(e);
     } finally {
