@@ -81,8 +81,8 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       match /slots/{date} {
         allow read: if isAuthenticated();
-        allow create, delete: if isAdmin() || isProviderOwner(providerId);
-        allow update: if isFullAccount() || isAdmin() || isProviderOwner(providerId);
+        allow create, update: if isFullAccount() || isAdmin() || isProviderOwner(providerId);
+        allow delete: if isAdmin() || isProviderOwner(providerId);
       }
     }
 
