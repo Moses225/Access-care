@@ -46,6 +46,7 @@ export default function SignupScreen() {
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [birthYear, setBirthYear] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -53,6 +54,27 @@ export default function SignupScreen() {
   const [verificationSent, setVerificationSent] = useState(false);
 
   const handleSignup = async () => {
+    // ── Age validation ───────────────────────────────────────────────────────
+    const yearNum = parseInt(birthYear, 10);
+    const currentYear = new Date().getFullYear();
+    if (
+      !birthYear ||
+      isNaN(yearNum) ||
+      yearNum < 1900 ||
+      yearNum > currentYear
+    ) {
+      Alert.alert("Validation Error", "Please enter a valid birth year.");
+      return;
+    }
+    const age = currentYear - yearNum;
+    if (age < 13) {
+      Alert.alert(
+        "Age Requirement",
+        "Morava is not available for users under 13. Please have a parent or guardian contact us at support@moravacare.com.",
+      );
+      return;
+    }
+
     // ── Name validation ──────────────────────────────────────────────────────
     const firstNameClean = sanitizeName(firstName);
     const lastNameClean = sanitizeName(lastName);
