@@ -1959,6 +1959,7 @@ export default function BookingScreen() {
         patientPhone: sanitizedData.patientPhone,
         notes: sanitizedData.notes,
         status: "pending",
+        ...(intakeSummary ? { patientIntakeSummary: intakeSummary } : {}),
         createdAt: serverTimestamp(),
       };
 

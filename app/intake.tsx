@@ -224,7 +224,7 @@ export default function IntakeScreen() {
 
   const progress = step / (STEPS.length - 1);
 
-  const Field = ({
+  const Field = React.useCallback(({
     label,
     hint,
     value,
