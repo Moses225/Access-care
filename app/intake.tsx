@@ -694,7 +694,7 @@ const DateField = React.memo(function DateField({
                 borderTopLeftRadius: 16,
                 borderTopRightRadius: 16,
                 paddingBottom: 40,
-                maxHeight: "80%",
+                height: 520,
               }}
             >
               <View
@@ -751,7 +751,7 @@ const DateField = React.memo(function DateField({
                 minimumDate={minDate}
                 accentColor={colors.primary}
                 textColor={colors.text}
-                style={{ backgroundColor: colors.card }}
+                style={{ height: 400, backgroundColor: colors.card }}
                 onChange={(_, date) => {
                   if (date) setTempDate(date);
                 }}
