@@ -1,6 +1,56 @@
-// SMS utility for booking confirmations
-// For beta: just logs to console
-// For production: integrate with Twilio backend
+// SMS utility — Twilio REST API
+// Credentials loaded from env vars (never hardcoded)
+
+const ACCOUNT_SID = process.env.EXPO_PUBLIC_TWILIO_ACCOUNT_SID ?? "";
+const AUTH_TOKEN = process.env.EXPO_PUBLIC_TWILIO_AUTH_TOKEN ?? "";
+const FROM_NUMBER = process.env.EXPO_PUBLIC_TWILIO_PHONE_NUMBER ?? "";
+
+async function sendSMS(to: string, body: string): Promise<boolean> {
+  if (!ACCOUNT_SID || !AUTH_TOKEN || !FROM_NUMBER) {
+    if (__DEV__) console.warn("⚠️ Twilio credentials not configured");
+    return false;
+  }
+
+  // Sanitize phone — ensure E.164 format
+  const sanitized = to.replace(/[^\d+]/g, "");
+  const e164 = sanitized.startsWith("+") ? sanitized : `+1${sanitized}`;
+
+  if (e164.length < 10) {
+    if (__DEV__) console.warn("⚠️ Invalid phone number:", to);
+    return false;
+  }
+
+  try {
+    const credentials = btoa(`${ACCOUNT_SID}:${AUTH_TOKEN}`);
+    const url = `https://api.twilio.com/2010-04-01/Accounts/${ACCOUNT_SID}/Messages.json`;
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${credentials}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        From: FROM_NUMBER,
+        To: e164,
+        Body: body,
+      }).toString(),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      if (__DEV__) console.log("✅ SMS sent:", data.sid, "→", e164);
+      return true;
+    } else {
+      if (__DEV__) console.error("❌ Twilio error:", data.message, "code:", data.code);
+      return false;
+    }
+  } catch (error) {
+    if (__DEV__) console.error("❌ SMS send failed:", error);
+    return false;
+  }
+}
 
 export async function sendBookingConfirmationSMS(
   phoneNumber: string,
@@ -9,30 +59,12 @@ export async function sendBookingConfirmationSMS(
   time: string,
   bookingId: string,
 ): Promise<boolean> {
-  if (__DEV__) {
-    console.log(`
-  📱 SMS CONFIRMATION (Beta - Logged Only)
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  To: ${phoneNumber}
+  const body =
+    `Morava: Your appointment request with ${providerName} on ${date} at ${time} has been submitted. ` +
+    `Booking ID: ${bookingId}. We'll text you when confirmed. Reply STOP to unsubscribe.`;
 
-  Morava Appointment Request
-
-  ✅ Provider: ${providerName}
-  📅 Date: ${date}
-  ⏰ Time: ${time}
-  🆔 Booking ID: ${bookingId}
-
-  Status: Pending Confirmation
-
-  We'll text you when the provider confirms!
-
-  Reply STOP to unsubscribe.
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    `);
-  }
-
-  // For beta testing, return success
-  return true;
+  if (__DEV__) console.log("📱 Sending confirmation SMS to:", phoneNumber);
+  return sendSMS(phoneNumber, body);
 }
 
 export async function sendBookingConfirmedSMS(
@@ -41,24 +73,12 @@ export async function sendBookingConfirmedSMS(
   date: string,
   time: string,
 ): Promise<boolean> {
-  if (__DEV__) {
-    console.log(`
-  📱 SMS CONFIRMED (Beta - Logged Only)
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  To: ${phoneNumber}
+  const body =
+    `Morava: ✅ Confirmed! Your appointment with ${providerName} is set for ${date} at ${time}. ` +
+    `Bring your ID and insurance card. Reply STOP to unsubscribe.`;
 
-  ✅ Appointment CONFIRMED!
-
-  Provider: ${providerName}
-  Date: ${date}
-  Time: ${time}
-
-  See you soon! Reply if you need to reschedule.
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    `);
-  }
-
-  return true;
+  if (__DEV__) console.log("📱 Sending confirmed SMS to:", phoneNumber);
+  return sendSMS(phoneNumber, body);
 }
 
 export async function sendBookingReminderSMS(
@@ -67,24 +87,10 @@ export async function sendBookingReminderSMS(
   date: string,
   time: string,
 ): Promise<boolean> {
-  if (__DEV__) {
-    console.log(`
-  📱 SMS REMINDER (Beta - Logged Only)
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  To: ${phoneNumber}
+  const body =
+    `Morava: ⏰ Reminder — appointment with ${providerName} tomorrow at ${time}. ` +
+    `Arrive 10 min early. Bring ID and insurance. Reply STOP to unsubscribe.`;
 
-  ⏰ Appointment Reminder
-
-  Tomorrow at ${time}
-  Provider: ${providerName}
-
-  📍 Arrive 10 minutes early
-  🆔 Bring your ID and insurance card
-
-  Reply CONFIRM or CANCEL
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    `);
-  }
-
-  return true;
+  if (__DEV__) console.log("📱 Sending reminder SMS to:", phoneNumber);
+  return sendSMS(phoneNumber, body);
 }
