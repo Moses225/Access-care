@@ -748,6 +748,7 @@ const DateField = React.memo(function DateField({
                 display="spinner"
                 maximumDate={maxDate || new Date()}
                 minimumDate={minDate}
+                style={{ height: 200, width: "100%" }}
                 onChange={(_, date) => {
                   if (date) setTempDate(date);
                 }}
@@ -806,7 +807,7 @@ const HeightPicker = React.memo(function HeightPicker({
                     borderColor: feet === f ? colors.primary : colors.border,
                   },
                 ]}
-                onPress={() => onFeetChange(f)}
+                onPress={() => onFeetChange(feet === f ? "" : f)}
               >
                 <Text
                   style={{
