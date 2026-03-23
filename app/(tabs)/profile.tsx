@@ -344,7 +344,7 @@ export default function ProfileScreen() {
           <TouchableOpacity
             style={[styles.menuItem, { backgroundColor: colors.card }]}
             onPress={() =>
-              Linking.openURL("https://moses225.github.io/Access-care/docs/")
+              Linking.openURL("https://moses225.github.io/Access-care/")
             }
           >
             <View style={styles.menuLeft}>
