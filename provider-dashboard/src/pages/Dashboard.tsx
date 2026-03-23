@@ -25,10 +25,10 @@ interface Booking {
   reasonForVisit?: string;
   bookingFor?: string;
   patientIntakeSummary?: {
-    medications?: string;
-    allergies?: string;
-    conditions?: string;
-    surgeries?: string;
+    medications?: string | string[];
+    allergies?: string | string[];
+    conditions?: string | string[];
+    surgeries?: string | string[];
     bloodType?: string;
     emergencyContact?: { name: string; phone: string; relation: string };
   };
@@ -359,42 +359,55 @@ export default function Dashboard() {
                             </span>
                           </div>
                         )}
-                        {booking.patientIntakeSummary.allergies &&
-                          booking.patientIntakeSummary.allergies !== "None" &&
-                          booking.patientIntakeSummary.allergies !== "" && (
+                        {(() => {
+                          const allergies =
+                            booking.patientIntakeSummary.allergies;
+                          const display = Array.isArray(allergies)
+                            ? allergies.join(", ")
+                            : allergies;
+                          return display &&
+                            display !== "None" &&
+                            display !== "" ? (
                             <div className="text-xs">
                               <span className="font-semibold text-red-600">
                                 ⚠️ Allergies:
                               </span>{" "}
-                              <span className="text-slate-800">
-                                {booking.patientIntakeSummary.allergies}
-                              </span>
+                              <span className="text-slate-800">{display}</span>
                             </div>
-                          )}
-                        {booking.patientIntakeSummary.medications &&
-                          booking.patientIntakeSummary.medications !== "None" &&
-                          booking.patientIntakeSummary.medications !== "" && (
+                          ) : null;
+                        })()}
+                        {(() => {
+                          const meds = booking.patientIntakeSummary.medications;
+                          const display = Array.isArray(meds)
+                            ? meds.join(", ")
+                            : meds;
+                          return display &&
+                            display !== "None" &&
+                            display !== "" ? (
                             <div className="text-xs">
                               <span className="font-semibold text-slate-600">
                                 💊 Medications:
                               </span>{" "}
-                              <span className="text-slate-800">
-                                {booking.patientIntakeSummary.medications}
-                              </span>
+                              <span className="text-slate-800">{display}</span>
                             </div>
-                          )}
-                        {booking.patientIntakeSummary.conditions &&
-                          booking.patientIntakeSummary.conditions !== "None" &&
-                          booking.patientIntakeSummary.conditions !== "" && (
+                          ) : null;
+                        })()}
+                        {(() => {
+                          const conds = booking.patientIntakeSummary.conditions;
+                          const display = Array.isArray(conds)
+                            ? conds.join(", ")
+                            : conds;
+                          return display &&
+                            display !== "None" &&
+                            display !== "" ? (
                             <div className="text-xs">
                               <span className="font-semibold text-slate-600">
                                 🩺 Conditions:
                               </span>{" "}
-                              <span className="text-slate-800">
-                                {booking.patientIntakeSummary.conditions}
-                              </span>
+                              <span className="text-slate-800">{display}</span>
                             </div>
-                          )}
+                          ) : null;
+                        })()}
                         {booking.patientIntakeSummary.emergencyContact
                           ?.name && (
                           <div className="text-xs">
