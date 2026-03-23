@@ -1845,18 +1845,23 @@ export default function BookingScreen() {
     const currentUser = auth.currentUser;
     let intakeSummary: Record<string, any> | null = null;
     if (currentUser) {
-      const userSnap = await getDoc(doc(db, "users", currentUser.uid));
-      const intakeComplete =
-        userSnap.exists() && userSnap.data().intakeComplete === true;
-      if (!intakeComplete) {
-        router.push(`/intake?redirect=/booking/${id}` as any);
-        return;
+      const isBookingForDependent = selectedPatientId !== "self";
+      const intakeDocId = isBookingForDependent
+        ? `${currentUser.uid}_dep_${selectedPatientId}`
+        : currentUser.uid;
+
+      if (!isBookingForDependent) {
+        const userSnap = await getDoc(doc(db, "users", currentUser.uid));
+        const intakeComplete =
+          userSnap.exists() && userSnap.data().intakeComplete === true;
+        if (!intakeComplete) {
+          router.push(`/intake?redirect=/booking/${id}` as any);
+          return;
+        }
       }
       // Fetch intake summary to attach to booking
       try {
-        const intakeSnap = await getDoc(
-          doc(db, "intakeForms", currentUser.uid),
-        );
+        const intakeSnap = await getDoc(doc(db, "intakeForms", intakeDocId));
         if (intakeSnap.exists()) {
           const d = intakeSnap.data();
           intakeSummary = {
