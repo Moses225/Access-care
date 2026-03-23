@@ -161,11 +161,7 @@ service cloud.firestore {
     match /intakeForms/{userId} {
       allow read: if isOwner(userId) || isAdmin();
       allow create, update: if isOwner(userId) && isFullAccount()
-                 && request.resource.data.userId == request.auth.uid
-                 && request.resource.data.medications is string
-                 && request.resource.data.allergies is string
-                 && request.resource.data.conditions is string
-                 && request.resource.data.surgeries is string;
+                 && request.resource.data.userId == request.auth.uid;
       allow delete: if false;
     }
 
