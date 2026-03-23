@@ -693,7 +693,8 @@ const DateField = React.memo(function DateField({
                 backgroundColor: colors.card,
                 borderTopLeftRadius: 16,
                 borderTopRightRadius: 16,
-                paddingBottom: 32,
+                paddingBottom: 40,
+                maxHeight: "80%",
               }}
             >
               <View
@@ -745,10 +746,12 @@ const DateField = React.memo(function DateField({
               <DateTimePicker
                 value={tempDate}
                 mode="date"
-                display="spinner"
+                display="inline"
                 maximumDate={maxDate || new Date()}
                 minimumDate={minDate}
-                style={{ height: 200, width: "100%" }}
+                accentColor={colors.primary}
+                textColor={colors.text}
+                style={{ backgroundColor: colors.card }}
                 onChange={(_, date) => {
                   if (date) setTempDate(date);
                 }}
