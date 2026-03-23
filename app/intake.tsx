@@ -638,9 +638,11 @@ const DateField = React.memo(function DateField({
   minDate,
 }: DateFieldProps) {
   const [show, setShow] = useState(false);
-  const displayDate = value
-    ? value.toLocaleDateString("en-US", { month: "long", year: "numeric" })
-    : null;
+  const [tempDate, setTempDate] = useState<Date>(new Date());
+  const displayDate =
+    value && value.getTime() > 0
+      ? value.toLocaleDateString("en-US", { month: "long", year: "numeric" })
+      : null;
 
   return (
     <View style={{ marginBottom: 20 }}>
@@ -656,7 +658,10 @@ const DateField = React.memo(function DateField({
             borderColor: displayDate ? colors.primary : colors.border,
           },
         ]}
-        onPress={() => setShow(true)}
+        onPress={() => {
+          setTempDate(value && value.getTime() > 0 ? value : new Date());
+          setShow(true);
+        }}
       >
         <Text
           style={{
@@ -672,19 +677,98 @@ const DateField = React.memo(function DateField({
           </TouchableOpacity>
         )}
       </TouchableOpacity>
-      {show && (
-        <DateTimePicker
-          value={value || new Date()}
-          mode="date"
-          display={Platform.OS === "ios" ? "spinner" : "default"}
-          maximumDate={maxDate || new Date()}
-          minimumDate={minDate}
-          onChange={(_, date) => {
-            setShow(Platform.OS === "ios");
-            if (date) onChange(date);
-            if (Platform.OS === "android") setShow(false);
-          }}
-        />
+
+      {/* iOS — modal wrapper so spinner is visible */}
+      {Platform.OS === "ios" ? (
+        <Modal visible={show} transparent animationType="slide">
+          <View
+            style={{
+              flex: 1,
+              justifyContent: "flex-end",
+              backgroundColor: "rgba(0,0,0,0.4)",
+            }}
+          >
+            <View
+              style={{
+                backgroundColor: colors.card,
+                borderTopLeftRadius: 16,
+                borderTopRightRadius: 16,
+                paddingBottom: 32,
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  padding: 16,
+                  borderBottomWidth: 1,
+                  borderBottomColor: colors.border,
+                }}
+              >
+                <TouchableOpacity onPress={() => setShow(false)}>
+                  <Text
+                    style={{
+                      color: colors.subtext,
+                      fontSize: 16,
+                      fontWeight: "600",
+                    }}
+                  >
+                    Cancel
+                  </Text>
+                </TouchableOpacity>
+                <Text
+                  style={{
+                    color: colors.text,
+                    fontSize: 16,
+                    fontWeight: "700",
+                  }}
+                >
+                  {label}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    onChange(tempDate);
+                    setShow(false);
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: colors.primary,
+                      fontSize: 16,
+                      fontWeight: "700",
+                    }}
+                  >
+                    Done
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                value={tempDate}
+                mode="date"
+                display="spinner"
+                maximumDate={maxDate || new Date()}
+                minimumDate={minDate}
+                onChange={(_, date) => {
+                  if (date) setTempDate(date);
+                }}
+              />
+            </View>
+          </View>
+        </Modal>
+      ) : (
+        show && (
+          <DateTimePicker
+            value={tempDate}
+            mode="date"
+            display="default"
+            maximumDate={maxDate || new Date()}
+            minimumDate={minDate}
+            onChange={(_, date) => {
+              setShow(false);
+              if (date) onChange(date);
+            }}
+          />
+        )
       )}
     </View>
   );
@@ -712,7 +796,7 @@ const HeightPicker = React.memo(function HeightPicker({
         <View style={{ flex: 1 }}>
           <Text style={[s.fieldHint, { color: colors.subtext }]}>Feet</Text>
           <View style={s.chipWrap}>
-            {["4", "5", "6", "7"].map((f) => (
+            {["1", "2", "3", "4", "5", "6", "7", "8"].map((f) => (
               <TouchableOpacity
                 key={f}
                 style={[
@@ -754,7 +838,7 @@ const HeightPicker = React.memo(function HeightPicker({
                       minWidth: 36,
                     },
                   ]}
-                  onPress={() => onInchesChange(i)}
+                  onPress={() => onInchesChange(inches === i ? "" : i)}
                 >
                   <Text
                     style={{
@@ -850,6 +934,36 @@ const WeightPicker = React.memo(function WeightPicker({
           ))}
         </View>
       </ScrollView>
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 8,
+          marginTop: 8,
+        }}
+      >
+        <Text style={{ fontSize: 13, color: colors.subtext, flex: 1 }}>
+          Or type exact weight:
+        </Text>
+        <TextInput
+          style={[
+            s.input,
+            {
+              flex: 1,
+              backgroundColor: colors.card,
+              color: colors.text,
+              borderColor: colors.border,
+              paddingVertical: 10,
+            },
+          ]}
+          placeholder={`e.g. 143 ${unit}`}
+          placeholderTextColor={colors.subtext}
+          value={!weights.includes(value) ? value : ""}
+          onChangeText={(v) => onChange(sanitizeField(v, 10))}
+          keyboardType="numeric"
+          maxLength={10}
+        />
+      </View>
     </View>
   );
 });
@@ -860,6 +974,8 @@ export default function IntakeScreen() {
   const params = useLocalSearchParams();
   const { colors } = useTheme();
   const redirectTo = (params.redirect as string) || null;
+  const patientId = (params.patientId as string) || null;
+  const patientName = (params.patientName as string) || null;
 
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -935,7 +1051,8 @@ export default function IntakeScreen() {
 
       // Load existing intake
       try {
-        const snap = await getDoc(doc(db, "intakeForms", user.uid));
+        const docId = patientId || user.uid;
+        const snap = await getDoc(doc(db, "intakeForms", docId));
         if (snap.exists()) {
           const d = snap.data();
           if (d.bloodType) setBloodType([d.bloodType]);
@@ -999,21 +1116,23 @@ export default function IntakeScreen() {
       }
     };
     load();
-  }, []);
+  }, [patientId]);
 
   const handleSave = async () => {
     const user = auth.currentUser;
     if (!user) return;
     setSaving(true);
     try {
+      const docId = patientId || user.uid;
       const heightStr =
         heightFeet && heightInches
           ? `${heightFeet}'${heightInches}"`
           : heightFeet
             ? `${heightFeet}'`
             : "";
-      await setDoc(doc(db, "intakeForms", user.uid), {
+      await setDoc(doc(db, "intakeForms", docId), {
         userId: user.uid,
+        patientId: docId,
         bloodType: bloodType[0] ? sanitizeField(bloodType[0], 10) : "",
         heightFeet: sanitizeField(heightFeet, 5),
         heightInches: sanitizeField(heightInches, 5),
@@ -1058,14 +1177,17 @@ export default function IntakeScreen() {
         updatedAt: serverTimestamp(),
         version: 3,
       });
-      await setDoc(
-        doc(db, "users", user.uid),
-        { intakeComplete: true },
-        { merge: true },
-      );
+      if (!patientId) {
+        await setDoc(
+          doc(db, "users", user.uid),
+          { intakeComplete: true },
+          { merge: true },
+        );
+      }
       if (redirectTo) router.replace(redirectTo as any);
       else router.back();
-    } catch {
+    } catch (err) {
+      console.error("❌ Intake save error:", err);
       Alert.alert(
         "Error",
         "Could not save your health profile. Please try again.",
@@ -1143,7 +1265,13 @@ export default function IntakeScreen() {
           <View style={s.welcomeWrap}>
             <Text style={s.welcomeEmoji}>🏥</Text>
             <Text style={[s.welcomeTitle, { color: colors.text }]}>
-              {lastSaved ? "Your Health Profile" : "Set up your Health Profile"}
+              {patientName
+                ? lastSaved
+                  ? `${patientName}'s Health Profile`
+                  : `Set up ${patientName}'s Health Profile`
+                : lastSaved
+                  ? "Your Health Profile"
+                  : "Set up your Health Profile"}
             </Text>
             {lastSaved && (
               <View
