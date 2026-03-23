@@ -1,4 +1,4 @@
-import DateTimePicker from "@react-native-community/datetimepicker";
+// DateTimePicker removed — using custom month/year picker for stability
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import React, { useCallback, useEffect, useState } from "react";
@@ -628,21 +628,61 @@ interface DateFieldProps {
   minDate?: Date;
 }
 
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+const YEARS = Array.from(
+  { length: 50 },
+  (_, i) => new Date().getFullYear() - i,
+);
+
 const DateField = React.memo(function DateField({
   label,
   hint,
   value,
   onChange,
   colors,
-  maxDate,
-  minDate,
 }: DateFieldProps) {
   const [show, setShow] = useState(false);
-  const [tempDate, setTempDate] = useState<Date>(new Date());
+  const currentYear = new Date().getFullYear();
+  const currentMonth =
+    value && value.getTime() > 0 ? value.getMonth() : new Date().getMonth();
+  const currentYearVal =
+    value && value.getTime() > 0 ? value.getFullYear() : currentYear;
+
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+  const [selectedYear, setSelectedYear] = useState(currentYearVal);
+
   const displayDate =
     value && value.getTime() > 0
       ? value.toLocaleDateString("en-US", { month: "long", year: "numeric" })
       : null;
+
+  const handleOpen = () => {
+    setSelectedMonth(
+      value && value.getTime() > 0 ? value.getMonth() : new Date().getMonth(),
+    );
+    setSelectedYear(
+      value && value.getTime() > 0 ? value.getFullYear() : currentYear,
+    );
+    setShow(true);
+  };
+
+  const handleDone = () => {
+    onChange(new Date(selectedYear, selectedMonth, 1));
+    setShow(false);
+  };
 
   return (
     <View style={{ marginBottom: 20 }}>
@@ -658,10 +698,7 @@ const DateField = React.memo(function DateField({
             borderColor: displayDate ? colors.primary : colors.border,
           },
         ]}
-        onPress={() => {
-          setTempDate(value && value.getTime() > 0 ? value : new Date());
-          setShow(true);
-        }}
+        onPress={handleOpen}
       >
         <Text
           style={{
@@ -678,102 +715,151 @@ const DateField = React.memo(function DateField({
         )}
       </TouchableOpacity>
 
-      {/* iOS — modal wrapper so spinner is visible */}
-      {Platform.OS === "ios" ? (
-        <Modal visible={show} transparent animationType="slide">
+      <Modal visible={show} transparent animationType="slide">
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "flex-end",
+            backgroundColor: "rgba(0,0,0,0.4)",
+          }}
+        >
           <View
             style={{
-              flex: 1,
-              justifyContent: "flex-end",
-              backgroundColor: "rgba(0,0,0,0.4)",
+              backgroundColor: colors.card,
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              paddingBottom: 40,
             }}
           >
+            {/* Header */}
             <View
               style={{
-                backgroundColor: colors.card,
-                borderTopLeftRadius: 16,
-                borderTopRightRadius: 16,
-                paddingBottom: 40,
-                height: 520,
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: 16,
+                borderBottomWidth: 1,
+                borderBottomColor: colors.border,
               }}
             >
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  padding: 16,
-                  borderBottomWidth: 1,
-                  borderBottomColor: colors.border,
-                }}
-              >
-                <TouchableOpacity onPress={() => setShow(false)}>
-                  <Text
-                    style={{
-                      color: colors.subtext,
-                      fontSize: 16,
-                      fontWeight: "600",
-                    }}
-                  >
-                    Cancel
-                  </Text>
-                </TouchableOpacity>
+              <TouchableOpacity onPress={() => setShow(false)}>
                 <Text
                   style={{
-                    color: colors.text,
+                    color: colors.subtext,
+                    fontSize: 16,
+                    fontWeight: "600",
+                  }}
+                >
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              <Text
+                style={{ color: colors.text, fontSize: 16, fontWeight: "700" }}
+              >
+                {label}
+              </Text>
+              <TouchableOpacity onPress={handleDone}>
+                <Text
+                  style={{
+                    color: colors.primary,
                     fontSize: 16,
                     fontWeight: "700",
                   }}
                 >
-                  {label}
+                  Done
                 </Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    onChange(tempDate);
-                    setShow(false);
-                  }}
-                >
-                  <Text
+              </TouchableOpacity>
+            </View>
+
+            {/* Selected display */}
+            <View style={{ alignItems: "center", paddingVertical: 12 }}>
+              <Text
+                style={{
+                  fontSize: 18,
+                  fontWeight: "700",
+                  color: colors.primary,
+                }}
+              >
+                {MONTHS[selectedMonth]} {selectedYear}
+              </Text>
+            </View>
+
+            {/* Pickers */}
+            <View style={{ flexDirection: "row", height: 200 }}>
+              {/* Month */}
+              <ScrollView
+                style={{ flex: 1 }}
+                showsVerticalScrollIndicator={false}
+              >
+                {MONTHS.map((m, i) => (
+                  <TouchableOpacity
+                    key={m}
                     style={{
-                      color: colors.primary,
-                      fontSize: 16,
-                      fontWeight: "700",
+                      paddingVertical: 12,
+                      alignItems: "center",
+                      backgroundColor:
+                        selectedMonth === i
+                          ? colors.primary + "20"
+                          : "transparent",
                     }}
+                    onPress={() => setSelectedMonth(i)}
                   >
-                    Done
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              <DateTimePicker
-                value={tempDate}
-                mode="date"
-                display="inline"
-                maximumDate={maxDate || new Date()}
-                minimumDate={minDate}
-                accentColor={colors.primary}
-                textColor={colors.text}
-                style={{ height: 400, backgroundColor: colors.card }}
-                onChange={(_, date) => {
-                  if (date) setTempDate(date);
+                    <Text
+                      style={{
+                        fontSize: 16,
+                        fontWeight: selectedMonth === i ? "700" : "400",
+                        color:
+                          selectedMonth === i ? colors.primary : colors.text,
+                      }}
+                    >
+                      {m}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+              {/* Divider */}
+              <View
+                style={{
+                  width: 1,
+                  backgroundColor: colors.border,
+                  marginVertical: 8,
                 }}
               />
+              {/* Year */}
+              <ScrollView
+                style={{ flex: 1 }}
+                showsVerticalScrollIndicator={false}
+              >
+                {YEARS.map((y) => (
+                  <TouchableOpacity
+                    key={y}
+                    style={{
+                      paddingVertical: 12,
+                      alignItems: "center",
+                      backgroundColor:
+                        selectedYear === y
+                          ? colors.primary + "20"
+                          : "transparent",
+                    }}
+                    onPress={() => setSelectedYear(y)}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 16,
+                        fontWeight: selectedYear === y ? "700" : "400",
+                        color:
+                          selectedYear === y ? colors.primary : colors.text,
+                      }}
+                    >
+                      {y}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
             </View>
           </View>
-        </Modal>
-      ) : (
-        show && (
-          <DateTimePicker
-            value={tempDate}
-            mode="date"
-            display="default"
-            maximumDate={maxDate || new Date()}
-            minimumDate={minDate}
-            onChange={(_, date) => {
-              setShow(false);
-              if (date) onChange(date);
-            }}
-          />
-        )
-      )}
+        </View>
+      </Modal>
     </View>
   );
 });
