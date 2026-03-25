@@ -365,7 +365,7 @@ export default function ProfileScreen() {
             style={[styles.menuItem, { backgroundColor: colors.card }]}
             onPress={() =>
               Linking.openURL(
-                "https://moses225.github.io/Access-care/docs/terms.html",
+                "https://moses225.github.io/Access-care/terms.html",
               )
             }
           >
