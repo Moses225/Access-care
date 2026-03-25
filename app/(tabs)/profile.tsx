@@ -363,6 +363,27 @@ export default function ProfileScreen() {
 
           <TouchableOpacity
             style={[styles.menuItem, { backgroundColor: colors.card }]}
+            onPress={() =>
+              Linking.openURL(
+                "https://moses225.github.io/Access-care/docs/terms.html",
+              )
+            }
+          >
+            <View style={styles.menuLeft}>
+              <Text style={styles.menuIcon}>📋</Text>
+              <View>
+                <Text style={[styles.menuTitle, { color: colors.text }]}>
+                  Terms of Service
+                </Text>
+                <Text style={[styles.menuSubtitle, { color: colors.subtext }]}>
+                  Rules and agreements
+                </Text>
+              </View>
+            </View>
+            <Text style={[styles.chevron, { color: colors.subtext }]}>›</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.menuItem, { backgroundColor: colors.card }]}
             onPress={() => router.push("/profile/about")}
           >
             <View style={styles.menuLeft}>
