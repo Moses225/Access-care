@@ -1,691 +1,840 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<meta name="description" content="Morava connects Oklahoma SoonerCare and Medicaid patients with quality healthcare providers. Free, fast, and easy."/>
-<title>Morava — Your Path to Accessible Care</title>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,300&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --teal:#00BCD4;--teal-dark:#00838F;--teal-mid:#00ACC1;
-  --blue:#1565C0;--blue-light:#1976D2;
-  --ink:#0A1628;--muted:#64748B;--bg:#F8FAFC;
-  --white:#FFFFFF;--border:#E2E8F0;
-  --glass:rgba(255,255,255,0.07);--glass-border:rgba(255,255,255,0.12);
-}
-html{scroll-behavior:smooth}
-body{font-family:'DM Sans',sans-serif;color:var(--ink);background:var(--white);overflow-x:hidden}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Morava — Find a Doctor in Oklahoma | SoonerCare & Medicaid Providers</title>
+  <meta name="description" content="Find Oklahoma doctors who accept SoonerCare, Medicaid, and most insurance. Search 199+ verified providers in Oklahoma City, Tulsa and beyond. Book appointments free with Morava." />
+  <meta name="keywords" content="SoonerCare doctor, Oklahoma Medicaid provider, find doctor Oklahoma City, OB/GYN Oklahoma, pediatrician OKC, mental health provider Oklahoma, family medicine Oklahoma, uninsured doctor Oklahoma, Morava healthcare" />
+  <meta name="author" content="Morava Care LLC" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://moravacare.com" />
 
-/* ─── Scroll animations ─────────────────────────────────────────── */
-.reveal{opacity:0;transform:translateY(32px);transition:opacity 0.7s ease,transform 0.7s ease}
-.reveal.visible{opacity:1;transform:translateY(0)}
-.reveal-left{opacity:0;transform:translateX(-32px);transition:opacity 0.7s ease,transform 0.7s ease}
-.reveal-left.visible{opacity:1;transform:translateX(0)}
-.reveal-right{opacity:0;transform:translateX(32px);transition:opacity 0.7s ease,transform 0.7s ease}
-.reveal-right.visible{opacity:1;transform:translateX(0)}
-.d1{transition-delay:0.1s}.d2{transition-delay:0.2s}.d3{transition-delay:0.3s}
-.d4{transition-delay:0.4s}.d5{transition-delay:0.5s}
+  <!-- Open Graph -->
+  <meta property="og:title" content="Morava — Find a Doctor in Oklahoma" />
+  <meta property="og:description" content="Search 199+ Oklahoma providers who accept SoonerCare, Medicaid, and most insurance. Free for patients." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://moravacare.com" />
+  <meta property="og:site_name" content="Morava Care" />
 
-/* ─── Keyframes ─────────────────────────────────────────────────── */
-@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
-@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.8)}}
-@keyframes gradient-x{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
-@keyframes shimmer{0%{left:-100%}100%{left:200%}}
-@keyframes ripple-out{0%{transform:scale(0.8);opacity:0.6}100%{transform:scale(2.4);opacity:0}}
-@keyframes spin-slow{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-@keyframes counter{from{opacity:0}to{opacity:1}}
-@keyframes scanline{0%{top:-100%}100%{top:200%}}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
-@keyframes slide-marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Morava — Find a Doctor in Oklahoma" />
+  <meta name="twitter:description" content="Search 199+ Oklahoma providers who accept SoonerCare, Medicaid, and most insurance. Free for patients." />
 
-/* ─── Nav ───────────────────────────────────────────────────────── */
-nav{
-  position:fixed;top:0;left:0;right:0;z-index:200;
-  height:66px;padding:0 40px;
-  display:flex;align-items:center;justify-content:space-between;
-  background:rgba(255,255,255,0.88);backdrop-filter:blur(20px) saturate(1.8);
-  border-bottom:1px solid rgba(0,188,212,0.1);
-  transition:all 0.3s;
-}
-nav.scrolled{background:rgba(255,255,255,0.96);box-shadow:0 4px 24px rgba(0,0,0,0.06)}
-.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
-.nav-mark{
-  width:38px;height:38px;border-radius:11px;
-  background:linear-gradient(135deg,var(--teal),var(--blue));
-  display:flex;align-items:center;justify-content:center;
-  box-shadow:0 4px 14px rgba(0,188,212,0.4);
-  position:relative;overflow:hidden;
-}
-.nav-mark::after{
-  content:'';position:absolute;
-  top:0;left:-100%;width:60%;height:100%;
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.3),transparent);
-  animation:shimmer 3s infinite;
-}
-.nav-mark svg{width:22px;height:22px;position:relative;z-index:1}
-.nav-name{font-family:'Fraunces',serif;font-size:1.35rem;color:var(--ink);letter-spacing:-0.01em}
-.nav-links{display:flex;align-items:center;gap:4px}
-.nav-link{text-decoration:none;color:var(--muted);font-size:.875rem;font-weight:500;padding:7px 14px;border-radius:8px;transition:all 0.2s}
-.nav-link:hover{color:var(--ink);background:#F1F5F9}
-.nav-btn{
-  background:linear-gradient(135deg,var(--teal),var(--teal-dark));
-  color:#fff;font-size:.875rem;font-weight:600;
-  padding:9px 22px;border-radius:50px;text-decoration:none;
-  box-shadow:0 4px 14px rgba(0,188,212,0.35);
-  transition:all 0.25s;position:relative;overflow:hidden;
-}
-.nav-btn::after{content:'';position:absolute;top:0;left:-100%;width:60%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.25),transparent);animation:shimmer 2.5s infinite}
-.nav-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,188,212,0.5)}
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "MedicalOrganization",
+    "name": "Morava Care",
+    "url": "https://moravacare.com",
+    "description": "Free healthcare provider discovery and appointment booking platform for Oklahoma patients on SoonerCare, Medicaid, and most insurance plans.",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "14556 N Pennsylvania Ave Building B Apt 305",
+      "addressLocality": "Oklahoma City",
+      "addressRegion": "OK",
+      "postalCode": "73134",
+      "addressCountry": "US"
+    },
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "telephone": "+14328030136",
+      "email": "support@moravacare.com",
+      "contactType": "customer support"
+    },
+    "areaServed": {
+      "@type": "State",
+      "name": "Oklahoma"
+    }
+  }
+  </script>
 
-/* ─── Hero ──────────────────────────────────────────────────────── */
-.hero{
-  min-height:100vh;display:flex;align-items:center;
-  padding:100px 40px 80px;
-  background:#0A1628;
-  position:relative;overflow:hidden;
-}
-/* animated mesh gradient */
-.hero-mesh{
-  position:absolute;inset:0;
-  background:
-    radial-gradient(ellipse 80% 50% at 20% 40%,rgba(0,188,212,0.18) 0%,transparent 60%),
-    radial-gradient(ellipse 60% 40% at 80% 60%,rgba(21,101,192,0.2) 0%,transparent 60%),
-    radial-gradient(ellipse 40% 60% at 50% 90%,rgba(0,131,143,0.12) 0%,transparent 60%);
-  animation:gradient-x 12s ease infinite;
-  background-size:300% 300%;
-}
-/* grid texture */
-.hero-grid{
-  position:absolute;inset:0;
-  background-image:
-    linear-gradient(rgba(0,188,212,0.05) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(0,188,212,0.05) 1px,transparent 1px);
-  background-size:48px 48px;
-}
-/* scan line */
-.hero-scan{
-  position:absolute;left:0;right:0;height:2px;
-  background:linear-gradient(90deg,transparent,rgba(0,188,212,0.6),transparent);
-  animation:scanline 8s linear infinite;
-  pointer-events:none;
-}
-.hero-inner{max-width:1200px;margin:0 auto;width:100%;display:grid;grid-template-columns:1.1fr 0.9fr;gap:80px;align-items:center;position:relative;z-index:1}
-.hero-tag{
-  display:inline-flex;align-items:center;gap:8px;
-  background:rgba(0,188,212,0.12);border:1px solid rgba(0,188,212,0.25);
-  color:var(--teal);font-size:.75rem;font-weight:700;
-  padding:6px 14px;border-radius:50px;letter-spacing:0.08em;text-transform:uppercase;
-  margin-bottom:28px;
-}
-.hero-tag .dot{width:7px;height:7px;background:var(--teal);border-radius:50%;animation:pulse-dot 2s infinite}
-.hero h1{
-  font-family:'Fraunces',serif;font-size:clamp(3rem,5.5vw,5rem);
-  font-weight:700;line-height:1.05;letter-spacing:-0.025em;
-  color:#fff;margin-bottom:28px;
-}
-.hero h1 em{font-style:italic;font-weight:300;color:var(--teal);display:block}
-.hero-sub{font-size:1.1rem;color:rgba(255,255,255,0.55);line-height:1.8;margin-bottom:44px;max-width:500px}
-.hero-actions{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:48px}
-.btn-hero{
-  display:inline-flex;align-items:center;gap:10px;
-  background:linear-gradient(135deg,var(--teal),var(--blue));
-  color:#fff;font-weight:700;font-size:1rem;
-  padding:16px 32px;border-radius:50px;text-decoration:none;
-  box-shadow:0 8px 32px rgba(0,188,212,0.4);
-  transition:all 0.3s;position:relative;overflow:hidden;
-}
-.btn-hero::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--blue),var(--teal));opacity:0;transition:opacity 0.3s}
-.btn-hero:hover{transform:translateY(-3px);box-shadow:0 16px 40px rgba(0,188,212,0.5)}
-.btn-hero:hover::before{opacity:1}
-.btn-hero span{position:relative;z-index:1}
-.btn-ghost{
-  display:inline-flex;align-items:center;gap:10px;
-  background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.8);
-  font-weight:600;font-size:1rem;
-  padding:16px 32px;border-radius:50px;text-decoration:none;
-  border:1px solid rgba(255,255,255,0.15);
-  transition:all 0.3s;
-  backdrop-filter:blur(8px);
-}
-.btn-ghost:hover{background:rgba(255,255,255,0.12);border-color:rgba(255,255,255,0.3);transform:translateY(-2px)}
-.hero-trust{display:flex;align-items:center;gap:20px}
-.trust-item{display:flex;align-items:center;gap:8px;color:rgba(255,255,255,0.4);font-size:.82rem}
-.trust-dot{width:4px;height:4px;background:rgba(255,255,255,0.2);border-radius:50%}
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-/* phone mockup */
-.phone-wrap{position:relative;display:flex;justify-content:center}
-.phone-rings{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)}
-.ring{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);border-radius:50%;border:1px solid rgba(0,188,212,0.15);animation:ripple-out 3s ease-out infinite}
-.ring:nth-child(1){width:320px;height:320px;animation-delay:0s}
-.ring:nth-child(2){width:440px;height:440px;animation-delay:1s}
-.ring:nth-child(3){width:560px;height:560px;animation-delay:2s}
-.phone{
-  width:260px;border-radius:44px;
-  background:linear-gradient(160deg,#1a2a40,#0D1B2A);
-  padding:14px;
-  box-shadow:0 40px 100px rgba(0,0,0,0.6),0 0 0 1px rgba(255,255,255,0.06),inset 0 1px 0 rgba(255,255,255,0.08);
-  animation:float 7s ease-in-out infinite;
-  position:relative;z-index:2;
-}
-.phone-notch{width:80px;height:26px;background:#0D1B2A;border-radius:0 0 16px 16px;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;gap:6px}
-.phone-notch .cam{width:8px;height:8px;background:#1a2a40;border-radius:50%;border:1.5px solid rgba(0,188,212,0.3)}
-.phone-screen{background:#0D1B2A;border-radius:32px;overflow:hidden;padding:18px 14px;min-height:460px}
-.p-status{display:flex;justify-content:space-between;margin-bottom:18px}
-.p-status span{font-size:9px;color:rgba(255,255,255,0.3);font-weight:600}
-.p-header{margin-bottom:16px}
-.p-header h3{font-family:'Fraunces',serif;color:#fff;font-size:1.15rem;font-weight:700;margin-bottom:4px}
-.p-header p{color:rgba(0,188,212,0.7);font-size:.7rem;font-weight:600;letter-spacing:0.05em}
-.p-search{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:9px 12px;display:flex;align-items:center;gap:8px;margin-bottom:14px}
-.p-search span{color:rgba(255,255,255,0.2);font-size:.75rem}
-.pcard{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:12px;margin-bottom:9px;transition:all 0.3s}
-.pcard:hover{background:rgba(0,188,212,0.06);border-color:rgba(0,188,212,0.2)}
-.pcard-row{display:flex;align-items:center;gap:10px}
-.pavatar{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
-.pinfo{flex:1}
-.pname{color:#fff;font-size:.8rem;font-weight:600;margin-bottom:2px}
-.pspec{color:rgba(255,255,255,0.35);font-size:.67rem}
-.pbadge{font-size:.62rem;font-weight:700;padding:3px 8px;border-radius:50px;white-space:nowrap}
-.bg-green{background:rgba(76,175,80,0.15);color:#81C784}
-.bg-teal{background:rgba(0,188,212,0.15);color:#4DD0E1}
-.bg-amber{background:rgba(245,158,11,0.15);color:#FCD34D}
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --teal:#14B8A6; --teal-dark:#0d9488; --teal-light:#ccfbf1; --teal-xlight:#f0fdfb;
+      --text:#0f172a; --text-2:#475569; --text-3:#94a3b8;
+      --border:#e2e8f0; --white:#fff; --bg:#f8fafc;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--white); color:var(--text); overflow-x:hidden; line-height:1.6; }
 
-/* ─── Marquee ───────────────────────────────────────────────────── */
-.marquee-wrap{background:#0A1628;border-top:1px solid rgba(0,188,212,0.1);border-bottom:1px solid rgba(0,188,212,0.1);overflow:hidden;padding:14px 0}
-.marquee-track{display:flex;gap:0;animation:slide-marquee 25s linear infinite}
-.marquee-track:hover{animation-play-state:paused}
-.marquee-item{display:flex;align-items:center;gap:10px;padding:0 32px;white-space:nowrap;color:rgba(255,255,255,0.3);font-size:.85rem;font-weight:500}
-.marquee-item .mi{color:var(--teal);font-size:1rem}
+    /* NAV */
+    nav { position:sticky; top:0; z-index:200; background:rgba(255,255,255,.96); backdrop-filter:blur(12px); border-bottom:1px solid var(--border); padding:0 24px; }
+    .nav-inner { max-width:1200px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; height:64px; }
+    .logo { display:flex; align-items:center; gap:10px; font-family:'Nunito',sans-serif; font-weight:900; font-size:22px; color:var(--teal); text-decoration:none; }
+    .logo-mark { width:36px; height:36px; background:var(--teal); border-radius:10px; display:flex; align-items:center; justify-content:center; }
+    .logo-mark svg { width:20px; height:20px; }
+    .nav-links { display:flex; gap:24px; list-style:none; }
+    .nav-links a { color:var(--text-2); text-decoration:none; font-weight:500; font-size:14px; transition:color .2s; }
+    .nav-links a:hover { color:var(--teal); }
+    .nav-cta { background:var(--teal); color:#fff; padding:9px 20px; border-radius:50px; font-weight:700; font-size:14px; text-decoration:none; transition:all .2s; }
+    .nav-cta:hover { background:var(--teal-dark); transform:translateY(-1px); }
 
-/* ─── Stats ─────────────────────────────────────────────────────── */
-.stats{background:var(--white);padding:80px 40px;border-bottom:1px solid var(--border)}
-.stats-inner{max-width:1000px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:0}
-.stat-item{text-align:center;padding:40px 24px;position:relative}
-.stat-item::after{content:'';position:absolute;right:0;top:20%;bottom:20%;width:1px;background:var(--border)}
-.stat-item:last-child::after{display:none}
-.stat-num{
-  font-family:'Fraunces',serif;font-size:3.5rem;font-weight:700;
-  background:linear-gradient(135deg,var(--teal),var(--blue));
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-  background-clip:text;margin-bottom:8px;line-height:1;
-}
-.stat-label{color:var(--muted);font-size:.9rem;line-height:1.5}
+    /* HERO */
+    .hero { background:linear-gradient(150deg,#f0fdfb 0%,#eff6ff 60%,#fff 100%); padding:72px 24px 52px; text-align:center; }
+    .hero-badge { display:inline-flex; align-items:center; gap:8px; background:var(--teal-light); color:var(--teal-dark); font-weight:700; font-size:13px; padding:6px 16px; border-radius:50px; margin-bottom:22px; }
+    .pulse { width:8px; height:8px; background:var(--teal); border-radius:50%; animation:pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.8)} }
+    .hero h1 { font-family:'Nunito',sans-serif; font-weight:900; font-size:clamp(32px,5vw,56px); line-height:1.1; max-width:720px; margin:0 auto 16px; }
+    .hero h1 span { color:var(--teal); }
+    .hero p { font-size:17px; color:var(--text-2); max-width:500px; margin:0 auto 32px; }
 
-/* ─── Section base ──────────────────────────────────────────────── */
-.sec{padding:100px 40px}
-.sec-inner{max-width:1120px;margin:0 auto}
-.sec-tag{
-  display:inline-flex;align-items:center;gap:6px;
-  font-size:.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;
-  padding:5px 14px;border-radius:50px;margin-bottom:20px;
-}
-.tag-teal{background:rgba(0,188,212,0.1);color:var(--teal-dark);border:1px solid rgba(0,188,212,0.2)}
-.tag-blue{background:rgba(21,101,192,0.08);color:var(--blue);border:1px solid rgba(21,101,192,0.15)}
-.sec h2{font-family:'Fraunces',serif;font-size:clamp(2.2rem,3.5vw,3.2rem);color:var(--ink);line-height:1.15;letter-spacing:-0.02em;margin-bottom:16px}
-.sec-sub{font-size:1.05rem;color:var(--muted);line-height:1.8;max-width:580px;margin-bottom:56px}
+    /* SEARCH BAR */
+    .search-wrap { max-width:680px; margin:0 auto 16px; }
+    .search-bar { background:#fff; border:2px solid var(--border); border-radius:60px; display:flex; align-items:center; padding:5px 5px 5px 18px; box-shadow:0 4px 28px rgba(20,184,166,.12); transition:border-color .2s,box-shadow .2s; gap:6px; }
+    .search-bar:focus-within { border-color:var(--teal); box-shadow:0 4px 36px rgba(20,184,166,.22); }
+    #searchInput { flex:1; border:none; outline:none; font-size:15px; font-family:inherit; color:var(--text); background:transparent; min-width:0; }
+    #searchInput::placeholder { color:var(--text-3); }
+    .search-btn { background:var(--teal); color:#fff; border:none; border-radius:50px; padding:11px 24px; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer; transition:background .2s; white-space:nowrap; flex-shrink:0; }
+    .search-btn:hover { background:var(--teal-dark); }
 
-/* ─── How it works ──────────────────────────────────────────────── */
-.how{background:var(--bg)}
-.steps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--border);border-radius:20px;overflow:hidden}
-.step{background:var(--white);padding:40px 32px;position:relative;transition:all 0.3s}
-.step:hover{background:#FAFEFF;z-index:1;box-shadow:0 20px 60px rgba(0,188,212,0.1)}
-.step-n{font-family:'Fraunces',serif;font-size:5rem;font-weight:700;line-height:1;color:rgba(0,188,212,0.08);margin-bottom:-8px}
-.step-icon{width:54px;height:54px;border-radius:14px;background:linear-gradient(135deg,rgba(0,188,212,0.1),rgba(21,101,192,0.08));border:1px solid rgba(0,188,212,0.15);display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:18px;transition:all 0.3s}
-.step:hover .step-icon{background:linear-gradient(135deg,rgba(0,188,212,0.15),rgba(21,101,192,0.12));transform:scale(1.05)}
-.step h3{font-family:'Fraunces',serif;font-size:1.3rem;color:var(--ink);margin-bottom:10px}
-.step p{font-size:.9rem;color:var(--muted);line-height:1.75}
+    /* FILTER CHIPS */
+    .filters-wrap { max-width:900px; margin:0 auto; overflow-x:auto; padding-bottom:4px; }
+    .filters { display:flex; gap:8px; padding:4px 0; width:max-content; margin:0 auto; }
+    .chip { background:#fff; border:1.5px solid var(--border); color:var(--text-2); font-size:13px; font-weight:600; padding:7px 16px; border-radius:50px; cursor:pointer; transition:all .2s; white-space:nowrap; font-family:inherit; }
+    .chip:hover, .chip.active { border-color:var(--teal); color:var(--teal); background:var(--teal-xlight); }
 
-/* ─── For patients ──────────────────────────────────────────────── */
-.patients-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center}
-.feat-list{display:flex;flex-direction:column;gap:16px;margin-top:32px}
-.feat{display:flex;align-items:flex-start;gap:16px;padding:18px;border-radius:14px;transition:all 0.3s;cursor:default}
-.feat:hover{background:#F0FAFB}
-.feat-ico{width:46px;height:46px;border-radius:12px;border:1px solid var(--border);background:var(--white);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,0.04);transition:all 0.3s}
-.feat:hover .feat-ico{border-color:rgba(0,188,212,0.3);box-shadow:0 4px 16px rgba(0,188,212,0.15)}
-.feat h4{font-size:.95rem;font-weight:700;color:var(--ink);margin-bottom:4px}
-.feat p{font-size:.85rem;color:var(--muted);line-height:1.6}
-.coverage{background:var(--white);border-radius:24px;border:1px solid var(--border);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.06)}
-.cov-header{background:linear-gradient(135deg,#0A1628,#1a2a40);padding:24px 28px}
-.cov-header h3{font-family:'Fraunces',serif;color:#fff;font-size:1.2rem;margin-bottom:4px}
-.cov-header p{color:rgba(255,255,255,0.4);font-size:.8rem}
-.cov-list{padding:8px 0}
-.cov-item{display:flex;align-items:center;gap:14px;padding:16px 28px;transition:all 0.2s}
-.cov-item:hover{background:#F8FAFC}
-.cov-item:not(:last-child){border-bottom:1px solid var(--border)}
-.cov-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
-.cov-name{font-weight:600;font-size:.9rem;color:var(--ink);margin-bottom:2px}
-.cov-sub{font-size:.75rem;color:var(--muted)}
-.cov-check{margin-left:auto;width:24px;height:24px;background:rgba(0,188,212,0.1);border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--teal);font-size:.75rem;font-weight:700}
+    /* TRUST BAR */
+    .trust-bar { background:#fff; border-top:1px solid var(--border); border-bottom:1px solid var(--border); padding:14px 24px; }
+    .trust-inner { max-width:1200px; margin:0 auto; display:flex; align-items:center; justify-content:center; gap:32px; flex-wrap:wrap; }
+    .trust-item { display:flex; align-items:center; gap:7px; font-size:13px; font-weight:600; color:var(--text-2); }
 
-/* ─── For providers ─────────────────────────────────────────────── */
-.providers-sec{background:var(--ink);position:relative;overflow:hidden}
-.providers-sec::before{content:'';position:absolute;top:-300px;right:-200px;width:700px;height:700px;border-radius:50%;background:radial-gradient(circle,rgba(0,188,212,0.07) 0%,transparent 70%);pointer-events:none}
-.providers-sec::after{content:'';position:absolute;bottom:-200px;left:-100px;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(21,101,192,0.08) 0%,transparent 70%);pointer-events:none}
-.providers-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;position:relative;z-index:1}
-.providers-sec .sec h2{color:#fff}
-.providers-sec .sec-sub{color:rgba(255,255,255,0.45)}
-.perk-list{display:flex;flex-direction:column;gap:14px;margin-top:28px}
-.perk{display:flex;align-items:center;gap:12px;color:rgba(255,255,255,0.65);font-size:.9rem;padding:4px 0}
-.perk-check{width:24px;height:24px;background:rgba(0,188,212,0.12);border:1px solid rgba(0,188,212,0.2);border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--teal);font-size:.75rem;flex-shrink:0;transition:all 0.3s}
-.perk:hover .perk-check{background:rgba(0,188,212,0.2);transform:scale(1.1)}
-.dash-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:22px;padding:28px;backdrop-filter:blur(10px)}
-.dash-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
-.dash-top h4{color:#fff;font-weight:700;font-size:.95rem}
-.dash-live{display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--teal);font-weight:600}
-.dash-live .live-dot{width:7px;height:7px;background:var(--teal);border-radius:50%;animation:pulse-dot 1.5s infinite}
-.acard{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.05);border-radius:14px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;transition:all 0.3s}
-.acard:hover{background:rgba(0,188,212,0.05);border-color:rgba(0,188,212,0.15)}
-.acard-name{color:#fff;font-size:.85rem;font-weight:600;margin-bottom:3px}
-.acard-detail{color:rgba(255,255,255,0.3);font-size:.72rem}
-.astatus{font-size:.68rem;font-weight:700;padding:4px 10px;border-radius:50px}
-.s-pending{background:rgba(245,158,11,0.12);color:#FCD34D}
-.s-confirmed{background:rgba(76,175,80,0.12);color:#81C784}
-.s-meetgreet{background:rgba(0,188,212,0.12);color:#4DD0E1}
-.dash-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
-.db{padding:11px;border-radius:11px;text-align:center;font-size:.82rem;font-weight:700;cursor:pointer;transition:all 0.2s}
-.db-confirm{background:linear-gradient(135deg,var(--teal),var(--teal-dark));color:#fff;box-shadow:0 4px 12px rgba(0,188,212,0.3)}
-.db-confirm:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(0,188,212,0.45)}
-.db-view{background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.45)}
-.db-view:hover{background:rgba(255,255,255,0.08)}
+    /* MAIN LAYOUT */
+    .main-layout { display:grid; grid-template-columns:1fr 420px; max-width:1200px; margin:0 auto; gap:0; min-height:600px; }
+    .results-panel { padding:28px 24px; background:var(--bg); overflow-y:auto; }
+    .map-panel { position:sticky; top:64px; height:calc(100vh - 64px); }
+    #map { width:100%; height:100%; }
 
-/* ─── About ─────────────────────────────────────────────────────── */
-.about{background:var(--bg)}
-.about-inner{max-width:840px;margin:0 auto;text-align:center}
-.about h2{font-family:'Fraunces',serif;font-size:clamp(2rem,3.5vw,2.8rem);color:var(--ink);margin-bottom:24px;line-height:1.2;letter-spacing:-0.015em}
-.about p{font-size:1.05rem;color:var(--muted);line-height:1.85;margin-bottom:16px}
-.mission-card{
-  background:var(--white);border-radius:22px;border:1px solid var(--border);
-  padding:44px;margin-top:52px;text-align:left;
-  box-shadow:0 8px 40px rgba(0,0,0,0.05);
-  position:relative;overflow:hidden;
-}
-.mission-card::before{
-  content:'';position:absolute;left:0;top:0;bottom:0;width:4px;
-  background:linear-gradient(180deg,var(--teal),var(--blue));
-}
-.mission-label{font-size:.72rem;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:14px}
-.mission-card blockquote{font-family:'Fraunces',serif;font-size:1.4rem;font-style:italic;font-weight:300;color:var(--ink);line-height:1.65}
-.mission-sig{margin-top:20px;display:flex;align-items:center;gap:12px}
-.sig-avatar{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--teal),var(--blue));display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Fraunces',serif;font-size:1.1rem}
-.sig-name{font-size:.9rem;font-weight:700;color:var(--ink)}
-.sig-title{font-size:.78rem;color:var(--muted)}
+    /* RESULTS */
+    .results-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; flex-wrap:wrap; gap:10px; }
+    .results-count { font-size:14px; color:var(--text-2); font-weight:600; }
+    .results-count strong { color:var(--teal); }
+    .view-toggle { display:flex; gap:6px; }
+    .vtbtn { background:#fff; border:1.5px solid var(--border); color:var(--text-2); font-size:12px; font-weight:600; padding:5px 14px; border-radius:50px; cursor:pointer; transition:all .2s; font-family:inherit; }
+    .vtbtn.active { background:var(--teal); border-color:var(--teal); color:#fff; }
 
-/* ─── CTA ───────────────────────────────────────────────────────── */
-.cta-sec{
-  padding:110px 40px;
-  background:linear-gradient(135deg,#004D56 0%,#006064 30%,#00838F 60%,#1565C0 100%);
-  background-size:300% 300%;
-  animation:gradient-x 10s ease infinite;
-  position:relative;overflow:hidden;text-align:center;
-}
-.cta-sec::before{content:'';position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,0.04) 1px,transparent 1px);background-size:28px 28px}
-.cta-sec::after{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none'%3E%3Cg fill='%23ffffff' fill-opacity='0.025'%3E%3Cpath d='M50 50v-10h-4v10h-10v4h10v10h4v-10h10v-4h-10zM10 10v-10h-4v10h-10v4h10v10h4v-10h10v-4h-10z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");pointer-events:none}
-.cta-inner{max-width:700px;margin:0 auto;position:relative;z-index:1}
-.cta-sec h2{font-family:'Fraunces',serif;font-size:clamp(2.4rem,4vw,3.6rem);color:#fff;margin-bottom:18px;line-height:1.1;letter-spacing:-0.02em}
-.cta-sec p{color:rgba(255,255,255,0.7);font-size:1.1rem;margin-bottom:44px;line-height:1.75}
-.cta-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
-.btn-cta-white{
-  display:inline-flex;align-items:center;gap:10px;
-  background:#fff;color:var(--teal-dark);font-weight:700;font-size:1rem;
-  padding:16px 36px;border-radius:50px;text-decoration:none;
-  box-shadow:0 8px 28px rgba(0,0,0,0.2);transition:all 0.3s;
-}
-.btn-cta-white:hover{transform:translateY(-3px);box-shadow:0 16px 40px rgba(0,0,0,0.3)}
-.btn-cta-outline{
-  display:inline-flex;align-items:center;gap:10px;
-  background:transparent;color:#fff;font-weight:600;font-size:1rem;
-  padding:16px 36px;border-radius:50px;text-decoration:none;
-  border:2px solid rgba(255,255,255,0.35);transition:all 0.3s;
-  backdrop-filter:blur(8px);
-}
-.btn-cta-outline:hover{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.65)}
-.cta-note{margin-top:28px;color:rgba(255,255,255,0.4);font-size:.82rem}
+    .provider-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px; }
+    .provider-card { background:#fff; border:1.5px solid var(--border); border-radius:14px; padding:18px; transition:all .2s; cursor:pointer; }
+    .provider-card:hover, .provider-card.highlighted { border-color:var(--teal); box-shadow:0 6px 24px rgba(20,184,166,.12); transform:translateY(-2px); }
+    .pc-top { display:flex; align-items:flex-start; gap:12px; margin-bottom:11px; }
+    .pc-avatar { width:44px; height:44px; border-radius:12px; background:var(--teal-light); display:flex; align-items:center; justify-content:center; font-size:19px; flex-shrink:0; }
+    .pc-name { font-family:'Nunito',sans-serif; font-weight:800; font-size:14px; color:var(--text); margin-bottom:2px; line-height:1.3; }
+    .pc-spec { font-size:11px; color:var(--teal-dark); font-weight:700; text-transform:uppercase; letter-spacing:.3px; }
+    .pc-addr { font-size:12px; color:var(--text-3); margin-bottom:10px; line-height:1.5; }
+    .pc-tags { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:10px; }
+    .ptag { font-size:10px; font-weight:700; padding:2px 9px; border-radius:50px; }
+    .ptag-teal { background:var(--teal-light); color:var(--teal-dark); }
+    .ptag-blue { background:#dbeafe; color:#1e40af; }
+    .ptag-amber { background:#fef3c7; color:#92400e; }
+    .pc-phone { font-size:12px; font-weight:600; color:var(--text-2); margin-bottom:10px; }
+    .pc-phone a { color:var(--teal); text-decoration:none; }
+    .pc-phone a:hover { text-decoration:underline; }
+    .pc-actions { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+    .btn-book { background:var(--teal); color:#fff; border:none; border-radius:50px; padding:9px; font-size:12px; font-weight:700; font-family:inherit; cursor:pointer; transition:background .2s; }
+    .btn-book:hover { background:var(--teal-dark); }
+    .btn-map { background:#fff; color:var(--teal); border:1.5px solid var(--teal); border-radius:50px; padding:9px; font-size:12px; font-weight:700; font-family:inherit; cursor:pointer; transition:all .2s; }
+    .btn-map:hover { background:var(--teal-xlight); }
 
-/* ─── Footer ────────────────────────────────────────────────────── */
-footer{background:#060E1B;padding:56px 40px;color:rgba(255,255,255,0.35);font-size:.85rem}
-.footer-inner{max-width:1120px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px}
-.footer-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
-.footer-mark{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--teal),var(--blue));display:flex;align-items:center;justify-content:center}
-.footer-mark svg{width:16px;height:16px}
-.footer-name{font-family:'Fraunces',serif;color:rgba(255,255,255,0.8);font-size:1.1rem}
-.footer-links{display:flex;gap:28px}
-.footer-links a{color:rgba(255,255,255,0.3);text-decoration:none;transition:color 0.2s}
-.footer-links a:hover{color:rgba(255,255,255,0.8)}
+    /* PAGINATION */
+    .pagination { display:flex; justify-content:center; gap:6px; margin-top:28px; flex-wrap:wrap; }
+    .page-btn { background:#fff; border:1.5px solid var(--border); color:var(--text-2); font-size:13px; font-weight:600; padding:7px 14px; border-radius:50px; cursor:pointer; transition:all .2s; font-family:inherit; }
+    .page-btn:hover:not(:disabled) { border-color:var(--teal); color:var(--teal); }
+    .page-btn.active { background:var(--teal); border-color:var(--teal); color:#fff; }
+    .page-btn:disabled { opacity:.4; cursor:not-allowed; }
 
-/* ─── Responsive ────────────────────────────────────────────────── */
-@media(max-width:900px){
-  nav{padding:0 20px}
-  .nav-links .nav-link{display:none}
-  .hero{padding:90px 24px 60px}
-  .hero-inner{grid-template-columns:1fr;gap:56px}
-  .phone-wrap{order:-1}
-  .phone{width:220px}
-  .stats-inner{grid-template-columns:1fr;gap:0}
-  .stat-item::after{right:auto;top:auto;left:20%;right:20%;bottom:0;width:auto;height:1px}
-  .steps-grid{grid-template-columns:1fr;gap:2px}
-  .patients-grid,.providers-grid{grid-template-columns:1fr;gap:48px}
-  .sec{padding:72px 24px}
-  .cta-sec{padding:80px 24px}
-  .about{padding:72px 24px}
-  .footer-inner{flex-direction:column;text-align:center}
-  .footer-links{justify-content:center}
-}
-</style>
+    /* STATE */
+    .state-wrap { text-align:center; padding:60px 24px; }
+    .spinner { width:36px; height:36px; border:3px solid var(--teal-light); border-top-color:var(--teal); border-radius:50%; animation:spin .8s linear infinite; margin:0 auto 14px; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* VALUE SECTION */
+    .value-sec { padding:72px 24px; background:#fff; }
+    .sec-inner { max-width:1200px; margin:0 auto; text-align:center; }
+    .sec-label { display:inline-block; background:var(--teal-light); color:var(--teal-dark); font-weight:800; font-size:11px; letter-spacing:1px; text-transform:uppercase; padding:5px 14px; border-radius:50px; margin-bottom:14px; }
+    .sec-title { font-family:'Nunito',sans-serif; font-weight:900; font-size:clamp(26px,4vw,40px); line-height:1.2; margin-bottom:10px; }
+    .value-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:16px; margin-top:40px; }
+    .vc { background:var(--bg); border:1.5px solid var(--border); border-radius:14px; padding:24px; display:flex; gap:14px; text-align:left; }
+    .vc-icon { width:48px; height:48px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+    .i1{background:#fef3c7}.i2{background:#dbeafe}.i3{background:#f3e8ff}.i4{background:var(--teal-light)}.i5{background:#fce7f3}.i6{background:#dcfce7}
+    .vc h3 { font-family:'Nunito',sans-serif; font-weight:800; font-size:15px; margin-bottom:4px; }
+    .vc p { font-size:13px; color:var(--text-2); line-height:1.6; }
+
+    /* FAQ - SEO */
+    .faq-sec { padding:72px 24px; background:var(--bg); }
+    .faq-grid { max-width:800px; margin:40px auto 0; display:flex; flex-direction:column; gap:12px; }
+    .faq-item { background:#fff; border:1.5px solid var(--border); border-radius:14px; overflow:hidden; }
+    .faq-q { padding:20px 24px; font-weight:700; font-size:15px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; transition:background .2s; }
+    .faq-q:hover { background:var(--teal-xlight); }
+    .faq-q .arrow { transition:transform .3s; font-size:18px; color:var(--teal); }
+    .faq-item.open .faq-q .arrow { transform:rotate(180deg); }
+    .faq-a { max-height:0; overflow:hidden; transition:max-height .3s ease; }
+    .faq-item.open .faq-a { max-height:300px; }
+    .faq-a p { padding:0 24px 20px; font-size:14px; color:var(--text-2); line-height:1.7; }
+
+    /* PROVIDER CTA */
+    .pcta { background:linear-gradient(135deg,var(--teal) 0%,#0ea5e9 100%); padding:72px 24px; text-align:center; color:#fff; }
+    .pcta h2 { font-family:'Nunito',sans-serif; font-weight:900; font-size:clamp(26px,4vw,40px); margin-bottom:12px; }
+    .pcta p { font-size:16px; opacity:.9; max-width:480px; margin:0 auto 32px; }
+    .btn-white { background:#fff; color:var(--teal); padding:13px 28px; border-radius:50px; font-weight:800; font-size:14px; text-decoration:none; display:inline-block; transition:all .2s; box-shadow:0 4px 18px rgba(0,0,0,.15); margin:5px; }
+    .btn-white:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(0,0,0,.2); }
+    .btn-ghost { background:rgba(255,255,255,.15); color:#fff; border:2px solid rgba(255,255,255,.4); padding:11px 24px; border-radius:50px; font-weight:700; font-size:14px; text-decoration:none; display:inline-block; transition:background .2s; margin:5px; }
+    .btn-ghost:hover { background:rgba(255,255,255,.25); }
+
+    /* FOOTER */
+    footer { background:#0f172a; color:rgba(255,255,255,.5); padding:48px 24px 28px; }
+    .footer-inner { max-width:1200px; margin:0 auto; display:flex; justify-content:space-between; flex-wrap:wrap; gap:28px; margin-bottom:28px; }
+    .footer-brand p { font-size:13px; max-width:220px; line-height:1.7; margin-top:10px; }
+    .footer-col h4 { color:#fff; font-weight:700; font-size:13px; margin-bottom:12px; }
+    .footer-col a { display:block; color:rgba(255,255,255,.5); text-decoration:none; font-size:13px; margin-bottom:9px; transition:color .2s; }
+    .footer-col a:hover { color:var(--teal); }
+    .footer-bottom { max-width:1200px; margin:0 auto; padding-top:20px; border-top:1px solid rgba(255,255,255,.08); display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; font-size:12px; }
+
+    /* MODAL */
+    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:999; align-items:center; justify-content:center; padding:24px; }
+    .modal-overlay.open { display:flex; }
+    .modal { background:#fff; border-radius:20px; padding:32px; max-width:420px; width:100%; text-align:center; }
+    .modal h3 { font-family:'Nunito',sans-serif; font-weight:900; font-size:20px; margin-bottom:8px; }
+    .modal p { font-size:14px; color:var(--text-2); margin-bottom:20px; line-height:1.6; }
+    .modal-close { background:var(--teal); color:#fff; border:none; border-radius:50px; padding:12px 28px; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer; width:100%; }
+
+    /* MAP INFO WINDOW */
+    .gm-info { font-family:'Plus Jakarta Sans',sans-serif; min-width:200px; }
+    .gm-info strong { font-family:'Nunito',sans-serif; font-size:14px; }
+    .gm-info small { display:block; font-size:12px; color:#64748b; margin-top:3px; }
+    .gm-info a { display:block; margin-top:10px; background:#14B8A6; color:#fff; text-align:center; padding:8px; border-radius:50px; font-size:12px; font-weight:700; text-decoration:none; }
+
+    @media(max-width:900px) {
+      .nav-links { display:none; }
+      .main-layout { grid-template-columns:1fr; }
+      .map-panel { display:none; }
+      .map-panel.show-mobile { display:block; height:380px; position:relative; top:0; }
+      .trust-inner { gap:14px; }
+    }
+  </style>
 </head>
 <body>
 
-<!-- Nav -->
-<nav id="navbar">
-  <a href="/" class="nav-logo">
-    <div class="nav-mark">
-      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M3 20 Q7 15 12 10 Q17 5 21 3 L21.5 5 Q18 7 14 12 Q10 17 4.5 21.5 Z" fill="white"/>
-        <circle cx="21" cy="3" r="2.2" fill="white" opacity="0.9"/>
-      </svg>
-    </div>
-    <span class="nav-name">Morava</span>
-  </a>
-  <div class="nav-links">
-    <a href="#how-it-works" class="nav-link">How it works</a>
-    <a href="#for-patients" class="nav-link">For Patients</a>
-    <a href="#for-providers" class="nav-link">For Providers</a>
-    <a href="#about" class="nav-link">About</a>
-    <a href="https://dashboard.moravacare.com" class="nav-btn">Provider Portal →</a>
+<nav>
+  <div class="nav-inner">
+    <a class="logo" href="#">
+      <div class="logo-mark">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 20 Q7 15 12 10 Q17 5 21 3 L21.5 5 Q18 7 14 12 Q10 17 4.5 21.5 Z" fill="white"/><circle cx="21" cy="3" r="2.2" fill="white" opacity=".9"/></svg>
+      </div>
+      Morava
+    </a>
+    <ul class="nav-links">
+      <li><a href="#find">Find Providers</a></li>
+      <li><a href="#why">Why Morava</a></li>
+      <li><a href="#faq">FAQ</a></li>
+      <li><a href="#providers">For Providers</a></li>
+    </ul>
+    <a class="nav-cta" href="#find">Find Care Free →</a>
   </div>
 </nav>
 
-<!-- Hero -->
-<section class="hero">
-  <div class="hero-mesh"></div>
-  <div class="hero-grid"></div>
-  <div class="hero-scan"></div>
-  <div class="hero-inner">
-    <div>
-      <div class="hero-tag reveal"><span class="dot"></span>Now live in Oklahoma</div>
-      <h1 class="reveal d1">Your path to<em>accessible care.</em></h1>
-      <p class="hero-sub reveal d2">Morava connects SoonerCare and Medicaid patients across Oklahoma with quality providers — completely free. Find care near you in seconds.</p>
-      <div class="hero-actions reveal d3">
-        <a href="https://expo.dev/accounts/moses432/projects/accesscare/builds/c88af279-4744-475f-a796-6d17883b5d94" class="btn-hero">
-          <span>📱</span><span>Download the App</span>
-        </a>
-        <a href="https://dashboard.moravacare.com" class="btn-ghost">I'm a Provider →</a>
-      </div>
-      <div class="hero-trust reveal d4">
-        <div class="trust-item">✓ Free for patients</div>
-        <div class="trust-dot"></div>
-        <div class="trust-item">✓ No ads, ever</div>
-        <div class="trust-dot"></div>
-        <div class="trust-item">✓ HIPAA-aligned</div>
-      </div>
+<!-- HERO -->
+<section class="hero" id="find">
+  <div class="hero-badge"><div class="pulse"></div>199+ Oklahoma Providers · Free for Patients</div>
+  <h1>Find Oklahoma doctors who <span>accept your insurance</span></h1>
+  <p>Search SoonerCare, Medicaid, and private insurance providers across Oklahoma — book appointments free in the Morava app.</p>
+
+  <div class="search-wrap">
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder="Search by name, specialty, or city..." autocomplete="off" aria-label="Search providers" />
+      <button class="search-btn" id="searchBtn">🔍 Search</button>
     </div>
-    <div class="phone-wrap reveal-right d2">
-      <div class="phone-rings">
-        <div class="ring"></div>
-        <div class="ring"></div>
-        <div class="ring"></div>
-      </div>
-      <div class="phone">
-        <div class="phone-notch"><div class="cam"></div></div>
-        <div class="phone-screen">
-          <div class="p-status"><span>9:41</span><span>●●●</span></div>
-          <div class="p-header">
-            <h3>Hi, Maria 👋</h3>
-            <p>199+ PROVIDERS IN OKLAHOMA</p>
-          </div>
-          <div class="p-search">
-            <span>🔍</span><span>Search specialty, location...</span>
-          </div>
-          <div class="pcard">
-            <div class="pcard-row">
-              <div class="pavatar" style="background:rgba(0,188,212,0.12)">👨‍⚕️</div>
-              <div class="pinfo">
-                <div class="pname">Dr. Jane Smith</div>
-                <div class="pspec">Family Medicine · 2.1 mi</div>
-              </div>
-              <span class="pbadge bg-green">✓ Accepting</span>
-            </div>
-          </div>
-          <div class="pcard">
-            <div class="pcard-row">
-              <div class="pavatar" style="background:rgba(156,39,176,0.12)">🧠</div>
-              <div class="pinfo">
-                <div class="pname">Dr. Marcus Lee</div>
-                <div class="pspec">Mental Health · Telehealth</div>
-              </div>
-              <span class="pbadge bg-teal">🎉 Free M&G</span>
-            </div>
-          </div>
-          <div class="pcard">
-            <div class="pcard-row">
-              <div class="pavatar" style="background:rgba(233,30,99,0.12)">❤️</div>
-              <div class="pinfo">
-                <div class="pname">Dr. Sarah Okafor</div>
-                <div class="pspec">Cardiology · 4.8 mi</div>
-              </div>
-              <span class="pbadge bg-amber">SoonerCare</span>
-            </div>
-          </div>
-        </div>
-      </div>
+  </div>
+
+  <div class="filters-wrap">
+    <div class="filters" id="filterChips">
+      <button class="chip active" data-specialty="">✨ All Providers</button>
+      <button class="chip" data-specialty="Family Medicine">🫀 Family Medicine</button>
+      <button class="chip" data-specialty="OB/GYN">🤰 OB/GYN</button>
+      <button class="chip" data-specialty="Pediatrician">👶 Pediatrics</button>
+      <button class="chip" data-specialty="Mental Health Provider">🧠 Mental Health</button>
+      <button class="chip" data-specialty="Internal Medicine">🩺 Internal Medicine</button>
+      <button class="chip" data-specialty="Dermatology">💊 Dermatology</button>
+      <button class="chip" data-specialty="General Surgery">✂️ General Surgery</button>
+      <button class="chip" data-specialty="Physical Therapist">🏃 Physical Therapy</button>
+      <button class="chip" data-specialty="Midwife">🤱 Midwife</button>
+      <button class="chip" data-specialty="Dietitian">🥗 Dietitian</button>
+      <button class="chip" data-specialty="Maternal-Fetal Medicine">🔬 Maternal-Fetal</button>
+      <button class="chip" data-specialty="Doula Services">💛 Doula</button>
+      <button class="chip" data-specialty="Home Health Agency">🏠 Home Health</button>
+      <button class="chip" data-specialty="Diagnostic Radiology">🩻 Radiology</button>
     </div>
   </div>
 </section>
 
-<!-- Marquee -->
-<div class="marquee-wrap">
-  <div class="marquee-track">
-    <div class="marquee-item"><span class="mi">💊</span> SoonerCare Accepted</div>
-    <div class="marquee-item"><span class="mi">📍</span> Oklahoma City</div>
-    <div class="marquee-item"><span class="mi">🧠</span> Mental Health</div>
-    <div class="marquee-item"><span class="mi">👶</span> Pediatrics</div>
-    <div class="marquee-item"><span class="mi">❤️</span> Cardiology</div>
-    <div class="marquee-item"><span class="mi">📲</span> Telehealth</div>
-    <div class="marquee-item"><span class="mi">🆓</span> Free Meet & Greet</div>
-    <div class="marquee-item"><span class="mi">🦷</span> Dental</div>
-    <div class="marquee-item"><span class="mi">💊</span> SoonerCare Accepted</div>
-    <div class="marquee-item"><span class="mi">📍</span> Tulsa</div>
-    <div class="marquee-item"><span class="mi">🩺</span> Primary Care</div>
-    <div class="marquee-item"><span class="mi">🤰</span> Women's Health</div>
-    <div class="marquee-item"><span class="mi">💊</span> SoonerCare Accepted</div>
-    <div class="marquee-item"><span class="mi">📍</span> Oklahoma City</div>
-    <div class="marquee-item"><span class="mi">🧠</span> Mental Health</div>
-    <div class="marquee-item"><span class="mi">👶</span> Pediatrics</div>
-    <div class="marquee-item"><span class="mi">❤️</span> Cardiology</div>
-    <div class="marquee-item"><span class="mi">📲</span> Telehealth</div>
-    <div class="marquee-item"><span class="mi">🆓</span> Free Meet & Greet</div>
-    <div class="marquee-item"><span class="mi">🦷</span> Dental</div>
+<!-- TRUST BAR -->
+<div class="trust-bar">
+  <div class="trust-inner">
+    <div class="trust-item">✅ Free for patients</div>
+    <div class="trust-item">🛡️ SoonerCare & Medicaid</div>
+    <div class="trust-item">🏥 Uninsured welcome</div>
+    <div class="trust-item">📱 Book in the Morava app</div>
+    <div class="trust-item">🔒 HIPAA-aligned</div>
   </div>
 </div>
 
-<!-- Stats -->
-<section class="stats">
-  <div class="stats-inner">
-    <div class="stat-item reveal"><div class="stat-num">199+</div><div class="stat-label">Providers listed<br>in Oklahoma</div></div>
-    <div class="stat-item reveal d2"><div class="stat-num">800K+</div><div class="stat-label">SoonerCare members<br>in Oklahoma</div></div>
-    <div class="stat-item reveal d3"><div class="stat-num">100%</div><div class="stat-label">Free for patients<br>always</div></div>
-  </div>
-</section>
+<!-- MAIN: LIST + MAP -->
+<div style="background:var(--bg);padding:0 24px">
+  <div class="main-layout" id="mainLayout">
+    <!-- LEFT: Results -->
+    <div class="results-panel" id="resultsPanel">
+      <div class="results-header">
+        <div class="results-count" id="resultsCount">Loading providers...</div>
+        <div class="view-toggle">
+          <button class="vtbtn active" id="btnList">☰ List</button>
+          <button class="vtbtn show-mobile-map" id="btnMap" style="display:none">🗺 Map</button>
+        </div>
+      </div>
+      <div id="providerGrid" class="provider-grid">
+        <div class="state-wrap" style="grid-column:1/-1">
+          <div class="spinner"></div>
+          <p style="color:var(--text-2);font-size:14px">Loading Oklahoma providers...</p>
+        </div>
+      </div>
+      <div id="pagination" class="pagination"></div>
+    </div>
 
-<!-- How it works -->
-<section class="sec how" id="how-it-works">
+    <!-- RIGHT: Map -->
+    <div class="map-panel" id="mapPanel">
+      <div id="map"></div>
+    </div>
+  </div>
+</div>
+
+<!-- WHY MORAVA -->
+<section class="value-sec" id="why">
   <div class="sec-inner">
-    <span class="sec-tag tag-teal reveal">How it works</span>
-    <h2 class="reveal d1">Find care in three steps.</h2>
-    <p class="sec-sub reveal d2">No insurance card on hand? No problem. Morava works for SoonerCare, Medicaid, and uninsured patients alike.</p>
-    <div class="steps-grid">
-      <div class="step reveal d1">
-        <div class="step-n">01</div>
-        <div class="step-icon">📱</div>
-        <h3>Download the app</h3>
-        <p>Available on Android. Create a free account in under two minutes — no credit card, no insurance number needed upfront.</p>
-      </div>
-      <div class="step reveal d2">
-        <div class="step-n">02</div>
-        <div class="step-icon">🔍</div>
-        <h3>Find your provider</h3>
-        <p>Search by specialty, location, or insurance. Filter for SoonerCare-accepting providers near you and see who's accepting patients.</p>
-      </div>
-      <div class="step reveal d3">
-        <div class="step-n">03</div>
-        <div class="step-icon">📅</div>
-        <h3>Book your appointment</h3>
-        <p>Request an appointment directly through the app. Get confirmed — no phone tag, no hold music, no hassle.</p>
-      </div>
+    <span class="sec-label">Why Morava</span>
+    <h2 class="sec-title">The easiest way to find care in Oklahoma</h2>
+    <p style="color:var(--text-2);font-size:16px;max-width:500px;margin:0 auto">Built for the 800,000+ Oklahomans on SoonerCare who struggle to find accepting providers.</p>
+    <div class="value-grid">
+      <div class="vc"><div class="vc-icon i1">🆓</div><div><h3>Always free for patients</h3><p>No subscription, no fees, no paywalls. Morava is free forever for every patient in Oklahoma.</p></div></div>
+      <div class="vc"><div class="vc-icon i2">🛡️</div><div><h3>SoonerCare & Medicaid focus</h3><p>We specialize in connecting Oklahoma's SoonerCare and Medicaid members with accepting providers.</p></div></div>
+      <div class="vc"><div class="vc-icon i3">👨‍👩‍👧</div><div><h3>Book for your whole family</h3><p>Add dependents and book appointments for your children or family members from one account.</p></div></div>
+      <div class="vc"><div class="vc-icon i4">📋</div><div><h3>Portable health profile</h3><p>Fill out your health history once — shared automatically with every provider you book with.</p></div></div>
+      <div class="vc"><div class="vc-icon i5">📱</div><div><h3>SMS confirmations</h3><p>Get a text the moment your appointment is confirmed. No guessing, no hold music, no waiting.</p></div></div>
+      <div class="vc"><div class="vc-icon i6">🔒</div><div><h3>Private & secure</h3><p>Your data is encrypted and never sold to advertisers. You control what providers see about you.</p></div></div>
     </div>
   </div>
 </section>
 
-<!-- For patients -->
-<section class="sec" id="for-patients">
+<!-- FAQ - SEO CONTENT -->
+<section class="faq-sec" id="faq">
   <div class="sec-inner">
-    <div class="patients-grid">
-      <div>
-        <span class="sec-tag tag-teal reveal">For Patients</span>
-        <h2 class="reveal d1">Healthcare that actually works <em style="font-style:italic;color:var(--teal-mid)">for you.</em></h2>
-        <div class="feat-list">
-          <div class="feat reveal d1"><div class="feat-ico">💊</div><div><h4>SoonerCare & Medicaid filter</h4><p>See only providers who accept your specific plan. No surprises at the desk — ever.</p></div></div>
-          <div class="feat reveal d2"><div class="feat-ico">📍</div><div><h4>Find care near you</h4><p>Search by city, ZIP code, or let the app use your location to find the closest available provider.</p></div></div>
-          <div class="feat reveal d3"><div class="feat-ico">🎉</div><div><h4>Free Meet & Greet</h4><p>As a founding member, your first Meet & Greet consultation is completely free — no catch.</p></div></div>
-          <div class="feat reveal d4"><div class="feat-ico">📲</div><div><h4>Telehealth options</h4><p>Many providers offer virtual visits. Filter for telehealth and get quality care from home.</p></div></div>
-        </div>
-      </div>
-      <div class="reveal-right d2">
-        <div class="coverage">
-          <div class="cov-header">
-            <h3>Insurance we support</h3>
-            <p>All plans welcome — including self-pay</p>
-          </div>
-          <div class="cov-list">
-            <div class="cov-item"><div class="cov-dot" style="background:#4CAF50"></div><div><div class="cov-name">SoonerCare</div><div class="cov-sub">Oklahoma Medicaid — most common plan</div></div><div class="cov-check">✓</div></div>
-            <div class="cov-item"><div class="cov-dot" style="background:#2196F3"></div><div><div class="cov-name">Medicaid</div><div class="cov-sub">Federal & state Medicaid plans</div></div><div class="cov-check">✓</div></div>
-            <div class="cov-item"><div class="cov-dot" style="background:#FF9800"></div><div><div class="cov-name">Uninsured / Self-pay</div><div class="cov-sub">Sliding scale and cash pay providers</div></div><div class="cov-check">✓</div></div>
-            <div class="cov-item"><div class="cov-dot" style="background:#9C27B0"></div><div><div class="cov-name">Private insurance</div><div class="cov-sub">BlueCross, Aetna, BCBS and more</div></div><div class="cov-check">✓</div></div>
-          </div>
-        </div>
-      </div>
+    <span class="sec-label">Frequently Asked Questions</span>
+    <h2 class="sec-title">Common questions about Morava</h2>
+  </div>
+  <div class="faq-grid">
+    <div class="faq-item">
+      <div class="faq-q">How do I find a SoonerCare doctor in Oklahoma City? <span class="arrow">▾</span></div>
+      <div class="faq-a"><p>Use Morava's free provider search above. Search by specialty or city, and all listed providers accept SoonerCare and Medicaid patients. Download the Morava app to book an appointment directly.</p></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Is Morava really free for patients? <span class="arrow">▾</span></div>
+      <div class="faq-a"><p>Yes — Morava is completely free for every patient, forever. No subscription, no hidden fees, no paywalls. We never charge patients to search or book appointments.</p></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Does Morava work if I'm uninsured? <span class="arrow">▾</span></div>
+      <div class="faq-a"><p>Absolutely. Many providers in our network offer sliding-scale fees and accept uninsured patients. You can filter by "uninsured" or "self-pay" in the Morava app to find providers who welcome cash-pay patients.</p></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">What insurance plans does Morava support? <span class="arrow">▾</span></div>
+      <div class="faq-a"><p>Morava supports all major insurance plans including SoonerCare, Medicaid, Medicare, BlueCross BlueShield, Aetna, United Healthcare, Cigna, Humana, Tricare, CHIP, and most employer plans. Uninsured patients are also welcome.</p></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">How do I book an appointment through Morava? <span class="arrow">▾</span></div>
+      <div class="faq-a"><p>Download the free Morava app on Android, create a free account, search for a provider, and tap "Book Appointment." You'll receive an SMS confirmation once the provider accepts your request. iOS coming soon.</p></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Can I book appointments for my children or family members? <span class="arrow">▾</span></div>
+      <div class="faq-a"><p>Yes. Morava lets you add family members and dependents to your account. You can manage appointments for your entire family from a single account — no separate logins required.</p></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Are Morava providers verified? <span class="arrow">▾</span></div>
+      <div class="faq-a"><p>All providers listed on Morava are sourced from public healthcare databases. We encourage patients to verify provider credentials independently through the Oklahoma Medical Board. We are actively onboarding providers who have claimed and verified their Morava profiles.</p></div>
     </div>
   </div>
 </section>
 
-<!-- For providers -->
-<section class="sec providers-sec" id="for-providers">
-  <div class="sec-inner">
-    <div class="providers-grid">
-      <div>
-        <span class="sec-tag tag-teal reveal" style="background:rgba(0,188,212,0.1);color:var(--teal)">For Providers</span>
-        <h2 class="reveal d1">Reach patients who need you <em style="font-style:italic;color:var(--teal)">most.</em></h2>
-        <p class="sec-sub reveal d2">List your practice for free. Start receiving appointment requests from verified SoonerCare patients in Oklahoma today.</p>
-        <div class="perk-list">
-          <div class="perk reveal d1"><span class="perk-check">✓</span>Free listing — no subscription or per-appointment fees</div>
-          <div class="perk reveal d2"><span class="perk-check">✓</span>Real-time booking confirmations sent directly to patients</div>
-          <div class="perk reveal d3"><span class="perk-check">✓</span>Manage in-person and telehealth appointments</div>
-          <div class="perk reveal d4"><span class="perk-check">✓</span>HIPAA-compliant booking and communication platform</div>
-          <div class="perk reveal d5"><span class="perk-check">✓</span>Profile verified and live within 24 hours</div>
-        </div>
-        <a href="https://dashboard.moravacare.com" class="btn-hero" style="margin-top:36px;display:inline-flex">
-          <span>Claim your free profile →</span>
-        </a>
-      </div>
-      <div class="reveal-right d2">
-        <div class="dash-card">
-          <div class="dash-top">
-            <h4>Today's Appointments</h4>
-            <div class="dash-live"><span class="live-dot"></span>Live</div>
-          </div>
-          <div class="acard"><div><div class="acard-name">Maria G.</div><div class="acard-detail">New Patient · 9:00 AM · SoonerCare</div></div><span class="astatus s-pending">⏳ Pending</span></div>
-          <div class="acard"><div><div class="acard-name">James T.</div><div class="acard-detail">Follow-up · 11:30 AM · Medicaid</div></div><span class="astatus s-confirmed">✓ Confirmed</span></div>
-          <div class="acard"><div><div class="acard-name">Sarah K. — 🎉 Meet & Greet</div><div class="acard-detail">Free consult · Tomorrow 2:00 PM</div></div><span class="astatus s-meetgreet">🎉 Voucher</span></div>
-          <div class="dash-btns">
-            <div class="db db-confirm">Confirm all</div>
-            <div class="db db-view">View dashboard →</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+<!-- PROVIDER CTA -->
+<section class="pcta" id="providers">
+  <h2>Are you a healthcare provider?</h2>
+  <p>Get listed free and start receiving appointment requests from SoonerCare and Medicaid patients across Oklahoma.</p>
+  <a class="btn-white" href="https://dashboard.moravacare.com">Provider Dashboard →</a>
+  <a class="btn-ghost" href="mailto:moise@moravacare.com">Get Listed Free</a>
 </section>
 
-<!-- About -->
-<section class="about" id="about">
-  <div class="about-inner">
-    <span class="sec-tag tag-teal reveal" style="margin-bottom:20px">Our Mission</span>
-    <h2 class="reveal d1">Healthcare access shouldn't depend on your zip code.</h2>
-    <p class="reveal d2">In Oklahoma, over 800,000 residents rely on SoonerCare and Medicaid for their healthcare — yet finding a provider who accepts their insurance is frustratingly difficult.</p>
-    <p class="reveal d3">Morava exists to fix that. We built the simplest, fastest way for Oklahoma patients to find quality care and book appointments — regardless of insurance status, location, or income.</p>
-    <div class="mission-card reveal d4">
-      <div class="mission-label">Our Promise</div>
-      <blockquote>"Morava will always be free for patients. We will never sell your data, never show ads, and never put profit before your access to care."</blockquote>
-      <div class="mission-sig">
-        <div class="sig-avatar">M</div>
-        <div>
-          <div class="sig-name">Moise Kouassi</div>
-          <div class="sig-title">Founder, Morava · Oklahoma</div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- CTA -->
-<section class="cta-sec">
-  <div class="cta-inner">
-    <h2 class="reveal">Ready to find your provider?</h2>
-    <p class="reveal d2">Download Morava and search 199+ Oklahoma providers — free, in seconds. SoonerCare, Medicaid, and self-pay welcome.</p>
-    <div class="cta-btns reveal d3">
-      <a href="https://expo.dev/accounts/moses432/projects/accesscare/builds/c88af279-4744-475f-a796-6d17883b5d94" class="btn-cta-white">📱 Download the App</a>
-      <a href="https://dashboard.moravacare.com" class="btn-cta-outline">I'm a Provider →</a>
-    </div>
-    <p class="cta-note reveal d4">Android available now · iOS coming soon</p>
-  </div>
-</section>
-
-<!-- Footer -->
+<!-- FOOTER -->
 <footer>
   <div class="footer-inner">
-    <a href="/" class="footer-logo">
-      <div class="footer-mark">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M3 20 Q7 15 12 10 Q17 5 21 3 L21.5 5 Q18 7 14 12 Q10 17 4.5 21.5 Z" fill="white"/><circle cx="21" cy="3" r="2.2" fill="white" opacity="0.9"/></svg>
-      </div>
-      <span class="footer-name">Morava</span>
-    </a>
-    <span>© 2026 Morava. Serving Oklahoma patients and providers.</span>
-    <div class="footer-links">
+    <div class="footer-brand">
+      <a class="logo" href="#" style="color:#fff">
+        <div class="logo-mark"><svg viewBox="0 0 24 24" fill="none"><path d="M3 20 Q7 15 12 10 Q17 5 21 3 L21.5 5 Q18 7 14 12 Q10 17 4.5 21.5 Z" fill="white"/><circle cx="21" cy="3" r="2.2" fill="white" opacity=".9"/></svg></div>
+        Morava
+      </a>
+      <p>Your path to accessible care. Built for Oklahoma patients and providers.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Patients</h4>
+      <a href="#find">Find a Provider</a>
+      <a href="#why">Why Morava</a>
+      <a href="#faq">FAQ</a>
+      <a href="mailto:support@moravacare.com">Support</a>
+    </div>
+    <div class="footer-col">
+      <h4>Specialties</h4>
+      <a href="#find" onclick="setChip('Family Medicine')">Family Medicine</a>
+      <a href="#find" onclick="setChip('OB/GYN')">OB/GYN</a>
+      <a href="#find" onclick="setChip('Mental Health Provider')">Mental Health</a>
+      <a href="#find" onclick="setChip('Pediatrician')">Pediatrics</a>
+      <a href="#find" onclick="setChip('Internal Medicine')">Internal Medicine</a>
+    </div>
+    <div class="footer-col">
+      <h4>Providers</h4>
+      <a href="https://dashboard.moravacare.com">Provider Dashboard</a>
+      <a href="mailto:moise@moravacare.com">Get Listed Free</a>
+    </div>
+    <div class="footer-col">
+      <h4>Legal</h4>
       <a href="https://moses225.github.io/Access-care/">Privacy Policy</a>
-      <a href="https://dashboard.moravacare.com">Provider Portal</a>
+      <a href="https://moses225.github.io/Access-care/terms.html">Terms of Service</a>
       <a href="mailto:support@moravacare.com">Contact</a>
     </div>
   </div>
+  <div class="footer-bottom">
+    <span>© 2026 Morava Care LLC · Oklahoma City, OK · EIN 41-5066125</span>
+    <span>Made with ❤️ for Oklahoma</span>
+  </div>
 </footer>
 
-<script>
-// Nav scroll effect
-const nav = document.getElementById('navbar');
-window.addEventListener('scroll', () => {
-  nav.classList.toggle('scrolled', window.scrollY > 40);
-});
+<!-- MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div style="font-size:44px;margin-bottom:14px">📱</div>
+    <h3>Book in the Morava App</h3>
+    <p>Download the free Morava app to book an appointment with this provider. Search <strong>"Morava"</strong> on Google Play Store.</p>
+    <button class="modal-close" id="modalClose">Got it — find the app</button>
+  </div>
+</div>
 
-// Scroll reveal
-const observer = new IntersectionObserver((entries) => {
-  entries.forEach(e => {
-    if (e.isIntersecting) {
-      e.target.classList.add('visible');
+<!-- FIREBASE -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+// ================================================================
+// SECURITY: XSS Sanitization
+// Never render untrusted data directly into innerHTML
+// ================================================================
+function sanitizeHTML(str) {
+  if (!str || typeof str !== 'string') return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;')
+    .replace(/`/g, '&#x60;')
+    .replace(/javascript:/gi, '')
+    .replace(/on\w+=/gi, '')
+    .trim()
+    .substring(0, 500); // hard cap on length
+}
+
+function sanitizePhone(str) {
+  if (!str || typeof str !== 'string') return '';
+  // Only allow digits, spaces, dashes, parens, plus
+  return str.replace(/[^\d\s\-\(\)\+]/g, '').trim().substring(0, 20);
+}
+
+function sanitizeURL(str) {
+  if (!str || typeof str !== 'string') return '';
+  // Only allow safe URL characters for address encoding
+  return encodeURIComponent(str.replace(/[<>"'`]/g, '').trim().substring(0, 200));
+}
+
+// ================================================================
+// SECURITY: Rate limiting — max 10 Firebase reads per minute
+// Prevents bots from hammering Firestore quota
+// ================================================================
+const rateLimiter = {
+  reads: 0,
+  resetTime: Date.now() + 60000,
+  check() {
+    if (Date.now() > this.resetTime) {
+      this.reads = 0;
+      this.resetTime = Date.now() + 60000;
     }
-  });
-}, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+    if (this.reads >= 10) {
+      console.warn('Rate limit reached — too many Firebase reads');
+      return false;
+    }
+    this.reads++;
+    return true;
+  }
+};
 
-document.querySelectorAll('.reveal, .reveal-left, .reveal-right').forEach(el => {
-  observer.observe(el);
+// ================================================================
+// SECURITY: Input sanitization for search
+// Prevents injection via search box
+// ================================================================
+function sanitizeSearchInput(str) {
+  if (!str || typeof str !== 'string') return '';
+  return str
+    .replace(/[<>&"'`]/g, '')
+    .replace(/javascript:/gi, '')
+    .trim()
+    .substring(0, 100);
+}
+
+const app = initializeApp({
+  apiKey: "AIzaSyAMYBfxhljita9XVqTc_HHahMA7mFVFPn8",
+  authDomain: "accesscare-app.firebaseapp.com",
+  projectId: "accesscare-app",
+  storageBucket: "accesscare-app.firebasestorage.app",
+  messagingSenderId: "283308941540",
+  appId: "1:283308941540:web:e3c57ebf0e16ca9c8f4cf1"
+});
+const db = getFirestore(app);
+
+let allProviders = [];
+let currentPage = 1;
+let activeSpecialty = '';
+let activeSearch = '';
+let map, markers = [], infoWindow;
+const PER_PAGE = 12;
+
+// Fuzzy match — handles "pediatrics" → "Pediatrician", "mental" → "Mental Health Provider"
+const SPECIALTY_ALIASES = {
+  'family medicine': 'Family Medicine',
+  'family doctor': 'Family Medicine',
+  'primary care': 'Family Medicine',
+  'general practice': 'Family Medicine',
+  'ob/gyn': 'OB/GYN', 'obgyn': 'OB/GYN', 'obstetrics': 'OB/GYN', 'gynecology': 'OB/GYN',
+  'obstetrics & gynecology': 'OB/GYN',
+  'pediatrics': 'Pediatrician', 'pediatrician': 'Pediatrician', 'kids doctor': 'Pediatrician',
+  'mental health': 'Mental Health Provider', 'therapy': 'Mental Health Provider',
+  'therapist': 'Mental Health Provider', 'counselor': 'Mental Health Provider',
+  'psychiatry': 'Mental Health Provider', 'psychiatrist': 'Mental Health Provider',
+  'licensed professional counselor': 'Mental Health Provider',
+  'licensed alcohol and drug counselor': 'Mental Health Provider',
+  'internal medicine': 'Internal Medicine', 'internist': 'Internal Medicine',
+  'dermatology': 'Dermatology', 'dermatologist': 'Dermatology', 'skin': 'Dermatology',
+  'general surgery': 'General Surgery', 'surgeon': 'General Surgery',
+  'physical therapy': 'Physical Therapist', 'physical therapist': 'Physical Therapist', 'pt': 'Physical Therapist',
+  'midwife': 'Midwife', 'midwifery': 'Midwife',
+  'dietitian': 'Dietitian', 'dietician': 'Dietitian', 'nutritionist': 'Nutritionist',
+  'maternal-fetal': 'Maternal-Fetal Medicine', 'high risk pregnancy': 'Maternal-Fetal Medicine',
+  'doula': 'Doula Services',
+  'home health': 'Home Health Agency',
+  'radiology': 'Diagnostic Radiology', 'x-ray': 'Diagnostic Radiology',
+  'reproductive': 'Reproductive Endocrinologist',
+  'neonatologist': 'Neonatologist', 'nicu': 'Neonatologist',
+  'genetic counselor': 'Genetic Counselor',
+};
+
+const EMOJI = {
+  'Family Medicine':'🫀','OB/GYN':'🤰','Pediatrician':'👶',
+  'Mental Health Provider':'🧠','Internal Medicine':'🩺','Dermatology':'💊',
+  'General Surgery':'✂️','Physical Therapist':'🏃','Midwife':'🤱',
+  'Dietitian':'🥗','Nutritionist':'🥦','Maternal-Fetal Medicine':'🔬',
+  'Doula Services':'💛','Home Health Agency':'🏠','Diagnostic Radiology':'🩻',
+  'Reproductive Endocrinologist':'🔬','Neonatologist':'👶','Genetic Counselor':'🧬',
+  'Social Worker':'🤝','Lactation Consultant':'🤱',
+};
+function emoji(s) { return EMOJI[s] || '👨‍⚕️'; }
+
+function insuranceTags(p) {
+  const ins = Array.isArray(p.insurance) ? p.insurance.map(i=>(i||'').toLowerCase()) : [];
+  const t = [];
+  if (ins.some(i=>i.includes('soonercare')||i.includes('medicaid'))) t.push('<span class="ptag ptag-teal">✓ SoonerCare</span>');
+  if (ins.some(i=>i.includes('medicare'))) t.push('<span class="ptag ptag-blue">✓ Medicare</span>');
+  if (ins.some(i=>i.includes('uninsured')||i.includes('self'))) t.push('<span class="ptag ptag-amber">✓ Uninsured OK</span>');
+  if (!t.length) t.push('<span class="ptag ptag-teal">✓ Accepting Patients</span>');
+  return t.join('');
+}
+
+function renderCard(p, idx) {
+  // SECURITY: sanitize ALL provider data before inserting into DOM
+  const safeName    = sanitizeHTML(p.name || 'Unknown Provider');
+  const safeSpec    = sanitizeHTML(p.specialty || '');
+  const safeAddr    = sanitizeHTML(p.address || '');
+  const safePhone   = sanitizePhone(p.phone || '');
+  const safeAddrURL = sanitizeURL(p.address || '');
+  const safeIdx     = parseInt(idx, 10);
+
+  return `<div class="provider-card" data-idx="${safeIdx}" onclick="focusMarker(${safeIdx})">
+    <div class="pc-top">
+      <div class="pc-avatar">${emoji(p.specialty)}</div>
+      <div><div class="pc-name">${safeName}</div><div class="pc-spec">${safeSpec}</div></div>
+    </div>
+    ${safeAddr ? `<div class="pc-addr">📍 ${safeAddr}</div>` : ''}
+    <div class="pc-tags">${insuranceTags(p)}</div>
+    ${safePhone ? `<div class="pc-phone">📞 <a href="tel:${safePhone}" onclick="event.stopPropagation()">${safePhone}</a></div>` : ''}
+    <div class="pc-actions">
+      <button class="btn-book" onclick="event.stopPropagation();openModal()">📱 Book</button>
+      ${safeAddr ? `<button class="btn-map" onclick="event.stopPropagation();openGoogleMaps('${safeAddrURL}')">🗺 Directions</button>` : `<button class="btn-map" onclick="event.stopPropagation();focusMarker(${safeIdx})">📍 On Map</button>`}
+    </div>
+  </div>`;
+}
+
+function getFiltered() {
+  const q = activeSearch.toLowerCase().trim();
+  const sp = activeSpecialty;
+
+  // Resolve fuzzy specialty from search query
+  let resolvedSpecialty = sp;
+  if (q && !sp) {
+    const alias = SPECIALTY_ALIASES[q];
+    if (alias) resolvedSpecialty = alias;
+  }
+
+  return allProviders.filter(p => {
+    const matchSp = !resolvedSpecialty || (p.specialty||'')=== resolvedSpecialty;
+    const matchQ = !q ||
+      (p.name||'').toLowerCase().includes(q) ||
+      (p.specialty||'').toLowerCase().includes(q) ||
+      (p.address||'').toLowerCase().includes(q) ||
+      (p.city||'').toLowerCase().includes(q) ||
+      Object.keys(SPECIALTY_ALIASES).some(alias => alias.includes(q) && SPECIALTY_ALIASES[alias]===(p.specialty||''));
+    return matchSp && matchQ;
+  });
+}
+
+function render(page) {
+  const f = getFiltered();
+  const grid = document.getElementById('providerGrid');
+  const countEl = document.getElementById('resultsCount');
+  const pagEl = document.getElementById('pagination');
+
+  updateMapMarkers(f);
+
+  if (!f.length) {
+    grid.innerHTML = `<div class="state-wrap"><div style="font-size:40px;margin-bottom:12px">🔍</div><div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:18px;margin-bottom:8px">No providers found</div><div style="font-size:14px;color:var(--text-2)">Try a broader search term</div></div>`;
+    countEl.innerHTML = '0 providers found';
+    pagEl.innerHTML = '';
+    return;
+  }
+
+  const total = Math.ceil(f.length / PER_PAGE);
+  const items = f.slice((page-1)*PER_PAGE, page*PER_PAGE);
+  // Get actual indices in allProviders for map focus
+  const startIdx = (page-1)*PER_PAGE;
+
+  countEl.innerHTML = `Showing <strong>${f.length}</strong> Oklahoma providers`;
+  grid.innerHTML = items.map((p,i) => renderCard(p, allProviders.indexOf(p))).join('');
+
+  if (total <= 1) { pagEl.innerHTML=''; return; }
+  let html = `<button class="page-btn" ${page===1?'disabled':''} data-page="${page-1}">← Prev</button>`;
+  for (let i=1; i<=total; i++) {
+    if (i===1||i===total||Math.abs(i-page)<=2) html+=`<button class="page-btn ${i===page?'active':''}" data-page="${i}">${i}</button>`;
+    else if (Math.abs(i-page)===3) html+=`<span style="padding:8px 4px;color:var(--text-3)">…</span>`;
+  }
+  html += `<button class="page-btn" ${page===total?'disabled':''} data-page="${page+1}">Next →</button>`;
+  pagEl.innerHTML = html;
+}
+
+// MAP
+function initMap() {
+  const okc = {lat:35.4676, lng:-97.5164};
+  map = new google.maps.Map(document.getElementById('map'), {
+    center: okc, zoom: 10,
+    styles: [
+      {featureType:'poi',stylers:[{visibility:'off'}]},
+      {featureType:'transit',stylers:[{visibility:'off'}]},
+      {elementType:'geometry',stylers:[{color:'#f5f5f5'}]},
+      {featureType:'road',elementType:'geometry',stylers:[{color:'#ffffff'}]},
+      {featureType:'road.arterial',elementType:'geometry',stylers:[{color:'#ffffff'}]},
+      {featureType:'road.highway',elementType:'geometry',stylers:[{color:'#dadada'}]},
+      {featureType:'water',elementType:'geometry',stylers:[{color:'#c9e8f5'}]},
+    ],
+    mapTypeControl: false, streetViewControl: false, fullscreenControl: true,
+  });
+  infoWindow = new google.maps.InfoWindow();
+  if (allProviders.length) updateMapMarkers(allProviders);
+}
+window.initMap = initMap;
+
+function updateMapMarkers(filtered) {
+  if (!map) return;
+  markers.forEach(m => m.setMap(null));
+  markers = [];
+  const bounds = new google.maps.LatLngBounds();
+  let hasCoords = false;
+
+  filtered.forEach((p, i) => {
+    const lat = parseFloat(p.latitude);
+    const lng = parseFloat(p.longitude);
+    if (!lat || !lng || isNaN(lat) || isNaN(lng)) return;
+    hasCoords = true;
+    const pos = {lat, lng};
+    bounds.extend(pos);
+
+    const marker = new google.maps.Marker({
+      position: pos, map,
+      title: p.name,
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 9,
+        fillColor: '#14B8A6',
+        fillOpacity: 1,
+        strokeColor: '#ffffff',
+        strokeWeight: 2,
+      }
+    });
+
+    marker.addListener('click', () => {
+      infoWindow.setContent(`<div class="gm-info">
+        <strong>${p.name||'Provider'}</strong>
+        <small>${p.specialty||''}</small>
+        <small>📍 ${p.address||''}</small>
+        ${p.phone?`<small>📞 ${p.phone}</small>`:''}
+        <a href="#" onclick="openModal();return false;">📱 Book in App</a>
+      </div>`);
+      infoWindow.open(map, marker);
+      // Highlight card
+      document.querySelectorAll('.provider-card').forEach(c=>c.classList.remove('highlighted'));
+    });
+
+    markers.push(marker);
+  });
+
+  if (hasCoords && filtered.length > 0) {
+    if (filtered.length === 1) {
+      map.setCenter(bounds.getCenter());
+      map.setZoom(14);
+    } else {
+      map.fitBounds(bounds, {padding:40});
+    }
+  }
+}
+
+window.focusMarker = function(idx) {
+  const p = allProviders[idx];
+  if (!p || !map) return;
+  const lat = parseFloat(p.latitude);
+  const lng = parseFloat(p.longitude);
+  if (!lat || !lng) return;
+  map.panTo({lat, lng});
+  map.setZoom(15);
+  // Highlight the marker
+  const marker = markers.find(m => m.getTitle() === p.name);
+  if (marker) google.maps.event.trigger(marker, 'click');
+  // Scroll map into view on mobile
+  document.getElementById('mapPanel').scrollIntoView({behavior:'smooth'});
+};
+
+window.openGoogleMaps = function(addr) {
+  window.open(`https://www.google.com/maps/search/?api=1&query=${addr}`, '_blank');
+};
+
+window.openModal = function() {
+  document.getElementById('modal').classList.add('open');
+};
+
+window.setChip = function(specialty) {
+  activeSpecialty = specialty;
+  activeSearch = '';
+  document.getElementById('searchInput').value = '';
+  document.querySelectorAll('.chip').forEach(c => {
+    c.classList.toggle('active', c.dataset.specialty === specialty);
+  });
+  currentPage = 1;
+  render(1);
+  document.getElementById('find').scrollIntoView({behavior:'smooth'});
+};
+
+// Events — sanitize all user input
+document.getElementById('searchInput').addEventListener('input', e => {
+  activeSearch = sanitizeSearchInput(e.target.value);
+  currentPage = 1;
+  render(1);
+});
+document.getElementById('searchBtn').addEventListener('click', () => {
+  activeSearch = sanitizeSearchInput(document.getElementById('searchInput').value);
+  currentPage = 1;
+  render(1);
+});
+document.getElementById('filterChips').addEventListener('click', e => {
+  const chip = e.target.closest('.chip');
+  if (!chip) return;
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+  chip.classList.add('active');
+  activeSpecialty = chip.dataset.specialty;
+  activeSearch = '';
+  document.getElementById('searchInput').value = '';
+  currentPage = 1;
+  render(1);
+});
+document.getElementById('pagination').addEventListener('click', e => {
+  const btn = e.target.closest('.page-btn');
+  if (!btn||btn.disabled) return;
+  currentPage = parseInt(btn.dataset.page);
+  render(currentPage);
+  document.getElementById('mainLayout').scrollIntoView({behavior:'smooth'});
+});
+document.getElementById('modalClose').addEventListener('click', () => {
+  document.getElementById('modal').classList.remove('open');
+});
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target===document.getElementById('modal'))
+    document.getElementById('modal').classList.remove('open');
 });
 
-// Smooth anchor scroll
-document.querySelectorAll('a[href^="#"]').forEach(a => {
-  a.addEventListener('click', e => {
-    e.preventDefault();
-    const target = document.querySelector(a.getAttribute('href'));
-    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+// FAQ accordion
+document.querySelectorAll('.faq-q').forEach(q => {
+  q.addEventListener('click', () => {
+    const item = q.parentElement;
+    item.classList.toggle('open');
   });
 });
+
+// Mobile map toggle
+const btnMap = document.getElementById('btnMap');
+const btnList = document.getElementById('btnList');
+if (window.innerWidth <= 900) {
+  btnMap.style.display = 'block';
+  btnMap.addEventListener('click', () => {
+    document.getElementById('mapPanel').classList.toggle('show-mobile');
+    btnMap.classList.toggle('active');
+    btnList.classList.toggle('active');
+  });
+}
+
+// Load Firebase data — rate limited
+async function load() {
+  if (!rateLimiter.check()) {
+    document.getElementById('providerGrid').innerHTML = `<div class="state-wrap"><div style="font-size:40px;margin-bottom:12px">⏳</div><div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:18px">Too many requests</div><div style="font-size:14px;color:var(--text-2)">Please wait a moment and refresh</div></div>`;
+    return;
+  }
+  try {
+    const snap = await getDocs(collection(db, 'providers'));
+    allProviders = snap.docs
+      .map(d => ({id: d.id, ...d.data()}))
+      .filter(p => p.name && typeof p.name === 'string') // filter malformed docs
+      .sort((a,b) => (a.name||'').localeCompare(b.name||''));
+    render(1);
+  } catch(err) {
+    console.error('Provider load error:', err);
+    document.getElementById('providerGrid').innerHTML = `<div class="state-wrap"><div style="font-size:40px;margin-bottom:12px">⚠️</div><div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:18px">Could not load providers</div><div style="font-size:14px;color:var(--text-2)">Please refresh the page</div></div>`;
+  }
+}
+load();
 </script>
+
+<!-- Google Maps -->
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAMYBfxhljita9XVqTc_HHahMA7mFVFPn8&callback=initMap"></script>
+
 </body>
 </html>

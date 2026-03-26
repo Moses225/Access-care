@@ -2,6 +2,10 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // ================================================================
+    // HELPER FUNCTIONS
+    // ================================================================
+
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -34,37 +38,76 @@ service cloud.firestore {
           && request.auth.token.providerId == resource.data.providerId;
     }
 
+    // Validate a string field: must exist, be a string, within maxLen
+    function validString(field, maxLen) {
+      return field is string && field.size() > 0 && field.size() <= maxLen;
+    }
+
+    // Validate optional string: if present must be string within maxLen
+    function validOptionalString(field, maxLen) {
+      return !(field in request.resource.data) ||
+             (request.resource.data[field] is string &&
+              request.resource.data[field].size() <= maxLen);
+    }
+
+    // No script injection in a string (basic XSS guard at rules level)
+    function noScript(field) {
+      return !(request.resource.data[field].matches('.*<script.*')) &&
+             !(request.resource.data[field].matches('.*javascript:.*'));
+    }
+
+    // ================================================================
+    // PROVIDERS — Public read (needed for landing page web search)
+    // Write restricted to admins and verified provider owners
+    // ================================================================
     match /providers/{providerId} {
-      allow read: if isAuthenticated();
+      // Public read — providers are a public directory
+      // Web landing page and unauthenticated users can browse
+      allow read: if true;
+
+      // Only admins or the verified provider owner can write
       allow write: if isAdmin() || isProviderOwner(providerId);
     }
 
+    // ================================================================
+    // USERS
+    // ================================================================
     match /users/{userId} {
-      allow read, write: if isOwner(userId);
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId);
+
       match /dependents/{dependentId} {
         allow read:   if isOwner(userId) && isFullAccount();
         allow create: if isOwner(userId) && isFullAccount()
-                   && request.resource.data.firstName is string
-                   && request.resource.data.firstName.size() <= 100
-                   && request.resource.data.lastName is string
-                   && request.resource.data.lastName.size() <= 100;
-        allow update: if isOwner(userId) && isFullAccount();
+                   && validString(request.resource.data.firstName, 100)
+                   && validString(request.resource.data.lastName, 100)
+                   && noScript('firstName')
+                   && noScript('lastName');
+        allow update: if isOwner(userId) && isFullAccount()
+                   && validString(request.resource.data.firstName, 100)
+                   && validString(request.resource.data.lastName, 100);
         allow delete: if isOwner(userId) && isFullAccount();
       }
     }
 
+    // ================================================================
+    // BOOKINGS
+    // ================================================================
     match /bookings/{bookingId} {
       allow read: if isAuthenticated() &&
                      (isBookingPatient() || isBookingProvider() || isAdmin());
+
       allow create: if isFullAccount()
                  && request.resource.data.userId == request.auth.uid
                  && request.resource.data.status == 'pending'
-                 && request.resource.data.patientName is string
-                 && request.resource.data.patientName.size() <= 150
-                 && request.resource.data.date is string
-                 && request.resource.data.date.size() <= 20
-                 && request.resource.data.time is string
-                 && request.resource.data.time.size() <= 10;
+                 && validString(request.resource.data.patientName, 150)
+                 && validString(request.resource.data.date, 20)
+                 && validString(request.resource.data.time, 10)
+                 && validString(request.resource.data.providerId, 200)
+                 && noScript('patientName')
+                 && validOptionalString('notes', 1000)
+                 && validOptionalString('reasonForVisit', 500);
+
       allow update: if isAdmin()
                  || isBookingProvider()
                  || (isBookingPatient()
@@ -77,6 +120,9 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // ================================================================
+    // AVAILABILITY
+    // ================================================================
     match /availability/{providerId} {
       allow read: if isAuthenticated();
       match /slots/{date} {
@@ -86,86 +132,144 @@ service cloud.firestore {
       }
     }
 
+    // ================================================================
+    // QUESTIONS
+    // ================================================================
     match /questions/{questionId} {
       allow read: if isAuthenticated();
-      // FIXED: added userId binding and content size limit
       allow create: if isFullAccount()
                  && request.resource.data.userId == request.auth.uid
-                 && request.resource.data.content is string
-                 && request.resource.data.content.size() <= 2000;
+                 && validString(request.resource.data.content, 2000)
+                 && noScript('content');
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }
 
+    // ================================================================
+    // INSURANCE
+    // ================================================================
     match /insurance/{userId} {
       allow read:  if isOwner(userId);
       allow write: if isOwner(userId) && isFullAccount();
     }
 
+    // ================================================================
+    // NOTIFICATIONS
+    // ================================================================
     match /notifications/{userId} {
-      allow read, write: if isOwner(userId);
+      allow read:  if isOwner(userId);
+      allow write: if isOwner(userId);
     }
 
+    // ================================================================
+    // PRIVACY SETTINGS
+    // ================================================================
     match /privacy/{userId} {
-      allow read, write: if isOwner(userId);
+      allow read:  if isOwner(userId);
+      allow write: if isOwner(userId);
     }
 
+    // ================================================================
+    // PAYMENT METHODS
+    // ================================================================
     match /paymentMethods/{docId} {
       allow read, delete: if isAuthenticated() &&
                              resource.data.userId == request.auth.uid;
-      // FIXED: added userId binding — user can't create a payment method for someone else
       allow create: if isFullAccount()
                  && request.resource.data.userId == request.auth.uid;
+      allow update: if false; // payment methods must be deleted and recreated
     }
 
+    // ================================================================
+    // SUPPORT REQUESTS
+    // ================================================================
     match /supportRequests/{docId} {
       allow read: if isAuthenticated() &&
                      (resource.data.userId == request.auth.uid || isAdmin());
-      // FIXED: added userId binding and message size limit
       allow create: if isFullAccount()
                  && request.resource.data.userId == request.auth.uid
-                 && request.resource.data.message is string
-                 && request.resource.data.message.size() <= 5000;
+                 && validString(request.resource.data.message, 5000)
+                 && noScript('message');
+      allow update: if isAdmin();
+      allow delete: if false;
     }
 
+    // ================================================================
+    // SAVED PROVIDERS
+    // ================================================================
     match /savedProviders/{userId} {
       allow read, write: if isOwner(userId) && isFullAccount();
     }
 
+    // ================================================================
+    // PROVIDER USERS (Dashboard accounts)
+    // ================================================================
     match /providerUsers/{userId} {
-      // FIXED: separated read from write — removed circular exists() dependency on reads
       allow read:  if isOwner(userId) && request.auth.token.provider == true;
       allow write: if isOwner(userId) && isVerifiedProvider();
     }
 
+    // ================================================================
+    // AUDIT LOG — append only, no delete, no update
+    // ================================================================
     match /auditLog/{entryId} {
       allow create: if isFullAccount()
-                 && request.resource.data.actorUid == request.auth.uid;
+                 && request.resource.data.actorUid == request.auth.uid
+                 && validOptionalString('action', 100)
+                 && validOptionalString('targetId', 200);
       allow read:   if isAdmin();
       allow update: if false;
       allow delete: if false;
     }
 
+    // ================================================================
+    // ANALYTICS EVENTS — append only
+    // ================================================================
     match /analytics_events/{docId} {
-      allow create: if isAuthenticated();
+      allow create: if isAuthenticated()
+                 && validOptionalString('eventName', 100)
+                 && validOptionalString('screen', 100);
       allow read:   if isAdmin();
       allow update: if false;
       allow delete: if false;
     }
 
+    // ================================================================
+    // PROVIDER APPLICATIONS — public create with strict validation
+    // ================================================================
     match /providerApplications/{docId} {
-      allow create: if true;
+      allow create: if validString(request.resource.data.name, 200)
+                 && validString(request.resource.data.email, 200)
+                 && noScript('name')
+                 && noScript('email')
+                 && validOptionalString('phone', 20)
+                 && validOptionalString('specialty', 100)
+                 && validOptionalString('message', 2000);
       allow read, update, delete: if isAdmin();
     }
 
+    // ================================================================
+    // INTAKE FORMS — patient health profiles
+    // ================================================================
     match /intakeForms/{docId} {
       allow read: if isAuthenticated() &&
                    (request.auth.uid == resource.data.userId || isAdmin());
       allow create, update: if isFullAccount()
-                 && request.resource.data.userId == request.auth.uid;
+                 && request.resource.data.userId == request.auth.uid
+                 && validOptionalString('medications', 500)
+                 && validOptionalString('allergies', 500)
+                 && validOptionalString('conditions', 500)
+                 && validOptionalString('surgeries', 500)
+                 && validOptionalString('vaccinations', 500)
+                 && validOptionalString('bloodType', 10)
+                 && validOptionalString('height', 20)
+                 && validOptionalString('weight', 20);
       allow delete: if false;
     }
 
+    // ================================================================
+    // PLATFORM COUNTERS
+    // ================================================================
     match /platform/{docId} {
       allow read: if isAuthenticated();
       allow create: if isFullAccount()
@@ -176,6 +280,19 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ================================================================
+    // VISIT SUMMARIES — provider writes, patient reads
+    // ================================================================
+    match /visitSummaries/{bookingId} {
+      allow read: if isAuthenticated() &&
+                   (isBookingPatient() || isBookingProvider() || isAdmin());
+      allow create, update: if isVerifiedProvider() || isAdmin();
+      allow delete: if false;
+    }
+
+    // ================================================================
+    // CATCH-ALL — deny everything not explicitly allowed
+    // ================================================================
     match /{document=**} {
       allow read, write: if false;
     }
