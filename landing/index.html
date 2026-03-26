@@ -512,7 +512,7 @@ const db = getFirestore(app);
 // App Check — bot/scraper protection (monitoring mode)
 try {
   initializeAppCheck(app, {
-    provider: new ReCaptchaV3Provider('REPLACE_WITH_YOUR_SITE_KEY'),
+    provider: new ReCaptchaV3Provider('6LcSkpgsAAAAAGj-ai59fA7CVdi_vufRJIwGrAG_'),
     isTokenAutoRefreshEnabled: true
   });
 } catch(e) { console.warn('App Check init failed:', e); }
@@ -598,25 +598,54 @@ function renderCard(p, idx) {
   </div>`;
 }
 
+// Reverse map: display name → all possible raw Firebase values
+const REVERSE_SPECIALTY_MAP = {
+  'Family Medicine':         ['Family Medicine','General Practice'],
+  'OB/GYN':                  ['OB/GYN','Obstetrics & Gynecology','Obstetrics','Gynecology','Obstetrics and Gynecology'],
+  'Pediatrician':            ['Pediatrician','Pediatrics','Pediatric Medicine'],
+  'Mental Health Provider':  ['Mental Health Provider','Mental Health','Licensed Professional Counselor','Licensed Alcohol and Drug Counselor','Psychiatry','Psychology','Counseling','Behavioral Health','Social Worker','Psychologist'],
+  'Internal Medicine':       ['Internal Medicine','General Internal Medicine'],
+  'Dermatology':             ['Dermatology','Dermatologist'],
+  'General Surgery':         ['General Surgery','Surgery'],
+  'Physical Therapist':      ['Physical Therapist','Physical Therapy'],
+  'Midwife':                 ['Midwife','Midwifery','Certified Nurse Midwife','CNM'],
+  'Dietitian':               ['Dietitian','Dietician','Registered Dietitian','Nutritionist'],
+  'Maternal-Fetal Medicine': ['Maternal-Fetal Medicine','Maternal Fetal Medicine','Perinatology'],
+  'Doula Services':          ['Doula Services','Doula'],
+  'Home Health Agency':      ['Home Health Agency','Home Health','Home Care'],
+  'Diagnostic Radiology':    ['Diagnostic Radiology','Radiology','Imaging'],
+  'Social Worker':           ['Social Worker','Social Work','LCSW','Licensed Clinical Social Worker'],
+  'Lactation Consultant':    ['Lactation Consultant','Lactation'],
+};
+
+function specialtyMatches(providerSpecialty, filterSpecialty) {
+  if (!filterSpecialty) return true;
+  const ps = (providerSpecialty || '').trim();
+  if (!ps) return false;
+  if (ps === filterSpecialty) return true;
+  const rawValues = REVERSE_SPECIALTY_MAP[filterSpecialty] || [];
+  if (rawValues.some(v => ps.toLowerCase() === v.toLowerCase())) return true;
+  if (ps.toLowerCase().includes(filterSpecialty.toLowerCase())) return true;
+  if (filterSpecialty.toLowerCase().includes(ps.toLowerCase())) return true;
+  return false;
+}
+
 function getFiltered() {
   const q = activeSearch.toLowerCase().trim();
   const sp = activeSpecialty;
-
-  // Resolve fuzzy specialty from search query
   let resolvedSpecialty = sp;
   if (q && !sp) {
     const alias = SPECIALTY_ALIASES[q];
     if (alias) resolvedSpecialty = alias;
   }
-
   return allProviders.filter(p => {
-    const matchSp = !resolvedSpecialty || (p.specialty||'')=== resolvedSpecialty;
+    const matchSp = specialtyMatches(p.specialty, resolvedSpecialty);
     const matchQ = !q ||
       (p.name||'').toLowerCase().includes(q) ||
       (p.specialty||'').toLowerCase().includes(q) ||
       (p.address||'').toLowerCase().includes(q) ||
       (p.city||'').toLowerCase().includes(q) ||
-      Object.keys(SPECIALTY_ALIASES).some(alias => alias.includes(q) && SPECIALTY_ALIASES[alias]===(p.specialty||''));
+      Object.keys(SPECIALTY_ALIASES).some(a => a.includes(q) && specialtyMatches(p.specialty, SPECIALTY_ALIASES[a]));
     return matchSp && matchQ;
   });
 }
