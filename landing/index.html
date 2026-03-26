@@ -427,6 +427,18 @@
   </div>
 </div>
 
+<!-- Google Maps global callback — must be before module script -->
+<script>
+  // Pre-declare initMap so Google Maps callback works
+  // even if the module hasn't fully loaded yet
+  window._mapQueue = [];
+  window.initMap = function() {
+    window._mapReady = true;
+    window._mapQueue.forEach(fn => fn());
+    window._mapQueue = [];
+  };
+</script>
+
 <!-- FIREBASE -->
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
@@ -683,8 +695,8 @@ function render(page) {
   pagEl.innerHTML = html;
 }
 
-// MAP
-function initMap() {
+// MAP — integrates with global pre-declared initMap
+function initMapInternal() {
   const okc = {lat:35.4676, lng:-97.5164};
   map = new google.maps.Map(document.getElementById('map'), {
     center: okc, zoom: 10,
@@ -702,7 +714,19 @@ function initMap() {
   infoWindow = new google.maps.InfoWindow();
   if (allProviders.length) updateMapMarkers(allProviders);
 }
-window.initMap = initMap;
+// Register with the global initMap queue
+const doInitMap = function() { initMapInternal(); };
+if (window._mapReady) {
+  doInitMap();
+} else {
+  window._mapQueue.push(doInitMap);
+  // Override global initMap to call our internal version
+  window.initMap = function() {
+    window._mapReady = true;
+    window._mapQueue.forEach(fn => fn());
+    window._mapQueue = [];
+  };
+}
 
 function updateMapMarkers(filtered) {
   if (!map) return;

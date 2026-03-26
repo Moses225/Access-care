@@ -54,7 +54,7 @@
           },
           {
             "key": "Content-Security-Policy",
-            "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://maps.googleapis.com https://maps.gstatic.com https://www.google.com https://www.recaptcha.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com https://*.google.com; connect-src 'self' https://firestore.googleapis.com https://www.googleapis.com https://*.firebaseio.com https://firebase.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://firebaseappcheck.googleapis.com https://www.recaptcha.net https://recaptchaenterprise.googleapis.com; frame-src https://www.google.com https://www.recaptcha.net; worker-src blob:; object-src 'none'; base-uri 'self';"
+            "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://maps.googleapis.com https://maps.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.googleapis.com https://*.gstatic.com; connect-src 'self' https://firestore.googleapis.com https://www.googleapis.com https://*.firebaseio.com; frame-src 'none'; object-src 'none'; base-uri 'self';"
           }
         ]
       }
@@ -64,7 +64,6 @@
         "source": "**",
         "destination": "/index.html"
       }
-    ],
-    "site": "morava-landing"
+    ]
   }
 }
