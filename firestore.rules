@@ -290,6 +290,18 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+
+    // ================================================================
+    // WAITLIST — public email capture from moravacare.com
+    // ================================================================
+    match /waitlist/{docId} {
+      allow create: if request.resource.data.email is string
+                 && request.resource.data.email.size() > 0
+                 && request.resource.data.email.size() <= 200
+                 && request.resource.data.source is string;
+      allow read, update, delete: if isAdmin();
+    }
+
     // ================================================================
     // CATCH-ALL — deny everything not explicitly allowed
     // ================================================================
