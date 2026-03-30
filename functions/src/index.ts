@@ -21,7 +21,7 @@ export const onProviderApplication = onDocumentCreated(
 
     // ── Notify you ──────────────────────────────────────────────
     await resend.emails.send({
-      from: 'Morava <onboarding@resend.dev>',
+      from: 'Morava <noreply@moravacare.com>',
       to: 'moise@moravacare.com',
       subject: `New Provider Application — ${data.name}`,
       html: `
@@ -50,7 +50,7 @@ export const onProviderApplication = onDocumentCreated(
     // ── Confirm to provider ─────────────────────────────────────
     if (data.email) {
       await resend.emails.send({
-        from: 'Morava Care <onboarding@resend.dev>',
+        from: 'Morava Care <noreply@moravacare.com>',
         to: data.email,
         subject: 'We received your Morava provider application',
         html: `
@@ -102,7 +102,7 @@ export const onWaitlistSignup = onDocumentCreated(
 
     // ── Welcome email to new subscriber ────────────────────────
     await resend.emails.send({
-      from: 'Moise at Morava <onboarding@resend.dev>',
+      from: 'Moise at Morava <noreply@moravacare.com>',
       to: data.email,
       subject: 'You\'re on the Morava list 🎉',
       html: `
@@ -160,7 +160,7 @@ export const onWaitlistSignup = onDocumentCreated(
 
     // ── Notify you of new signup ────────────────────────────────
     await resend.emails.send({
-      from: 'Morava <onboarding@resend.dev>',
+      from: 'Morava <noreply@moravacare.com>',
       to: 'moise@moravacare.com',
       subject: `New waitlist signup: ${data.email}`,
       html: `
