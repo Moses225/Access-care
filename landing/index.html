@@ -52,6 +52,7 @@
   </script>
 
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%2314B8A6'/><path d='M6 26 Q9 21 14 16 Q19 11 24 9 L24.5 11 Q21 13 17 18 Q13 23 7.5 27.5 Z' fill='white'/><circle cx='24' cy='9' r='2.5' fill='white' opacity='0.9'/></svg>" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%2314B8A6'/><path d='M6 26 Q9 21 14 16 Q19 11 24 9 L24.5 11 Q21 13 17 18 Q13 23 7.5 27.5 Z' fill='white'/><circle cx='24' cy='9' r='2.5' fill='white' opacity='0.9'/></svg>" />
   <meta name="theme-color" content="#14B8A6" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -218,6 +219,23 @@
       .map-panel.show-mobile { display:block; height:380px; position:relative; top:0; }
       .trust-inner { gap:14px; }
     }
+
+    /* EMAIL CAPTURE */
+    .email-sec { background:linear-gradient(160deg,#0f172a 0%,#1a2a40 100%); padding:72px 24px; text-align:center; }
+    .email-sec h2 { font-family:'Nunito',sans-serif; font-weight:900; font-size:clamp(26px,4vw,40px); color:#fff; margin-bottom:12px; }
+    .email-sec p { font-size:17px; color:rgba(255,255,255,.7); max-width:500px; margin:0 auto 36px; line-height:1.7; }
+    .email-form { max-width:520px; margin:0 auto; }
+    .email-row { display:flex; gap:10px; background:#fff; border-radius:60px; padding:6px 6px 6px 20px; box-shadow:0 8px 32px rgba(0,0,0,.3); }
+    .email-row input { flex:1; border:none; outline:none; font-size:15px; font-family:inherit; color:#0f172a; background:transparent; min-width:0; }
+    .email-row input::placeholder { color:#94a3b8; }
+    .email-submit { background:var(--teal); color:#fff; border:none; border-radius:50px; padding:12px 24px; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer; transition:background .2s; white-space:nowrap; flex-shrink:0; }
+    .email-submit:hover { background:var(--teal-dark); }
+    .email-trust { display:flex; justify-content:center; gap:24px; margin-top:20px; flex-wrap:wrap; }
+    .email-trust-item { font-size:13px; color:rgba(255,255,255,.45); display:flex; align-items:center; gap:6px; }
+    .email-success { display:none; background:rgba(20,184,166,.15); border:1px solid rgba(20,184,166,.3); border-radius:14px; padding:20px; margin-top:16px; }
+    .email-success p { color:var(--teal); font-weight:700; font-size:16px; margin:0; }
+    .email-count { display:inline-flex; align-items:center; gap:8px; background:rgba(20,184,166,.15); border:1px solid rgba(20,184,166,.25); color:var(--teal); font-size:13px; font-weight:700; padding:6px 16px; border-radius:50px; margin-bottom:24px; }
+    @media(max-width:600px) { .email-row { flex-direction:column; border-radius:16px; padding:12px; } .email-submit { border-radius:50px; padding:13px; } }
   </style>
 </head>
 <body>
@@ -369,10 +387,35 @@
 </section>
 
 <!-- PROVIDER CTA -->
+
+<!-- EMAIL CAPTURE -->
+<section class="email-sec" id="notify">
+  <div class="email-count"><div class="pulse"></div>Now live in Oklahoma</div>
+  <h2>Be the first to know<br>when we launch near you</h2>
+  <p>Get early access updates, new provider announcements, and Oklahoma healthcare resources — straight to your inbox. No spam, ever.</p>
+
+  <div class="email-form">
+    <form id="emailCaptureForm">
+      <div class="email-row">
+        <input type="email" id="emailInput" placeholder="Enter your email address..." required autocomplete="email" />
+        <button type="submit" class="email-submit" id="emailSubmitBtn">Get Early Access →</button>
+      </div>
+    </form>
+    <div class="email-success" id="emailSuccess">
+      <p>✅ You're on the list! We'll be in touch soon.</p>
+    </div>
+    <div class="email-trust">
+      <div class="email-trust-item">🔒 No spam, ever</div>
+      <div class="email-trust-item">📧 Unsubscribe anytime</div>
+      <div class="email-trust-item">🆓 Free for patients always</div>
+    </div>
+  </div>
+</section>
+
 <section class="pcta" id="providers">
   <h2>Are you a healthcare provider?</h2>
   <p>Get listed free and start receiving appointment requests from SoonerCare and Medicaid patients across Oklahoma.</p>
-  <a class="btn-white" href="https://dashboard.moravacare.com">Provider Dashboard →</a>
+  <a class="btn-white" href="https://dashboard.moravacare.com" target="_blank" rel="noopener">Provider Dashboard →</a>
   <a class="btn-ghost" href="mailto:moise@moravacare.com">Get Listed Free</a>
 </section>
 
@@ -403,7 +446,7 @@
     </div>
     <div class="footer-col">
       <h4>Providers</h4>
-      <a href="https://dashboard.moravacare.com">Provider Dashboard</a>
+      <a href="https://dashboard.moravacare.com" target="_blank" rel="noopener">Provider Dashboard</a>
       <a href="mailto:moise@moravacare.com">Get Listed Free</a>
     </div>
     <div class="footer-col">
@@ -444,7 +487,7 @@
 <!-- FIREBASE -->
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getFirestore, collection, getDocs, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js';
 
 // ================================================================
@@ -895,6 +938,40 @@ async function load() {
   }
 }
 load();
+
+// Email capture — saves directly to Firebase Firestore
+document.getElementById('emailCaptureForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+
+  const rawEmail = document.getElementById('emailInput').value;
+  // Sanitize and validate email
+  const email = rawEmail.replace(/[<>&'"]/g, '').trim().toLowerCase();
+  if (!email || !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) return;
+  if (email.length > 200) return; // hard cap
+
+  const btn = document.getElementById('emailSubmitBtn');
+  btn.textContent = 'Saving...';
+  btn.disabled = true;
+
+  try {
+    // Save to Firestore waitlist collection
+    await addDoc(collection(db, 'waitlist'), {
+      email,
+      source: 'moravacare.com',
+      createdAt: serverTimestamp(),
+      userAgent: navigator.userAgent.substring(0, 200)
+    });
+    document.getElementById('emailCaptureForm').style.display = 'none';
+    document.getElementById('emailSuccess').style.display = 'block';
+  } catch(err) {
+    console.error('Waitlist error:', err);
+    btn.textContent = 'Get Early Access →';
+    btn.disabled = false;
+    btn.style.background = '#ef4444';
+    btn.textContent = 'Try again';
+  }
+});
+
 </script>
 
 
