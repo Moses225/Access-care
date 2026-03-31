@@ -282,8 +282,12 @@
       <button class="chip" data-specialty="Dermatology">💊 Dermatology</button>
       <button class="chip" data-specialty="General Surgery">✂️ General Surgery</button>
       <button class="chip" data-specialty="Physical Therapist">🏃 Physical Therapy</button>
-      <button class="chip" data-specialty="Midwife">🤱 Midwife</button>
+      <button class="chip" data-specialty="Occupational Therapist">🦾 Occupational Therapy</button>
       <button class="chip" data-specialty="Dietitian">🥗 Dietitian</button>
+      <button class="chip" data-specialty="Cardiology">❤️ Cardiology</button>
+      <button class="chip" data-specialty="Oncology">🎗️ Oncology</button>
+      <button class="chip" data-specialty="Neurology">🧬 Neurology</button>
+      <button class="chip" data-specialty="Ophthalmologist">👁️ Ophthalmology</button>
       <button class="chip" data-specialty="Maternal-Fetal Medicine">🔬 Maternal-Fetal</button>
       <button class="chip" data-specialty="Doula Services">💛 Doula</button>
       <button class="chip" data-specialty="Home Health Agency">🏠 Home Health</button>
@@ -632,6 +636,21 @@ const SPECIALTY_ALIASES = {
   'reproductive': 'Reproductive Endocrinologist',
   'neonatologist': 'Neonatologist', 'nicu': 'Neonatologist',
   'genetic counselor': 'Genetic Counselor',
+  'occupational therapy': 'Occupational Therapist',
+  'occupational therapist': 'Occupational Therapist',
+  'ot': 'Occupational Therapist',
+  'cardiology': 'Cardiology',
+  'cardiologist': 'Cardiology',
+  'heart': 'Cardiology',
+  'oncology': 'Oncology',
+  'oncologist': 'Oncology',
+  'cancer': 'Oncology',
+  'neurology': 'Neurology',
+  'neurologist': 'Neurology',
+  'ophthalmology': 'Ophthalmologist',
+  'ophthalmologist': 'Ophthalmologist',
+  'eye doctor': 'Ophthalmologist',
+  'eye care': 'Ophthalmologist',
 };
 
 const EMOJI = {
@@ -642,6 +661,8 @@ const EMOJI = {
   'Doula Services':'💛','Home Health Agency':'🏠','Diagnostic Radiology':'🩻',
   'Reproductive Endocrinologist':'🔬','Neonatologist':'👶','Genetic Counselor':'🧬',
   'Social Worker':'🤝','Lactation Consultant':'🤱',
+  'Occupational Therapist':'🦾','Cardiology':'❤️',
+  'Oncology':'🎗️','Neurology':'🧬','Ophthalmologist':'👁️',
 };
 function emoji(s) { return EMOJI[s] || '👨‍⚕️'; }
 
@@ -697,6 +718,11 @@ const REVERSE_SPECIALTY_MAP = {
   'Diagnostic Radiology':    ['Diagnostic Radiology','Radiology','Imaging'],
   'Social Worker':           ['Social Worker','Social Work','LCSW','Licensed Clinical Social Worker'],
   'Lactation Consultant':    ['Lactation Consultant','Lactation'],
+  'Occupational Therapist':  ['Occupational Therapist','Occupational Therapy','OT'],
+  'Cardiology':              ['Cardiology','Cardiovascular Disease','Cardiac Electrophysiologist'],
+  'Oncology':                ['Oncology','Hematology & Oncology','Gynecologic Oncology','Neuro-Oncology','Pediatric Hematology & Oncology','Prostate Cancer'],
+  'Neurology':               ['Neurology','Pediatric Neurology','Pediatric Neurosurgery','Neurosurgery'],
+  'Ophthalmologist':         ['Ophthalmologist','Ophthalmology'],
 };
 
 function specialtyMatches(providerSpecialty, filterSpecialty) {
