@@ -214,7 +214,6 @@ service cloud.firestore {
     // ================================================================
     match /auditLog/{entryId} {
       allow create: if isFullAccount()
-                 && request.resource.data.actorUid == request.auth.uid
                  && validOptionalString('action', 100)
                  && validOptionalString('targetId', 200);
       allow read:   if isAdmin();
