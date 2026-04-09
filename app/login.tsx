@@ -37,10 +37,7 @@ export default function LoginScreen() {
       return;
     }
     try {
-      await sendPasswordResetEmail(auth, sanitizedEmail, {
-        url: "https://accesscare-app.firebaseapp.com",
-        handleCodeInApp: false,
-      });
+      await sendPasswordResetEmail(auth, sanitizedEmail);
       Alert.alert(
         "Email Sent",
         "Check your inbox for a password reset link. Open the link in your browser to reset your password.",
