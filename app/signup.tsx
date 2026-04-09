@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import {
   createUserWithEmailAndPassword,
@@ -78,6 +79,8 @@ export default function SignupScreen() {
   const [birthYear, setBirthYear] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [verificationSent, setVerificationSent] = useState(false);
@@ -403,12 +406,21 @@ export default function SignupScreen() {
           placeholderTextColor={colors.subtext}
           value={password}
           onChangeText={setPassword}
-          secureTextEntry
+          secureTextEntry={!showPassword}
           textContentType="newPassword"
           editable={!loading}
           accessibilityLabel="Password"
         />
-
+        <TouchableOpacity
+          style={styles.eyeIcon}
+          onPress={() => setShowPassword(!showPassword)}
+        >
+          <Ionicons
+            name={showPassword ? "eye-off" : "eye"}
+            size={22}
+            color="#94A3B8"
+          />
+        </TouchableOpacity>
         <Text style={[styles.passwordHint, { color: colors.subtext }]}>
           Min 8 characters · 1 uppercase · 1 number · 1 special character
           (!@#$%...)
@@ -427,12 +439,22 @@ export default function SignupScreen() {
           placeholderTextColor={colors.subtext}
           value={confirmPassword}
           onChangeText={setConfirmPassword}
-          secureTextEntry
+          secureTextEntry={!showConfirmPassword}
           textContentType="newPassword"
           editable={!loading}
           onSubmitEditing={handleSignup}
           accessibilityLabel="Confirm password"
         />
+        <TouchableOpacity
+          style={styles.eyeIcon}
+          onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+        >
+          <Ionicons
+            name={showConfirmPassword ? "eye-off" : "eye"}
+            size={22}
+            color="#94A3B8"
+          />
+        </TouchableOpacity>
 
         <TouchableOpacity
           style={[
@@ -482,6 +504,12 @@ const styles = StyleSheet.create({
     padding: 15,
     marginBottom: 15,
     fontSize: 16,
+  },
+  eyeIcon: {
+    alignSelf: "flex-end",
+    marginTop: -48,
+    marginBottom: 8,
+    padding: 4,
   },
   passwordHint: {
     fontSize: 12,
