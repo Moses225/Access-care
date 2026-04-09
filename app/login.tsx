@@ -1,5 +1,9 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import {
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
 import React, { useState } from "react";
 import {
   Alert,
@@ -14,6 +18,7 @@ import {
 } from "react-native";
 import { useTheme } from "../context/ThemeContext";
 import { auth } from "../firebase";
+import { logFailedLogin } from "../utils/auditLog";
 import { logError } from "../utils/crashReporting";
 import { sanitizeEmail, validateLogin } from "../utils/validation";
 
@@ -23,6 +28,28 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const handleForgotPassword = async () => {
+    const sanitizedEmail = sanitizeEmail(email);
+    if (!sanitizedEmail) {
+      Alert.alert("Reset Password", "Please enter your email address first.");
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, sanitizedEmail, {
+        url: "https://accesscare-app.firebaseapp.com",
+        handleCodeInApp: false,
+      });
+      Alert.alert(
+        "Email Sent",
+        "Check your inbox for a password reset link. Open the link in your browser to reset your password.",
+        [{ text: "OK" }],
+      );
+    } catch {
+      Alert.alert("Error", "Could not send reset email. Please try again.");
+    }
+  };
 
   const handleLogin = async () => {
     if (__DEV__) console.log("🔑 handleLogin called");
@@ -64,6 +91,7 @@ export default function LoginScreen() {
     } catch (error: any) {
       if (__DEV__) console.error("❌ Sign in FAILED:", error);
       logError(error, "Login");
+      logFailedLogin(email).catch(() => {});
 
       let errorMessage = "Failed to sign in. Please try again.";
 
@@ -122,23 +150,44 @@ export default function LoginScreen() {
         editable={!loading}
       />
 
-      <TextInput
-        style={[
-          styles.input,
-          {
-            backgroundColor: colors.card,
-            color: colors.text,
-            borderColor: colors.border,
-          },
-        ]}
-        placeholder="Password"
-        placeholderTextColor={colors.subtext}
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        editable={!loading}
-        onSubmitEditing={handleLogin}
-      />
+      <View style={styles.passwordContainer}>
+        <TextInput
+          style={[
+            styles.passwordInput,
+            {
+              backgroundColor: colors.card,
+              color: colors.text,
+              borderColor: colors.border,
+            },
+          ]}
+          placeholder="Password"
+          placeholderTextColor={colors.subtext}
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry={!showPassword}
+          editable={!loading}
+          onSubmitEditing={handleLogin}
+        />
+        <TouchableOpacity
+          style={styles.eyeIcon}
+          onPress={() => setShowPassword(!showPassword)}
+        >
+          <Ionicons
+            name={showPassword ? "eye-off" : "eye"}
+            size={22}
+            color="#94A3B8"
+          />
+        </TouchableOpacity>
+      </View>
+
+      <TouchableOpacity
+        onPress={handleForgotPassword}
+        style={styles.forgotPassword}
+      >
+        <Text style={[styles.forgotPasswordText, { color: colors.primary }]}>
+          Forgot password?
+        </Text>
+      </TouchableOpacity>
 
       <TouchableOpacity
         style={[
@@ -197,4 +246,23 @@ const styles = StyleSheet.create({
   footer: { flexDirection: "row", justifyContent: "center", marginTop: 30 },
   footerText: { fontSize: 16 },
   signupLink: { fontSize: 16, fontWeight: "bold" },
+  forgotPassword: { alignSelf: "flex-end", marginBottom: 16, marginTop: -8 },
+  forgotPasswordText: { fontSize: 14 },
+  passwordContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 2,
+    borderRadius: 12,
+    marginBottom: 15,
+  },
+  passwordInput: {
+    flex: 1,
+    padding: 15,
+    fontSize: 16,
+    borderWidth: 0,
+    borderRadius: 12,
+  },
+  eyeIcon: {
+    padding: 12,
+  },
 });
