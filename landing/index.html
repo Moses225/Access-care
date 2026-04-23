@@ -1393,10 +1393,10 @@
         <div class="pulse"></div>
         Now live in Oklahoma
       </div>
-      <h2>Be the first to know<br />when we launch near you</h2>
+      <h2>Stay updated on<br />Oklahoma healthcare</h2>
       <p>
-        Get early access updates, new provider announcements, and Oklahoma
-        healthcare resources — straight to your inbox. No spam, ever.
+        Get new provider announcements, healthcare resources, and Morava updates
+        — straight to your inbox. No spam, ever.
       </p>
 
       <div class="email-form">
@@ -1431,8 +1431,20 @@
         Get listed free and start receiving appointment requests from SoonerCare
         and Medicaid patients across Oklahoma.
       </p>
-      <a class="btn-white" href="https://dashboard.moravacare.com" target="_blank" rel="noopener">Claim Your Free Profile →</a>
-      <a class="btn-ghost" href="https://dashboard.moravacare.com" target="_blank" rel="noopener">Provider Sign In</a>
+      <a
+        class="btn-white"
+        href="https://dashboard.moravacare.com"
+        target="_blank"
+        rel="noopener"
+        >Claim Your Free Profile →</a
+      >
+      <a
+        class="btn-ghost"
+        href="https://dashboard.moravacare.com"
+        target="_blank"
+        rel="noopener"
+        >Provider Sign In</a
+      >
     </section>
 
     <!-- FOOTER -->
@@ -1538,7 +1550,7 @@
             margin-top: 4px;
           "
         >
-
+          <a
             href="https://apps.apple.com/app/morava/id6762682632"
             target="_blank"
             rel="noopener"
@@ -2217,13 +2229,15 @@
       // Load Firebase data — rate limited
       async function load() {
         // Check sessionStorage cache first — avoids repeat Firestore reads
-        const cached = sessionStorage.getItem('morava_providers');
+        const cached = sessionStorage.getItem("morava_providers");
         if (cached) {
           try {
             allProviders = JSON.parse(cached);
             render(1);
             return;
-          } catch { /* cache miss — fall through */ }
+          } catch {
+            /* cache miss — fall through */
+          }
         }
         if (!rateLimiter.check()) {
           document.getElementById("providerGrid").innerHTML =
@@ -2236,7 +2250,10 @@
             .map((d) => ({ id: d.id, ...d.data() }))
             .filter((p) => p.name && typeof p.name === "string") // filter malformed docs
             .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-          sessionStorage.setItem('morava_providers', JSON.stringify(allProviders));
+          sessionStorage.setItem(
+            "morava_providers",
+            JSON.stringify(allProviders),
+          );
           render(1);
         } catch (err) {
           console.error("Provider load error:", err);
