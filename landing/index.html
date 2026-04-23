@@ -1385,8 +1385,6 @@
       </div>
     </section>
 
-    <!-- PROVIDER CTA -->
-
     <!-- EMAIL CAPTURE -->
     <section class="email-sec" id="notify">
       <div class="email-count">
@@ -1988,7 +1986,6 @@
         const total = Math.ceil(f.length / PER_PAGE);
         const items = f.slice((page - 1) * PER_PAGE, page * PER_PAGE);
         // Get actual indices in allProviders for map focus
-        const startIdx = (page - 1) * PER_PAGE;
 
         countEl.innerHTML = `Showing <strong>${f.length}</strong> Oklahoma providers`;
         grid.innerHTML = items
@@ -2294,7 +2291,7 @@
             document.getElementById("emailSuccess").style.display = "block";
           } catch (err) {
             console.error("Waitlist error:", err);
-            btn.textContent = "Get Early Access →";
+            btn.textContent = "Stay Updated →";
             btn.disabled = false;
             btn.style.background = "#ef4444";
             btn.textContent = "Try again";
