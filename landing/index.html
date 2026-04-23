@@ -1431,20 +1431,8 @@
         Get listed free and start receiving appointment requests from SoonerCare
         and Medicaid patients across Oklahoma.
       </p>
-
-        class="btn-white"
-        href="https://dashboard.moravacare.com"
-        target="_blank"
-        rel="noopener"
-        >Claim Your Free Profile →</a
-      >
-
-        class="btn-ghost"
-        href="https://dashboard.moravacare.com"
-        target="_blank"
-        rel="noopener"
-        >Provider Sign In</a
-      >
+      <a class="btn-white" href="https://dashboard.moravacare.com" target="_blank" rel="noopener">Claim Your Free Profile →</a>
+      <a class="btn-ghost" href="https://dashboard.moravacare.com" target="_blank" rel="noopener">Provider Sign In</a>
     </section>
 
     <!-- FOOTER -->
@@ -2200,35 +2188,7 @@
         document.getElementById("modal").classList.remove("open");
       });
 
-      // Modal email capture
-      document
-        .getElementById("modalEmailBtn")
-        .addEventListener("click", async () => {
-          const rawEmail = document.getElementById("modalEmailInput").value;
-          const email = rawEmail
-            .replace(/[<>&\'"]/g, "")
-            .trim()
-            .toLowerCase();
-          if (!email || !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) return;
-
-          const btn = document.getElementById("modalEmailBtn");
-          btn.textContent = "Saving...";
-          btn.disabled = true;
-
-          try {
-            await addDoc(collection(db, "waitlist"), {
-              email,
-              source: "moravacare.com/modal",
-              createdAt: serverTimestamp(),
-            });
-            document.getElementById("modalEmailForm").style.display = "none";
-            document.getElementById("modalEmailSuccess").style.display =
-              "block";
-          } catch {
-            btn.textContent = "Notify me";
-            btn.disabled = false;
-          }
-        });
+      // Modal email capture removed — iOS now live
       document.getElementById("modal").addEventListener("click", (e) => {
         if (e.target === document.getElementById("modal"))
           document.getElementById("modal").classList.remove("open");
@@ -2256,6 +2216,15 @@
 
       // Load Firebase data — rate limited
       async function load() {
+        // Check sessionStorage cache first — avoids repeat Firestore reads
+        const cached = sessionStorage.getItem('morava_providers');
+        if (cached) {
+          try {
+            allProviders = JSON.parse(cached);
+            render(1);
+            return;
+          } catch { /* cache miss — fall through */ }
+        }
         if (!rateLimiter.check()) {
           document.getElementById("providerGrid").innerHTML =
             `<div class="state-wrap"><div style="font-size:40px;margin-bottom:12px">⏳</div><div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:18px">Too many requests</div><div style="font-size:14px;color:var(--text-2)">Please wait a moment and refresh</div></div>`;
@@ -2267,6 +2236,7 @@
             .map((d) => ({ id: d.id, ...d.data() }))
             .filter((p) => p.name && typeof p.name === "string") // filter malformed docs
             .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+          sessionStorage.setItem('morava_providers', JSON.stringify(allProviders));
           render(1);
         } catch (err) {
           console.error("Provider load error:", err);
