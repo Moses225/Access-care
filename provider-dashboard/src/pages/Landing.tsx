@@ -1,10 +1,10 @@
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { db } from "../firebase";
 
 export default function Landing() {
   const navigate = useNavigate();
-
   return (
     <div className="min-h-screen bg-white font-sans">
       {/* ── Patient redirect banner ──────────────────────────────────── */}
@@ -19,6 +19,7 @@ export default function Landing() {
           Download the Morava patient app →
         </a>
       </div>
+
       {/* ── Nav ──────────────────────────────────────────────────────── */}
       <nav className="fixed top-10 left-0 right-0 z-50 bg-white/90 backdrop-blur-sm border-b border-slate-100">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -53,7 +54,7 @@ export default function Landing() {
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 bg-teal-50 border border-teal-100 text-teal-700 text-sm font-medium px-4 py-2 rounded-full mb-8">
             <span className="w-2 h-2 bg-teal-500 rounded-full animate-pulse" />
-            Now accepting Oklahoma SoonerCare providers
+            Now live on Google Play & App Store · Free to list
           </div>
           <h1 className="font-display text-5xl md:text-6xl lg:text-7xl text-slate-900 leading-tight mb-6 text-balance">
             Reach patients who need you{" "}
@@ -164,8 +165,9 @@ export default function Landing() {
               </p>
               <ul className="space-y-4">
                 {[
-                  "Free listing — no subscription, no per-appointment fees",
-                  "Real-time booking confirmations sent to patients",
+                  "Free listing — no subscription, no per-appointment fees during launch",
+                  "Real-time booking notifications sent to your email",
+                  "Every booking includes a patient health summary PDF for your EHR",
                   "Manage in-person and telehealth appointments",
                   "Profile verified and live within 24 hours",
                   "HIPAA-compliant booking and communication",
@@ -278,7 +280,7 @@ export default function Landing() {
             <span className="font-display text-white">Morava</span>
           </div>
           <p className="text-slate-500 text-sm">
-            © 2026 Morava. Serving Oklahoma SoonerCare patients and providers.
+            © 2026 Morava Care LLC · Oklahoma City, OK · EIN 41-5066125
           </p>
           <div className="flex gap-6">
             <a
@@ -308,9 +310,14 @@ function ApplyForm() {
     name: "",
     practice: "",
     specialty: "",
-    phone: "",
-    email: "",
     npi: "",
+    email: "",
+    phone: "",
+    city: "",
+    insuranceAccepted: [] as string[],
+    telehealth: "",
+    notificationEmail: "",
+    referredBy: "",
     message: "",
   });
   const [submitted, setSubmitted] = useState(false);
@@ -324,6 +331,15 @@ function ApplyForm() {
       >,
     ) =>
       setForm((prev) => ({ ...prev, [k]: e.target.value }));
+
+  const toggleInsurance = (val: string) => {
+    setForm((prev) => ({
+      ...prev,
+      insuranceAccepted: prev.insuranceAccepted.includes(val)
+        ? prev.insuranceAccepted.filter((i) => i !== val)
+        : [...prev.insuranceAccepted, val],
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -339,12 +355,27 @@ function ApplyForm() {
     } catch (err) {
       console.error("Application submission error:", err);
       alert(
-        "Something went wrong. Please try again or email us directly at support@moravacare.com",
+        "Something went wrong. Please try again or email us at support@moravacare.com",
       );
     } finally {
       setSubmitting(false);
     }
   };
+
+  const insuranceOptions = [
+    "SoonerCare / Medicaid",
+    "Medicare",
+    "BlueCross BlueShield",
+    "Aetna",
+    "UnitedHealthcare",
+    "Cigna",
+    "Humana",
+    "Tricare",
+    "CHIP",
+    "Self-Pay / Sliding Scale",
+    "Out of Pocket",
+    "Most Major Insurance",
+  ];
 
   if (submitted)
     return (
@@ -355,7 +386,9 @@ function ApplyForm() {
         </h3>
         <p className="text-slate-500">
           We'll reach out to {form.email} within 24 hours to verify your
-          credentials and activate your profile.
+          credentials and activate your profile. You'll receive booking
+          notifications at{" "}
+          {form.notificationEmail || form.email}.
         </p>
       </div>
     );
@@ -363,8 +396,9 @@ function ApplyForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-white rounded-2xl p-8 text-left space-y-4"
+      className="bg-white rounded-2xl p-8 text-left space-y-5"
     >
+      {/* Row 1: Name + Practice */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field
           label="Full Name"
@@ -381,6 +415,8 @@ function ApplyForm() {
           required
         />
       </div>
+
+      {/* Row 2: Specialty + City */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">
@@ -400,12 +436,20 @@ function ApplyForm() {
               "Internal Medicine",
               "Pediatrics",
               "OB/GYN",
-              "Psychiatry",
+              "Psychiatry / Mental Health",
               "Cardiology",
               "Dermatology",
               "Orthopedics",
               "Urgent Care",
               "Dental / General Dentistry",
+              "Physical Therapy",
+              "Occupational Therapy",
+              "Chiropractic",
+              "Neurology",
+              "Oncology",
+              "Ophthalmology",
+              "Doula Services",
+              "Home Health",
               "Other",
             ].map((s) => (
               <option key={s} value={s}>
@@ -415,20 +459,21 @@ function ApplyForm() {
           </select>
         </div>
         <Field
+          label="City / Location"
+          value={form.city}
+          onChange={set("city")}
+          placeholder="Oklahoma City, OK"
+          required
+        />
+      </div>
+
+      {/* Row 3: NPI + Phone */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Field
           label="NPI Number"
           value={form.npi}
           onChange={set("npi")}
           placeholder="1234567890"
-        />
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field
-          label="Email"
-          type="email"
-          value={form.email}
-          onChange={set("email")}
-          placeholder="dr.smith@clinic.com"
-          required
         />
         <Field
           label="Phone"
@@ -439,6 +484,87 @@ function ApplyForm() {
           required
         />
       </div>
+
+      {/* Row 4: Email + Notification Email */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Field
+          label="Email"
+          type="email"
+          value={form.email}
+          onChange={set("email")}
+          placeholder="dr.smith@clinic.com"
+          required
+        />
+        <div>
+          <Field
+            label="Booking Alert Email"
+            type="email"
+            value={form.notificationEmail}
+            onChange={set("notificationEmail")}
+            placeholder="frontdesk@clinic.com"
+          />
+          <p className="text-xs text-slate-400 mt-1">
+            Where to send new booking alerts (can be front desk)
+          </p>
+        </div>
+      </div>
+
+      {/* Telehealth */}
+      <div>
+        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">
+          Do you offer telehealth?
+        </label>
+        <div className="flex gap-3">
+          {["Yes", "No", "Both in-person and telehealth"].map((opt) => (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => setForm((prev) => ({ ...prev, telehealth: opt }))}
+              className={`flex-1 py-2.5 rounded-lg text-sm font-semibold border transition-colors ${
+                form.telehealth === opt
+                  ? "bg-teal-500 text-white border-teal-500"
+                  : "border-slate-200 text-slate-600 hover:border-teal-300"
+              }`}
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Insurance accepted */}
+      <div>
+        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">
+          Insurance Accepted (select all that apply)
+        </label>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {insuranceOptions.map((ins) => (
+            <button
+              key={ins}
+              type="button"
+              onClick={() => toggleInsurance(ins)}
+              className={`px-3 py-2 rounded-lg text-xs font-semibold border text-left transition-colors ${
+                form.insuranceAccepted.includes(ins)
+                  ? "bg-teal-50 text-teal-700 border-teal-400"
+                  : "border-slate-200 text-slate-600 hover:border-slate-300"
+              }`}
+            >
+              {form.insuranceAccepted.includes(ins) ? "✓ " : ""}
+              {ins}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Referred by */}
+      <Field
+        label="Referred by (optional)"
+        value={form.referredBy}
+        onChange={set("referredBy")}
+        placeholder="Name of person who referred you to Morava"
+      />
+
+      {/* Message */}
       <div>
         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">
           Anything else?
@@ -451,6 +577,7 @@ function ApplyForm() {
           className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none"
         />
       </div>
+
       <button
         type="submit"
         disabled={submitting}
@@ -505,5 +632,3 @@ function Field({
     </div>
   );
 }
-
-import { useState } from "react";
