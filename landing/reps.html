@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Morava — Sales Rep Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --teal:#14b8a6;--teal-dark:#0d9488;--teal-light:#ccfbf1;
+  --teal-xlight:#f0fdfb;--navy:#0f172a;--text:#1e293b;
+  --text-2:#475569;--text-3:#94a3b8;--border:#e2e8f0;
+  --bg:#f8fafc;--white:#fff;--red:#ef4444;--amber:#f59e0b;
+  --amber-bg:#fef3c7;--green:#22c55e;
+}
+html{scroll-behavior:smooth}
+body{font-family:"Plus Jakarta Sans",sans-serif;background:var(--bg);
+  color:var(--text);min-height:100vh;}
+
+/* NAV */
+nav{background:var(--white);border-bottom:1px solid var(--border);
+  padding:0 24px;position:sticky;top:0;z-index:100;}
+.nav-inner{max-width:900px;margin:0 auto;height:64px;
+  display:flex;align-items:center;justify-content:space-between;}
+.logo{display:flex;align-items:center;gap:8px;text-decoration:none;}
+.logo-box{width:32px;height:32px;background:var(--teal);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;}
+.logo-name{font-family:"Nunito",sans-serif;font-weight:900;
+  font-size:18px;color:var(--navy);}
+.logo-tag{font-size:11px;font-weight:700;color:var(--teal);
+  background:var(--teal-xlight);padding:2px 8px;border-radius:50px;}
+.nav-link{font-size:13px;color:var(--text-2);text-decoration:none;
+  font-weight:600;transition:color .2s;}
+.nav-link:hover{color:var(--teal)}
+
+/* HERO */
+.hero{background:linear-gradient(135deg,var(--navy) 0%,#1a3a5c 100%);
+  padding:56px 24px;text-align:center;}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;
+  background:rgba(20,184,166,.15);border:1px solid rgba(20,184,166,.3);
+  color:var(--teal);font-size:12px;font-weight:700;padding:5px 14px;
+  border-radius:50px;margin-bottom:20px;}
+.pulse{width:7px;height:7px;background:var(--teal);border-radius:50%;
+  animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}
+  50%{opacity:.5;transform:scale(.8)}}
+.hero h1{font-family:"Nunito",sans-serif;font-weight:900;
+  font-size:clamp(28px,4vw,44px);color:var(--white);margin-bottom:12px;}
+.hero h1 span{color:var(--teal)}
+.hero p{font-size:16px;color:rgba(255,255,255,.7);max-width:480px;
+  margin:0 auto 32px;line-height:1.7;}
+
+/* COMMISSION CARDS */
+.comm-row{display:grid;grid-template-columns:repeat(3,1fr);
+  gap:12px;max-width:480px;margin:0 auto;}
+.comm-card{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);
+  border-radius:12px;padding:16px;text-align:center;}
+.comm-amount{font-family:"Nunito",sans-serif;font-weight:900;
+  font-size:28px;color:var(--teal);}
+.comm-label{font-size:11px;color:rgba(255,255,255,.55);margin-top:4px;
+  line-height:1.4;}
+
+/* TABS */
+.tabs-wrap{max-width:900px;margin:0 auto;padding:0 24px;}
+.tabs{display:flex;gap:0;margin-top:-1px;border-bottom:2px solid var(--border);
+  margin-bottom:32px;}
+.tab{flex:1;padding:16px;font-size:14px;font-weight:700;
+  color:var(--text-2);background:none;border:none;cursor:pointer;
+  transition:all .2s;border-bottom:2px solid transparent;
+  margin-bottom:-2px;font-family:inherit;}
+.tab.active{color:var(--teal);border-bottom-color:var(--teal);}
+.tab:hover:not(.active){color:var(--text)}
+
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+
+/* MAIN WRAP */
+.main{max-width:900px;margin:0 auto;padding:32px 24px 60px;}
+
+/* CARDS */
+.card{background:var(--white);border-radius:16px;border:1.5px solid var(--border);
+  padding:28px;margin-bottom:20px;}
+.card-label{font-size:11px;font-weight:800;color:var(--teal);
+  text-transform:uppercase;letter-spacing:.5px;margin-bottom:16px;}
+
+/* FIELDS */
+.field{margin-bottom:18px;}
+.field:last-child{margin-bottom:0}
+.field label{display:block;font-size:13px;font-weight:700;
+  color:var(--text);margin-bottom:6px;}
+.required{color:var(--red)}
+.hint{font-size:11px;color:var(--text-3);margin-top:4px;line-height:1.5;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+
+input[type=text],input[type=email],input[type=tel],
+select,textarea{
+  width:100%;padding:12px 14px;border:2px solid var(--border);
+  border-radius:10px;font-size:14px;font-family:inherit;
+  color:var(--text);background:var(--white);outline:none;
+  transition:border-color .2s;}
+input:focus,select:focus,textarea:focus{border-color:var(--teal);}
+textarea{resize:vertical;min-height:80px;}
+select{appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 14px center;}
+
+/* TOGGLES */
+.toggle-group{display:flex;gap:8px;flex-wrap:wrap;}
+.toggle{padding:8px 16px;border-radius:50px;font-size:13px;
+  font-weight:700;border:2px solid var(--border);cursor:pointer;
+  background:var(--white);color:var(--text-2);transition:all .2s;
+  font-family:inherit;}
+.toggle.active{border-color:var(--teal);color:var(--teal);
+  background:var(--teal-xlight);}
+
+/* CHECKBOXES */
+.check-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.check-item{display:flex;align-items:center;gap:8px;
+  padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;
+  cursor:pointer;transition:all .2s;}
+.check-item:hover{border-color:var(--teal)}
+.check-item input{width:15px;height:15px;accent-color:var(--teal);
+  flex-shrink:0;cursor:pointer;}
+.check-item span{font-size:12px;font-weight:600;color:var(--text)}
+.check-item.checked{border-color:var(--teal);background:var(--teal-xlight);}
+
+/* RADIO */
+.radio-row{display:flex;gap:10px;flex-wrap:wrap;}
+.radio-item{display:flex;align-items:center;gap:6px;cursor:pointer;}
+.radio-item input{width:15px;height:15px;accent-color:var(--teal);cursor:pointer;}
+.radio-item span{font-size:13px;font-weight:600;color:var(--text)}
+
+/* ACK */
+.ack{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;
+  background:var(--bg);border:1.5px solid var(--border);
+  border-radius:10px;margin-bottom:10px;cursor:pointer;}
+.ack input{width:16px;height:16px;accent-color:var(--teal);
+  flex-shrink:0;margin-top:2px;cursor:pointer;}
+.ack span{font-size:13px;color:var(--text);line-height:1.5;}
+
+/* BUTTONS */
+.btn{width:100%;padding:15px;background:var(--teal);color:white;
+  border:none;border-radius:12px;font-size:15px;font-weight:800;
+  font-family:inherit;cursor:pointer;transition:background .2s;}
+.btn:hover{background:var(--teal-dark)}
+.btn:disabled{opacity:.6;cursor:not-allowed}
+
+/* NOTICE */
+.notice{background:var(--amber-bg);border:1.5px solid var(--amber);
+  border-left:4px solid var(--amber);border-radius:10px;
+  padding:12px 16px;font-size:13px;color:#92400e;
+  margin-bottom:20px;line-height:1.6;}
+
+/* SUCCESS */
+.success-box{background:var(--white);border-radius:20px;
+  border:1.5px solid var(--border);padding:48px 32px;text-align:center;}
+.success-icon{font-size:52px;margin-bottom:16px;}
+.success-box h2{font-family:"Nunito",sans-serif;font-weight:900;
+  font-size:24px;color:var(--navy);margin-bottom:8px;}
+.success-box p{font-size:14px;color:var(--text-2);line-height:1.7;
+  max-width:400px;margin:0 auto 20px;}
+.next-steps{background:var(--teal-xlight);border:1.5px solid var(--teal-light);
+  border-radius:12px;padding:18px;text-align:left;margin-bottom:20px;}
+.next-steps h3{font-size:12px;font-weight:800;color:var(--teal-dark);
+  text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
+.next-steps li{font-size:13px;color:var(--text-2);margin-bottom:6px;
+  list-style:none;padding-left:18px;position:relative;}
+.next-steps li::before{content:"→";position:absolute;left:0;color:var(--teal);}
+.btn-outline{background:var(--white);color:var(--teal);border:2px solid var(--teal);
+  border-radius:10px;padding:12px 24px;font-size:14px;font-weight:800;
+  font-family:inherit;cursor:pointer;transition:all .2s;}
+.btn-outline:hover{background:var(--teal-xlight)}
+
+/* HOW IT WORKS STEPS */
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:16px;margin-bottom:32px;}
+.step{background:var(--white);border:1.5px solid var(--border);
+  border-radius:14px;padding:20px;}
+.step-num{width:32px;height:32px;background:var(--teal);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:"Nunito",sans-serif;font-weight:900;font-size:14px;
+  color:white;margin-bottom:12px;}
+.step h3{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:6px;}
+.step p{font-size:12px;color:var(--text-2);line-height:1.6;}
+
+@media(max-width:560px){
+  .grid-2{grid-template-columns:1fr}
+  .check-grid{grid-template-columns:1fr}
+  .comm-row{grid-template-columns:1fr}
+  .hero{padding:40px 20px}
+  .card{padding:18px}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a class="logo" href="https://moravacare.com">
+      <div class="logo-box">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
+          <path d="M3 17 Q7 7 12 12 Q17 17 21 7"/>
+          <circle cx="21" cy="7" r="2" fill="white" stroke="none"/>
+        </svg>
+      </div>
+      <span class="logo-name">Morava</span>
+      <span class="logo-tag">Rep Hub</span>
+    </a>
+    <a class="nav-link" href="https://moravacare.com">← Patient Site</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">
+    <div class="pulse"></div>
+    Now accepting sales reps across Oklahoma
+  </div>
+  <h1>Earn by helping Oklahoma<br/><span>patients find care</span></h1>
+  <p>Sign up to become a Morava sales rep and earn commission for every provider you bring onto the platform.</p>
+  <div class="comm-row">
+    <div class="comm-card">
+      <div class="comm-amount">$15</div>
+      <div class="comm-label">Per provider<br/>Listings 1–10</div>
+    </div>
+    <div class="comm-card">
+      <div class="comm-amount">$18</div>
+      <div class="comm-label">Per provider<br/>Listings 11–25</div>
+    </div>
+    <div class="comm-card">
+      <div class="comm-amount">$20</div>
+      <div class="comm-label">Per provider<br/>Listings 26+</div>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- TABS -->
+  <div class="tabs-wrap" style="padding:0;">
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('apply',this)">
+        🙋 Apply to Be a Rep
+      </button>
+      <button class="tab" onclick="switchTab('submit',this)">
+        📋 Submit a Provider
+      </button>
+    </div>
+  </div>
+
+  <!-- ── TAB 1: APPLY ── -->
+  <div class="tab-panel active" id="tab-apply">
+
+    <!-- How it works -->
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>Apply below</h3>
+        <p>Takes 3 minutes. Tell us about yourself and your Oklahoma connections.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>Quick intro call</h3>
+        <p>15-minute intro call. We'll walk you through the platform and answer questions.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>Sign your agreement</h3>
+        <p>Simple contractor agreement. No exclusivity, no commitment minimums.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <h3>Start earning</h3>
+        <p>Recruit providers, submit them here, get paid monthly on the 1st.</p>
+      </div>
+    </div>
+
+    <div id="applyFormWrap">
+      <form id="applyForm">
+
+        <div class="card">
+          <div class="card-label">Personal Information</div>
+          <div class="grid-2">
+            <div class="field">
+              <label>Full Name <span class="required">*</span></label>
+              <input type="text" id="a-name" placeholder="First and last name" required/>
+            </div>
+            <div class="field">
+              <label>Email Address <span class="required">*</span></label>
+              <input type="email" id="a-email" placeholder="your@email.com" required/>
+            </div>
+          </div>
+          <div class="grid-2">
+            <div class="field">
+              <label>Phone Number <span class="required">*</span></label>
+              <input type="tel" id="a-phone" placeholder="(405) 555-0123" required/>
+            </div>
+            <div class="field">
+              <label>City <span class="required">*</span></label>
+              <select id="a-city" required>
+                <option value="">Select your city...</option>
+                <option>Oklahoma City</option>
+                <option>Tulsa</option>
+                <option>Norman</option>
+                <option>Edmond</option>
+                <option>Broken Arrow</option>
+                <option>Lawton</option>
+                <option>Moore</option>
+                <option>Yukon</option>
+                <option>Stillwater</option>
+                <option>Enid</option>
+                <option>Mustang</option>
+                <option>Other Oklahoma city</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-label">Your Background</div>
+          <div class="field">
+            <label>Current or recent role <span class="required">*</span></label>
+            <select id="a-role" required>
+              <option value="">Select...</option>
+              <option>Medical Receptionist / Front Desk</option>
+              <option>Medical Assistant (MA)</option>
+              <option>CNA / Healthcare Aide</option>
+              <option>Medical Billing / Coding</option>
+              <option>Sales / Business Development</option>
+              <option>Customer Service</option>
+              <option>Nursing / Pre-med Student</option>
+              <option>Healthcare Administrator</option>
+              <option>Independent Contractor / Freelancer</option>
+              <option>Other</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Healthcare connections in Oklahoma?</label>
+            <div class="toggle-group" id="a-connections">
+              <button type="button" class="toggle" data-val="Strong — know several providers personally">Strong connections</button>
+              <button type="button" class="toggle" data-val="Some — work adjacent to healthcare">Some connections</button>
+              <button type="button" class="toggle" data-val="None — comfortable cold outreach">None — will cold outreach</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Sales / outreach experience?</label>
+            <div class="toggle-group" id="a-sales">
+              <button type="button" class="toggle" data-val="Yes — extensive">Yes, extensive</button>
+              <button type="button" class="toggle" data-val="Yes — some">Yes, some</button>
+              <button type="button" class="toggle" data-val="No — but motivated">No, but motivated</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Hours per week available <span class="required">*</span></label>
+            <select id="a-hours" required>
+              <option value="">Select...</option>
+              <option>2–5 hours/week</option>
+              <option>5–10 hours/week</option>
+              <option>10–20 hours/week</option>
+              <option>20+ hours/week</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Preferred outreach methods (select all that apply)</label>
+            <div class="check-grid" id="a-methods">
+              <label class="check-item"><input type="checkbox" value="Phone calls"/><span>📞 Phone calls</span></label>
+              <label class="check-item"><input type="checkbox" value="In-person clinic visits"/><span>🏥 In-person visits</span></label>
+              <label class="check-item"><input type="checkbox" value="Facebook / social media"/><span>📱 Facebook / social</span></label>
+              <label class="check-item"><input type="checkbox" value="Email outreach"/><span>✉️ Email</span></label>
+              <label class="check-item"><input type="checkbox" value="LinkedIn"/><span>💼 LinkedIn</span></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-label">Payment & Referral</div>
+          <div class="grid-2">
+            <div class="field">
+              <label>Preferred payment method</label>
+              <select id="a-payment">
+                <option value="">Select...</option>
+                <option>Venmo</option>
+                <option>PayPal</option>
+                <option>Zelle</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Payment handle / email</label>
+              <input type="text" id="a-handle" placeholder="@yourvenmo or email"/>
+            </div>
+          </div>
+          <div class="field">
+            <label>How did you hear about this?</label>
+            <select id="a-source">
+              <option value="">Select...</option>
+              <option>Facebook group</option>
+              <option>LinkedIn</option>
+              <option>Indeed</option>
+              <option>Referred by someone</option>
+              <option>Craigslist</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Who referred you? (if applicable)</label>
+            <input type="text" id="a-referrer" placeholder="Name of person who referred you"/>
+          </div>
+          <div class="field">
+            <label>Why are you interested? <span class="required">*</span></label>
+            <textarea id="a-why" placeholder="Tell us a bit about yourself and why this is a good fit..." required></textarea>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-label">Acknowledgments</div>
+          <label class="ack"><input type="checkbox" id="ack1" required/><span>I understand this is a 1099 independent contractor position — commission only, no salary or benefits.</span></label>
+          <label class="ack"><input type="checkbox" id="ack2" required/><span>I understand commission is paid once a provider's profile is verified and live in the app — not on submission.</span></label>
+          <label class="ack"><input type="checkbox" id="ack3" required/><span>I agree to represent Morava honestly and will not make false promises to providers.</span></label>
+          <label class="ack"><input type="checkbox" id="ack4" required/><span>I am based in Oklahoma and authorized to work as an independent contractor in the US.</span></label>
+        </div>
+
+        <button type="submit" class="btn" id="applyBtn">Submit Application →</button>
+        <p style="text-align:center;font-size:12px;color:var(--text-3);margin-top:12px;">
+          Questions? Email <a href="mailto:moise@moravacare.com" style="color:var(--teal)">moise@moravacare.com</a> or text <a href="tel:+14328030136" style="color:var(--teal)">(432) 803-0136</a>
+        </p>
+      </form>
+    </div>
+
+    <div class="success-box" id="applySuccess" style="display:none;">
+      <div class="success-icon">🎉</div>
+      <h2>Application received!</h2>
+      <p>We'll review your application and reach out within 1–2 business days to schedule a quick call.</p>
+      <div class="next-steps">
+        <h3>What happens next</h3>
+        <ul>
+          <li>Our team reviews your application</li>
+          <li>You get a call within 2 business days</li>
+          <li>If it's a fit — you receive the onboarding kit and contractor agreement</li>
+          <li>Once signed, you can start submitting providers using the "Submit a Provider" tab</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TAB 2: SUBMIT PROVIDER ── -->
+  <div class="tab-panel" id="tab-submit">
+
+    <div class="notice">
+      <strong>Active reps only.</strong> This form is for submitting providers you've already spoken with and who have agreed to list on Morava. Commission ($15–$20) is paid once their profile is verified and live.
+    </div>
+
+    <div id="submitFormWrap">
+      <form id="submitForm">
+
+        <div class="card">
+          <div class="card-label">Your Information (Rep)</div>
+          <div class="grid-2">
+            <div class="field">
+              <label>Your Full Name <span class="required">*</span></label>
+              <input type="text" id="r-name" placeholder="Your name" required/>
+            </div>
+            <div class="field">
+              <label>Your Email <span class="required">*</span></label>
+              <input type="email" id="r-email" placeholder="your@email.com" required/>
+            </div>
+          </div>
+          <div class="field">
+            <label>Your Venmo / PayPal / Zelle handle</label>
+            <input type="text" id="r-payment" placeholder="e.g. Venmo @yourname"/>
+            <div class="hint">So we can pay your commission promptly</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-label">Provider Information</div>
+          <div class="grid-2">
+            <div class="field">
+              <label>Provider Full Name <span class="required">*</span></label>
+              <input type="text" id="p-name" placeholder="Dr. Jane Smith, MD" required/>
+            </div>
+            <div class="field">
+              <label>Practice / Clinic Name <span class="required">*</span></label>
+              <input type="text" id="p-practice" placeholder="Smith Family Medicine" required/>
+            </div>
+          </div>
+          <div class="grid-2">
+            <div class="field">
+              <label>Specialty <span class="required">*</span></label>
+              <select id="p-specialty" required>
+                <option value="">Select specialty...</option>
+                <option>Family Medicine</option>
+                <option>Internal Medicine</option>
+                <option>Pediatrics</option>
+                <option>OB/GYN</option>
+                <option>Psychiatry / Mental Health</option>
+                <option>Cardiology</option>
+                <option>Dermatology</option>
+                <option>Orthopedics</option>
+                <option>Urgent Care</option>
+                <option>Dental / General Dentistry</option>
+                <option>Physical Therapy</option>
+                <option>Occupational Therapy</option>
+                <option>Neurology</option>
+                <option>Ophthalmology</option>
+                <option>Doula Services</option>
+                <option>Home Health</option>
+                <option>Other</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>City / Location <span class="required">*</span></label>
+              <input type="text" id="p-city" placeholder="Oklahoma City, OK" required/>
+            </div>
+          </div>
+          <div class="grid-2">
+            <div class="field">
+              <label>Provider Phone <span class="required">*</span></label>
+              <input type="tel" id="p-phone" placeholder="(405) 555-0123" required/>
+            </div>
+            <div class="field">
+              <label>Provider Email <span class="required">*</span></label>
+              <input type="email" id="p-email" placeholder="dr@clinic.com" required/>
+              <div class="hint">Used to send their dashboard login</div>
+            </div>
+          </div>
+          <div class="field">
+            <label>NPI Number (if available)</label>
+            <input type="text" id="p-npi" placeholder="1234567890"/>
+            <div class="hint">Find at nppes.cms.hhs.gov — speeds up verification</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-label">Practice Details</div>
+          <div class="field">
+            <label>Insurance accepted (select all that apply)</label>
+            <div class="check-grid" id="p-insurance">
+              <label class="check-item"><input type="checkbox" value="SoonerCare / Medicaid"/><span>SoonerCare / Medicaid</span></label>
+              <label class="check-item"><input type="checkbox" value="Medicare"/><span>Medicare</span></label>
+              <label class="check-item"><input type="checkbox" value="BlueCross BlueShield"/><span>BlueCross BlueShield</span></label>
+              <label class="check-item"><input type="checkbox" value="Aetna"/><span>Aetna</span></label>
+              <label class="check-item"><input type="checkbox" value="UnitedHealthcare"/><span>UnitedHealthcare</span></label>
+              <label class="check-item"><input type="checkbox" value="Cigna"/><span>Cigna</span></label>
+              <label class="check-item"><input type="checkbox" value="Tricare"/><span>Tricare</span></label>
+              <label class="check-item"><input type="checkbox" value="Self-Pay / Sliding Scale"/><span>Self-Pay / Sliding Scale</span></label>
+              <label class="check-item"><input type="checkbox" value="Most Major Insurance"/><span>Most Major Insurance</span></label>
+              <label class="check-item"><input type="checkbox" value="Not sure"/><span>Not sure / will confirm</span></label>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Telehealth offered?</label>
+            <div class="toggle-group" id="p-telehealth">
+              <button type="button" class="toggle" data-val="Yes">Yes</button>
+              <button type="button" class="toggle" data-val="No">No</button>
+              <button type="button" class="toggle" data-val="Both">Both</button>
+              <button type="button" class="toggle" data-val="Not sure">Not sure</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Accepting new patients?</label>
+            <div class="toggle-group" id="p-accepting">
+              <button type="button" class="toggle" data-val="Yes">Yes</button>
+              <button type="button" class="toggle" data-val="Limited">Limited</button>
+              <button type="button" class="toggle" data-val="No">No</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-label">Contact Details</div>
+          <div class="grid-2">
+            <div class="field">
+              <label>How did you reach them? <span class="required">*</span></label>
+              <select id="p-contact" required>
+                <option value="">Select...</option>
+                <option>Phone call</option>
+                <option>In-person visit</option>
+                <option>Facebook message</option>
+                <option>Email</option>
+                <option>LinkedIn</option>
+                <option>Text message</option>
+                <option>Referral / introduction</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Their interest level <span class="required">*</span></label>
+              <select id="p-interest" required>
+                <option value="">Select...</option>
+                <option>✅ Confirmed — ready to go live</option>
+                <option>🤔 Interested — needs follow-up</option>
+                <option>🌡️ Warm — still considering</option>
+              </select>
+              <div class="hint">Commission paid for confirmed providers only</div>
+            </div>
+          </div>
+          <div class="field">
+            <label>Additional notes</label>
+            <textarea id="p-notes" placeholder="Best contact time, special instructions, what they care about..."></textarea>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-label">Confirm Before Submitting</div>
+          <label class="ack"><input type="checkbox" id="sack1" required/><span>I have spoken with this provider and they have agreed to be listed on Morava.</span></label>
+          <label class="ack"><input type="checkbox" id="sack2" required/><span>The information above is accurate to the best of my knowledge.</span></label>
+          <label class="ack"><input type="checkbox" id="sack3" required/><span>I understand commission is paid once their profile is verified and live — not on submission.</span></label>
+        </div>
+
+        <button type="submit" class="btn" id="submitBtn">Submit Provider →</button>
+        <p style="text-align:center;font-size:12px;color:var(--text-3);margin-top:12px;">
+          Questions? Text us at <a href="tel:+14328030136" style="color:var(--teal)">(432) 803-0136</a>
+        </p>
+      </form>
+    </div>
+
+    <div class="success-box" id="submitSuccess" style="display:none;">
+      <div class="success-icon">✅</div>
+      <h2>Provider submitted!</h2>
+      <p>We'll verify this provider within 24 hours and confirm when their profile goes live — that's when your commission is logged.</p>
+      <div class="next-steps">
+        <h3>What happens next</h3>
+        <ul>
+          <li>Provider is verified on the NPI Registry</li>
+          <li>Their profile is added to the Morava app</li>
+          <li>Provider receives their dashboard login by email</li>
+          <li>You get a confirmation message — commission logged</li>
+          <li>Commission paid on the 1st of next month</li>
+        </ul>
+      </div>
+      <button class="btn-outline" onclick="resetSubmit()">Submit Another Provider</button>
+    </div>
+  </div>
+
+</div><!-- end .main -->
+
+<!-- FIREBASE -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, addDoc, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+// ── SECURITY: Sanitization helpers ──────────────────────────────
+function sanitizeText(str, maxLen = 300) {
+  if (!str || typeof str !== 'string') return '';
+  return str
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#x27;')
+    .replace(/javascript:/gi,'').replace(/on\w+=/gi,'')
+    .trim().substring(0, maxLen);
+}
+function sanitizeEmail(str) {
+  if (!str || typeof str !== 'string') return '';
+  const e = str.trim().toLowerCase().substring(0, 200);
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) ? e : '';
+}
+function sanitizePhone(str) {
+  if (!str || typeof str !== 'string') return '';
+  return str.replace(/[^\d\s\-\(\)\+]/g,'').trim().substring(0, 20);
+}
+function sanitizeNPI(str) {
+  if (!str || typeof str !== 'string') return '';
+  return str.replace(/[^\d]/g,'').substring(0, 10);
+}
+function val(id) {
+  return sanitizeText(document.getElementById(id)?.value || '');
+}
+function emailVal(id) {
+  return sanitizeEmail(document.getElementById(id)?.value || '');
+}
+function phoneVal(id) {
+  return sanitizePhone(document.getElementById(id)?.value || '');
+}
+// ────────────────────────────────────────────────────────────────
+
+const app = initializeApp({
+  apiKey: "AIzaSyAMYBfxhljita9XVqTc_HHahMA7mFVFPn8",
+  authDomain: "accesscare-app.firebaseapp.com",
+  projectId: "accesscare-app",
+  storageBucket: "accesscare-app.firebasestorage.app",
+  messagingSenderId: "283308941540",
+  appId: "1:283308941540:web:e3c57ebf0e16ca9c8f4cf1",
+});
+const db = getFirestore(app);
+
+// ── APPLY FORM ──
+document.getElementById('applyForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('applyBtn');
+  btn.disabled = true; btn.textContent = 'Submitting...';
+
+  const methods = [...document.querySelectorAll('#a-methods input:checked')].map(c => c.value);
+  const connections = document.querySelector('#a-connections .toggle.active')?.dataset.val || '';
+  const sales = document.querySelector('#a-sales .toggle.active')?.dataset.val || '';
+
+  // Validate required email
+  const repEmail = emailVal('a-email');
+  if (!repEmail) {
+    btn.disabled = false; btn.textContent = 'Submit Application →';
+    alert('Please enter a valid email address.'); return;
+  }
+  try {
+    await addDoc(collection(db, 'repApplications'), {
+      name: val('a-name'),
+      email: repEmail,
+      phone: phoneVal('a-phone'),
+      city: sanitizeText(document.getElementById('a-city').value, 100),
+      role: sanitizeText(document.getElementById('a-role').value, 100),
+      connections: sanitizeText(connections, 100),
+      salesExp: sanitizeText(sales, 100),
+      hoursPerWeek: sanitizeText(document.getElementById('a-hours').value, 50),
+      outreachMethods: sanitizeText(methods.join(', '), 300),
+      paymentMethod: sanitizeText(document.getElementById('a-payment').value, 50),
+      paymentHandle: sanitizeText(document.getElementById('a-handle').value, 100),
+      heardFrom: sanitizeText(document.getElementById('a-source').value, 100),
+      referredBy: val('a-referrer'),
+      whyInterested: sanitizeText(document.getElementById('a-why').value, 1000),
+      status: 'new',
+      submittedAt: serverTimestamp(),
+      source: 'moravacare.com/reps',
+    });
+    document.getElementById('applyFormWrap').style.display = 'none';
+    document.getElementById('applySuccess').style.display = 'block';
+  } catch(err) {
+    console.error(err);
+    btn.disabled = false;
+    btn.textContent = 'Submit Application →';
+    alert('Something went wrong. Please email moise@moravacare.com directly.');
+  }
+});
+
+// ── SUBMIT FORM ──
+document.getElementById('submitForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true; btn.textContent = 'Submitting...';
+
+  const insurance = [...document.querySelectorAll('#p-insurance input:checked')].map(c => c.value);
+  const telehealth = document.querySelector('#p-telehealth .toggle.active')?.dataset.val || '';
+  const accepting = document.querySelector('#p-accepting .toggle.active')?.dataset.val || '';
+
+  // Validate required emails
+  const repEmailS = emailVal('r-email');
+  const provEmailS = emailVal('p-email');
+  if (!repEmailS || !provEmailS) {
+    btn.disabled = false; btn.textContent = 'Submit Provider →';
+    alert('Please enter valid email addresses.'); return;
+  }
+  try {
+    await addDoc(collection(db, 'providerSubmissions'), {
+      repName: val('r-name'),
+      repEmail: repEmailS,
+      repPayment: val('r-payment'),
+      providerName: val('p-name'),
+      practiceName: val('p-practice'),
+      specialty: sanitizeText(document.getElementById('p-specialty').value, 100),
+      city: val('p-city'),
+      providerPhone: phoneVal('p-phone'),
+      providerEmail: provEmailS,
+      npi: sanitizeNPI(document.getElementById('p-npi').value),
+      insuranceAccepted: insurance.map(i => sanitizeText(i, 100)),
+      telehealth: sanitizeText(telehealth, 50),
+      acceptingNewPatients: sanitizeText(accepting, 50),
+      contactMethod: sanitizeText(document.getElementById('p-contact').value, 100),
+      interestLevel: sanitizeText(document.getElementById('p-interest').value, 100),
+      notes: sanitizeText(document.getElementById('p-notes').value, 1000),
+      status: 'pending_verification',
+      commissionPaid: false,
+      submittedAt: serverTimestamp(),
+      source: 'moravacare.com/reps',
+    });
+    document.getElementById('submitFormWrap').style.display = 'none';
+    document.getElementById('submitSuccess').style.display = 'block';
+  } catch(err) {
+    console.error(err);
+    btn.disabled = false;
+    btn.textContent = 'Submit Provider →';
+    alert('Something went wrong. Questions? Text us at (432) 803-0136.');
+  }
+});
+</script>
+
+<script>
+// Tab switching
+function switchTab(id, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-' + id).classList.add('active');
+}
+
+// Toggle buttons (single select)
+document.querySelectorAll('.toggle-group').forEach(group => {
+  group.querySelectorAll('.toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      group.querySelectorAll('.toggle').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+});
+
+// Checkbox visual state
+document.querySelectorAll('.check-item').forEach(item => {
+  const cb = item.querySelector('input[type=checkbox]');
+  cb.addEventListener('change', () => {
+    item.classList.toggle('checked', cb.checked);
+  });
+});
+
+// Reset submit form
+function resetSubmit() {
+  document.getElementById('submitForm').reset();
+  document.querySelectorAll('#tab-submit .toggle').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#tab-submit .check-item').forEach(i => i.classList.remove('checked'));
+  document.getElementById('submitFormWrap').style.display = 'block';
+  document.getElementById('submitSuccess').style.display = 'none';
+  document.getElementById('submitBtn').disabled = false;
+  document.getElementById('submitBtn').textContent = 'Submit Provider →';
+}
+</script>
+
+</body>
+</html>
