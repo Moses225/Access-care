@@ -13,184 +13,203 @@
   --teal-xlight:#f0fdfb;--navy:#0f172a;--text:#1e293b;
   --text-2:#475569;--text-3:#94a3b8;--border:#e2e8f0;
   --bg:#f8fafc;--white:#fff;--red:#ef4444;--amber:#f59e0b;
-  --amber-bg:#fef3c7;--green:#22c55e;
+  --amber-bg:#fef3c7;--green:#22c55e;--green-bg:#f0fdf4;
+  --blue:#3b82f6;--blue-bg:#eff6ff;
 }
 html{scroll-behavior:smooth}
-body{font-family:"Plus Jakarta Sans",sans-serif;background:var(--bg);
-  color:var(--text);min-height:100vh;}
+body{font-family:"Plus Jakarta Sans",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
 
 /* NAV */
-nav{background:var(--white);border-bottom:1px solid var(--border);
-  padding:0 24px;position:sticky;top:0;z-index:100;}
-.nav-inner{max-width:900px;margin:0 auto;height:64px;
-  display:flex;align-items:center;justify-content:space-between;}
+nav{background:var(--white);border-bottom:1px solid var(--border);padding:0 24px;position:sticky;top:0;z-index:100;}
+.nav-inner{max-width:900px;margin:0 auto;height:64px;display:flex;align-items:center;justify-content:space-between;}
 .logo{display:flex;align-items:center;gap:8px;text-decoration:none;}
-.logo-box{width:32px;height:32px;background:var(--teal);border-radius:8px;
-  display:flex;align-items:center;justify-content:center;}
-.logo-name{font-family:"Nunito",sans-serif;font-weight:900;
-  font-size:18px;color:var(--navy);}
-.logo-tag{font-size:11px;font-weight:700;color:var(--teal);
-  background:var(--teal-xlight);padding:2px 8px;border-radius:50px;}
-.nav-link{font-size:13px;color:var(--text-2);text-decoration:none;
-  font-weight:600;transition:color .2s;}
+.logo-box{width:32px;height:32px;background:var(--teal);border-radius:8px;display:flex;align-items:center;justify-content:center;}
+.logo-name{font-family:"Nunito",sans-serif;font-weight:900;font-size:18px;color:var(--navy);}
+.logo-tag{font-size:11px;font-weight:700;color:var(--teal);background:var(--teal-xlight);padding:2px 8px;border-radius:50px;}
+.nav-link{font-size:13px;color:var(--text-2);text-decoration:none;font-weight:600;transition:color .2s;}
 .nav-link:hover{color:var(--teal)}
 
 /* HERO */
-.hero{background:linear-gradient(135deg,var(--navy) 0%,#1a3a5c 100%);
-  padding:56px 24px;text-align:center;}
-.hero-badge{display:inline-flex;align-items:center;gap:8px;
-  background:rgba(20,184,166,.15);border:1px solid rgba(20,184,166,.3);
-  color:var(--teal);font-size:12px;font-weight:700;padding:5px 14px;
-  border-radius:50px;margin-bottom:20px;}
-.pulse{width:7px;height:7px;background:var(--teal);border-radius:50%;
-  animation:pulse 2s infinite;}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}
-  50%{opacity:.5;transform:scale(.8)}}
-.hero h1{font-family:"Nunito",sans-serif;font-weight:900;
-  font-size:clamp(28px,4vw,44px);color:var(--white);margin-bottom:12px;}
+.hero{background:linear-gradient(135deg,var(--navy) 0%,#1a3a5c 100%);padding:56px 24px;text-align:center;}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(20,184,166,.15);border:1px solid rgba(20,184,166,.3);color:var(--teal);font-size:12px;font-weight:700;padding:5px 14px;border-radius:50px;margin-bottom:20px;}
+.pulse{width:7px;height:7px;background:var(--teal);border-radius:50%;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+.hero h1{font-family:"Nunito",sans-serif;font-weight:900;font-size:clamp(28px,4vw,44px);color:var(--white);margin-bottom:12px;}
 .hero h1 span{color:var(--teal)}
-.hero p{font-size:16px;color:rgba(255,255,255,.7);max-width:480px;
-  margin:0 auto 32px;line-height:1.7;}
-
-/* COMMISSION CARDS */
-.comm-row{display:grid;grid-template-columns:repeat(3,1fr);
-  gap:12px;max-width:480px;margin:0 auto;}
-.comm-card{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);
-  border-radius:12px;padding:16px;text-align:center;}
-.comm-amount{font-family:"Nunito",sans-serif;font-weight:900;
-  font-size:28px;color:var(--teal);}
-.comm-label{font-size:11px;color:rgba(255,255,255,.55);margin-top:4px;
-  line-height:1.4;}
+.hero p{font-size:16px;color:rgba(255,255,255,.7);max-width:480px;margin:0 auto 32px;line-height:1.7;}
+.comm-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:480px;margin:0 auto;}
+.comm-card{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:16px;text-align:center;}
+.comm-amount{font-family:"Nunito",sans-serif;font-weight:900;font-size:28px;color:var(--teal);}
+.comm-label{font-size:11px;color:rgba(255,255,255,.55);margin-top:4px;line-height:1.4;}
 
 /* TABS */
 .tabs-wrap{max-width:900px;margin:0 auto;padding:0 24px;}
-.tabs{display:flex;gap:0;margin-top:-1px;border-bottom:2px solid var(--border);
-  margin-bottom:32px;}
-.tab{flex:1;padding:16px;font-size:14px;font-weight:700;
-  color:var(--text-2);background:none;border:none;cursor:pointer;
-  transition:all .2s;border-bottom:2px solid transparent;
-  margin-bottom:-2px;font-family:inherit;}
+.tabs{display:flex;gap:0;margin-top:-1px;border-bottom:2px solid var(--border);margin-bottom:32px;}
+.tab{flex:1;padding:16px;font-size:14px;font-weight:700;color:var(--text-2);background:none;border:none;cursor:pointer;transition:all .2s;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:inherit;}
 .tab.active{color:var(--teal);border-bottom-color:var(--teal);}
 .tab:hover:not(.active){color:var(--text)}
-
 .tab-panel{display:none;}
 .tab-panel.active{display:block;}
 
-/* MAIN WRAP */
+/* MAIN */
 .main{max-width:900px;margin:0 auto;padding:32px 24px 60px;}
 
 /* CARDS */
-.card{background:var(--white);border-radius:16px;border:1.5px solid var(--border);
-  padding:28px;margin-bottom:20px;}
-.card-label{font-size:11px;font-weight:800;color:var(--teal);
-  text-transform:uppercase;letter-spacing:.5px;margin-bottom:16px;}
+.card{background:var(--white);border-radius:16px;border:1.5px solid var(--border);padding:28px;margin-bottom:20px;}
+.card-label{font-size:11px;font-weight:800;color:var(--teal);text-transform:uppercase;letter-spacing:.5px;margin-bottom:16px;}
 
 /* FIELDS */
 .field{margin-bottom:18px;}
 .field:last-child{margin-bottom:0}
-.field label{display:block;font-size:13px;font-weight:700;
-  color:var(--text);margin-bottom:6px;}
+.field label{display:block;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px;}
 .required{color:var(--red)}
 .hint{font-size:11px;color:var(--text-3);margin-top:4px;line-height:1.5;}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 
-input[type=text],input[type=email],input[type=tel],
-select,textarea{
-  width:100%;padding:12px 14px;border:2px solid var(--border);
-  border-radius:10px;font-size:14px;font-family:inherit;
-  color:var(--text);background:var(--white);outline:none;
-  transition:border-color .2s;}
+input[type=text],input[type=email],input[type=tel],select,textarea{
+  width:100%;padding:12px 14px;border:2px solid var(--border);border-radius:10px;
+  font-size:14px;font-family:inherit;color:var(--text);background:var(--white);
+  outline:none;transition:border-color .2s;}
 input:focus,select:focus,textarea:focus{border-color:var(--teal);}
+input.input-error{border-color:var(--red);}
 textarea{resize:vertical;min-height:80px;}
-select{appearance:none;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-  background-repeat:no-repeat;background-position:right 14px center;}
+select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;}
 
 /* TOGGLES */
 .toggle-group{display:flex;gap:8px;flex-wrap:wrap;}
-.toggle{padding:8px 16px;border-radius:50px;font-size:13px;
-  font-weight:700;border:2px solid var(--border);cursor:pointer;
-  background:var(--white);color:var(--text-2);transition:all .2s;
-  font-family:inherit;}
-.toggle.active{border-color:var(--teal);color:var(--teal);
-  background:var(--teal-xlight);}
+.toggle{padding:8px 16px;border-radius:50px;font-size:13px;font-weight:700;border:2px solid var(--border);cursor:pointer;background:var(--white);color:var(--text-2);transition:all .2s;font-family:inherit;}
+.toggle.active{border-color:var(--teal);color:var(--teal);background:var(--teal-xlight);}
 
 /* CHECKBOXES */
 .check-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
-.check-item{display:flex;align-items:center;gap:8px;
-  padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;
-  cursor:pointer;transition:all .2s;}
+.check-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;transition:all .2s;}
 .check-item:hover{border-color:var(--teal)}
-.check-item input{width:15px;height:15px;accent-color:var(--teal);
-  flex-shrink:0;cursor:pointer;}
+.check-item input{width:15px;height:15px;accent-color:var(--teal);flex-shrink:0;cursor:pointer;}
 .check-item span{font-size:12px;font-weight:600;color:var(--text)}
 .check-item.checked{border-color:var(--teal);background:var(--teal-xlight);}
 
-/* RADIO */
-.radio-row{display:flex;gap:10px;flex-wrap:wrap;}
-.radio-item{display:flex;align-items:center;gap:6px;cursor:pointer;}
-.radio-item input{width:15px;height:15px;accent-color:var(--teal);cursor:pointer;}
-.radio-item span{font-size:13px;font-weight:600;color:var(--text)}
-
 /* ACK */
-.ack{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;
-  background:var(--bg);border:1.5px solid var(--border);
-  border-radius:10px;margin-bottom:10px;cursor:pointer;}
-.ack input{width:16px;height:16px;accent-color:var(--teal);
-  flex-shrink:0;margin-top:2px;cursor:pointer;}
+.ack{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;margin-bottom:10px;cursor:pointer;}
+.ack input{width:16px;height:16px;accent-color:var(--teal);flex-shrink:0;margin-top:2px;cursor:pointer;}
 .ack span{font-size:13px;color:var(--text);line-height:1.5;}
 
 /* BUTTONS */
-.btn{width:100%;padding:15px;background:var(--teal);color:white;
-  border:none;border-radius:12px;font-size:15px;font-weight:800;
-  font-family:inherit;cursor:pointer;transition:background .2s;}
+.btn{width:100%;padding:15px;background:var(--teal);color:white;border:none;border-radius:12px;font-size:15px;font-weight:800;font-family:inherit;cursor:pointer;transition:background .2s;}
 .btn:hover{background:var(--teal-dark)}
 .btn:disabled{opacity:.6;cursor:not-allowed}
-
-/* NOTICE */
-.notice{background:var(--amber-bg);border:1.5px solid var(--amber);
-  border-left:4px solid var(--amber);border-radius:10px;
-  padding:12px 16px;font-size:13px;color:#92400e;
-  margin-bottom:20px;line-height:1.6;}
-
-/* SUCCESS */
-.success-box{background:var(--white);border-radius:20px;
-  border:1.5px solid var(--border);padding:48px 32px;text-align:center;}
-.success-icon{font-size:52px;margin-bottom:16px;}
-.success-box h2{font-family:"Nunito",sans-serif;font-weight:900;
-  font-size:24px;color:var(--navy);margin-bottom:8px;}
-.success-box p{font-size:14px;color:var(--text-2);line-height:1.7;
-  max-width:400px;margin:0 auto 20px;}
-.next-steps{background:var(--teal-xlight);border:1.5px solid var(--teal-light);
-  border-radius:12px;padding:18px;text-align:left;margin-bottom:20px;}
-.next-steps h3{font-size:12px;font-weight:800;color:var(--teal-dark);
-  text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
-.next-steps li{font-size:13px;color:var(--text-2);margin-bottom:6px;
-  list-style:none;padding-left:18px;position:relative;}
-.next-steps li::before{content:"→";position:absolute;left:0;color:var(--teal);}
-.btn-outline{background:var(--white);color:var(--teal);border:2px solid var(--teal);
-  border-radius:10px;padding:12px 24px;font-size:14px;font-weight:800;
-  font-family:inherit;cursor:pointer;transition:all .2s;}
+.btn-sm{padding:10px 20px;width:auto;font-size:14px;border-radius:10px;}
+.btn-outline{background:var(--white);color:var(--teal);border:2px solid var(--teal);border-radius:10px;padding:12px 24px;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer;transition:all .2s;}
 .btn-outline:hover{background:var(--teal-xlight)}
 
-/* HOW IT WORKS STEPS */
-.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
-  gap:16px;margin-bottom:32px;}
-.step{background:var(--white);border:1.5px solid var(--border);
-  border-radius:14px;padding:20px;}
-.step-num{width:32px;height:32px;background:var(--teal);border-radius:8px;
-  display:flex;align-items:center;justify-content:center;
-  font-family:"Nunito",sans-serif;font-weight:900;font-size:14px;
-  color:white;margin-bottom:12px;}
+/* NOTICES */
+.notice{background:var(--amber-bg);border:1.5px solid var(--amber);border-left:4px solid var(--amber);border-radius:10px;padding:12px 16px;font-size:13px;color:#92400e;margin-bottom:20px;line-height:1.6;}
+.notice-red{background:#fef2f2;border:1.5px solid #fca5a5;border-left:4px solid var(--red);border-radius:10px;padding:12px 16px;font-size:13px;color:#991b1b;margin-top:8px;line-height:1.6;display:none;}
+.notice-red.show{display:block;}
+.notice-green{background:var(--green-bg);border:1.5px solid #86efac;border-left:4px solid var(--green);border-radius:10px;padding:12px 16px;font-size:13px;color:#166534;margin-top:8px;line-height:1.6;display:none;}
+.notice-green.show{display:block;}
+
+/* SUCCESS */
+.success-box{background:var(--white);border-radius:20px;border:1.5px solid var(--border);padding:48px 32px;text-align:center;}
+.success-icon{font-size:52px;margin-bottom:16px;}
+.success-box h2{font-family:"Nunito",sans-serif;font-weight:900;font-size:24px;color:var(--navy);margin-bottom:8px;}
+.success-box p{font-size:14px;color:var(--text-2);line-height:1.7;max-width:400px;margin:0 auto 20px;}
+.next-steps{background:var(--teal-xlight);border:1.5px solid var(--teal-light);border-radius:12px;padding:18px;text-align:left;margin-bottom:20px;}
+.next-steps h3{font-size:12px;font-weight:800;color:var(--teal-dark);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
+.next-steps li{font-size:13px;color:var(--text-2);margin-bottom:6px;list-style:none;padding-left:18px;position:relative;}
+.next-steps li::before{content:"→";position:absolute;left:0;color:var(--teal);}
+
+/* HOW IT WORKS */
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:32px;}
+.step{background:var(--white);border:1.5px solid var(--border);border-radius:14px;padding:20px;}
+.step-num{width:32px;height:32px;background:var(--teal);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:"Nunito",sans-serif;font-weight:900;font-size:14px;color:white;margin-bottom:12px;}
 .step h3{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:6px;}
 .step p{font-size:12px;color:var(--text-2);line-height:1.6;}
 
-@media(max-width:560px){
+/* ── REP GATE ───────────────────────────────────────────── */
+.gate-card{background:var(--white);border-radius:20px;border:2px solid var(--border);padding:40px 32px;text-align:center;margin-bottom:20px;}
+.gate-icon{font-size:40px;margin-bottom:16px;}
+.gate-card h2{font-family:"Nunito",sans-serif;font-weight:900;font-size:22px;color:var(--navy);margin-bottom:8px;}
+.gate-card p{font-size:14px;color:var(--text-2);line-height:1.7;max-width:400px;margin:0 auto 24px;}
+.gate-row{display:flex;gap:10px;max-width:420px;margin:0 auto;}
+.gate-row input{flex:1;}
+.gate-error{font-size:13px;color:var(--red);margin-top:10px;display:none;}
+.gate-error.show{display:block;}
+.gate-pending{font-size:13px;color:var(--amber);margin-top:10px;display:none;line-height:1.6;}
+.gate-pending.show{display:block;}
+.rep-welcome{background:var(--teal-xlight);border:1.5px solid var(--teal-light);border-radius:12px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.rep-welcome-left{display:flex;align-items:center;gap:10px;}
+.rep-welcome-avatar{width:34px;height:34px;background:var(--teal);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:14px;flex-shrink:0;}
+.rep-welcome-name{font-size:14px;font-weight:700;color:var(--teal-dark);}
+.rep-welcome-tier{font-size:12px;color:var(--text-3);}
+.rep-switch{font-size:12px;color:var(--text-3);cursor:pointer;text-decoration:underline;}
+.rep-switch:hover{color:var(--red)}
+
+/* ── STATUS TAB ─────────────────────────────────────────── */
+.status-lookup{background:var(--white);border-radius:16px;border:1.5px solid var(--border);padding:28px;margin-bottom:20px;}
+.status-lookup h3{font-family:"Nunito",sans-serif;font-size:18px;font-weight:800;color:var(--navy);margin-bottom:6px;}
+.status-lookup p{font-size:13px;color:var(--text-2);margin-bottom:18px;line-height:1.6;}
+.status-lookup-row{display:flex;gap:10px;}
+.status-lookup-row input{flex:1;}
+
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.stat-card{background:var(--white);border-radius:14px;border:1.5px solid var(--border);padding:16px;}
+.stat-val{font-family:"Nunito",sans-serif;font-size:26px;font-weight:900;color:var(--navy);}
+.stat-val.teal{color:var(--teal-dark);}
+.stat-val.amber{color:var(--amber);}
+.stat-val.green{color:var(--green);}
+.stat-label{font-size:11px;color:var(--text-3);margin-top:4px;font-weight:600;}
+
+.submissions-table{background:var(--white);border-radius:16px;border:1.5px solid var(--border);overflow:hidden;}
+.st-header{display:grid;grid-template-columns:2fr 1.2fr 1fr 1fr;padding:10px 16px;background:var(--bg);border-bottom:1.5px solid var(--border);}
+.st-th{font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;}
+.st-row{display:grid;grid-template-columns:2fr 1.2fr 1fr 1fr;padding:14px 16px;border-bottom:1px solid var(--border);align-items:center;transition:background .15s;}
+.st-row:last-child{border-bottom:none;}
+.st-row:hover{background:var(--bg)}
+.st-provider-name{font-size:13px;font-weight:700;color:var(--text);}
+.st-provider-sub{font-size:11px;color:var(--text-3);margin-top:2px;}
+.st-date{font-size:12px;color:var(--text-2);}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;}
+.b-live{background:#dcfce7;color:#166534;}
+.b-pending{background:var(--amber-bg);color:#92400e;}
+.b-review{background:var(--blue-bg);color:#1e40af;}
+.b-rejected{background:#fef2f2;color:#991b1b;}
+.b-npi{background:#f3e8ff;color:#6b21a8;}
+.st-commission{font-size:13px;font-weight:700;}
+.st-commission.paid{color:var(--teal-dark);}
+.st-commission.pending{color:var(--amber);}
+.st-commission.na{color:var(--text-3);font-weight:400;}
+.payout-banner{background:var(--green-bg);border-top:1.5px solid #86efac;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.payout-banner span{font-size:13px;color:#166534;}
+.payout-banner strong{font-weight:700;}
+.st-empty{padding:48px 24px;text-align:center;}
+.st-empty-icon{font-size:36px;margin-bottom:12px;}
+.st-empty p{font-size:14px;color:var(--text-3);}
+.status-loading{padding:32px;text-align:center;font-size:14px;color:var(--text-3);}
+
+/* NPI CHECK */
+.npi-checking{font-size:11px;color:var(--text-3);margin-top:4px;display:none;}
+.npi-checking.show{display:block;}
+.npi-taken{font-size:11px;color:var(--red);font-weight:600;margin-top:4px;display:none;}
+.npi-taken.show{display:block;}
+.npi-ok{font-size:11px;color:var(--green);font-weight:600;margin-top:4px;display:none;}
+.npi-ok.show{display:block;}
+
+/* OTHER CITY */
+.other-city-wrap{margin-top:10px;display:none;}
+.other-city-wrap.show{display:block;}
+
+@media(max-width:640px){
   .grid-2{grid-template-columns:1fr}
   .check-grid{grid-template-columns:1fr}
   .comm-row{grid-template-columns:1fr}
   .hero{padding:40px 20px}
-  .card{padding:18px}
+  .card,.gate-card{padding:18px}
+  .gate-row{flex-direction:column}
+  .stats-grid{grid-template-columns:1fr 1fr}
+  .st-header,.st-row{grid-template-columns:2fr 1fr 1fr;font-size:12px;}
+  .st-header .st-th:nth-child(2),.st-row .st-date{display:none}
+  .status-lookup-row{flex-direction:column}
+  .tabs .tab{font-size:12px;padding:12px 8px;}
 }
 </style>
 </head>
@@ -219,18 +238,18 @@ select{appearance:none;
     Now accepting sales reps across Oklahoma
   </div>
   <h1>Earn by helping Oklahoma<br/><span>patients find care</span></h1>
-  <p>Sign up to become a Morava sales rep and earn commission for every provider you bring onto the platform.</p>
+  <p>Sign up to become a Morava sales rep and earn commission for every verified provider you bring onto the platform.</p>
   <div class="comm-row">
     <div class="comm-card">
       <div class="comm-amount">$15</div>
       <div class="comm-label">Per provider<br/>Listings 1–10</div>
     </div>
     <div class="comm-card">
-      <div class="comm-amount">$18</div>
+      <div class="comm-amount">$20</div>
       <div class="comm-label">Per provider<br/>Listings 11–25</div>
     </div>
     <div class="comm-card">
-      <div class="comm-amount">$20</div>
+      <div class="comm-amount">$25</div>
       <div class="comm-label">Per provider<br/>Listings 26+</div>
     </div>
   </div>
@@ -238,48 +257,25 @@ select{appearance:none;
 
 <div class="main">
 
-  <!-- TABS -->
   <div class="tabs-wrap" style="padding:0;">
     <div class="tabs">
-      <button class="tab active" onclick="switchTab('apply',this)">
-        🙋 Apply to Be a Rep
-      </button>
-      <button class="tab" onclick="switchTab('submit',this)">
-        📋 Submit a Provider
-      </button>
+      <button class="tab active" onclick="switchTab('apply',this)">🙋 Apply to Be a Rep</button>
+      <button class="tab" onclick="switchTab('submit',this)">📋 Submit a Provider</button>
+      <button class="tab" onclick="switchTab('status',this)">📊 My Status</button>
     </div>
   </div>
 
-  <!-- ── TAB 1: APPLY ── -->
+  <!-- ── TAB 1: APPLY ────────────────────────────────────── -->
   <div class="tab-panel active" id="tab-apply">
-
-    <!-- How it works -->
     <div class="steps">
-      <div class="step">
-        <div class="step-num">1</div>
-        <h3>Apply below</h3>
-        <p>Takes 3 minutes. Tell us about yourself and your Oklahoma connections.</p>
-      </div>
-      <div class="step">
-        <div class="step-num">2</div>
-        <h3>Quick intro call</h3>
-        <p>15-minute intro call. We'll walk you through the platform and answer questions.</p>
-      </div>
-      <div class="step">
-        <div class="step-num">3</div>
-        <h3>Sign your agreement</h3>
-        <p>Simple contractor agreement. No exclusivity, no commitment minimums.</p>
-      </div>
-      <div class="step">
-        <div class="step-num">4</div>
-        <h3>Start earning</h3>
-        <p>Recruit providers, submit them here, get paid monthly on the 1st.</p>
-      </div>
+      <div class="step"><div class="step-num">1</div><h3>Apply below</h3><p>Takes 3 minutes. Tell us about yourself and your Oklahoma connections.</p></div>
+      <div class="step"><div class="step-num">2</div><h3>Quick intro call</h3><p>15-minute intro call. We'll walk you through the platform and answer questions.</p></div>
+      <div class="step"><div class="step-num">3</div><h3>Sign your agreement</h3><p>Simple contractor agreement. No exclusivity, no commitment minimums.</p></div>
+      <div class="step"><div class="step-num">4</div><h3>Start earning</h3><p>Recruit providers, submit them here, get paid monthly on the 1st.</p></div>
     </div>
 
     <div id="applyFormWrap">
       <form id="applyForm">
-
         <div class="card">
           <div class="card-label">Personal Information</div>
           <div class="grid-2">
@@ -299,7 +295,7 @@ select{appearance:none;
             </div>
             <div class="field">
               <label>City <span class="required">*</span></label>
-              <select id="a-city" required>
+              <select id="a-city" required onchange="toggleOtherCity(this.value)">
                 <option value="">Select your city...</option>
                 <option>Oklahoma City</option>
                 <option>Tulsa</option>
@@ -312,8 +308,16 @@ select{appearance:none;
                 <option>Stillwater</option>
                 <option>Enid</option>
                 <option>Mustang</option>
-                <option>Other Oklahoma city</option>
+                <option>Midwest City</option>
+                <option>Del City</option>
+                <option>Muskogee</option>
+                <option>Bartlesville</option>
+                <option>Shawnee</option>
+                <option>Another city in Oklahoma</option>
               </select>
+              <div class="other-city-wrap" id="otherCityWrap">
+                <input type="text" id="a-city-other" placeholder="Enter your city name"/>
+              </div>
             </div>
           </div>
         </div>
@@ -336,7 +340,6 @@ select{appearance:none;
               <option>Other</option>
             </select>
           </div>
-
           <div class="field">
             <label>Healthcare connections in Oklahoma?</label>
             <div class="toggle-group" id="a-connections">
@@ -345,7 +348,6 @@ select{appearance:none;
               <button type="button" class="toggle" data-val="None — comfortable cold outreach">None — will cold outreach</button>
             </div>
           </div>
-
           <div class="field">
             <label>Sales / outreach experience?</label>
             <div class="toggle-group" id="a-sales">
@@ -354,7 +356,6 @@ select{appearance:none;
               <button type="button" class="toggle" data-val="No — but motivated">No, but motivated</button>
             </div>
           </div>
-
           <div class="field">
             <label>Hours per week available <span class="required">*</span></label>
             <select id="a-hours" required>
@@ -365,7 +366,6 @@ select{appearance:none;
               <option>20+ hours/week</option>
             </select>
           </div>
-
           <div class="field">
             <label>Preferred outreach methods (select all that apply)</label>
             <div class="check-grid" id="a-methods">
@@ -383,16 +383,16 @@ select{appearance:none;
           <div class="grid-2">
             <div class="field">
               <label>Preferred payment method</label>
-              <select id="a-payment">
+              <select id="a-payment" onchange="togglePaymentHint(this.value)">
                 <option value="">Select...</option>
-                <option>Venmo</option>
-                <option>PayPal</option>
                 <option>Zelle</option>
+                <option>Direct Deposit (ACH)</option>
               </select>
             </div>
             <div class="field">
-              <label>Payment handle / email</label>
-              <input type="text" id="a-handle" placeholder="@yourvenmo or email"/>
+              <label>Zelle phone or email <span id="handleLabel" style="font-weight:400;color:var(--text-3)">(if Zelle)</span></label>
+              <input type="text" id="a-handle" placeholder="Phone number or email linked to Zelle"/>
+              <div class="hint" id="paymentHint">If you select Direct Deposit, we'll collect your banking info securely via email after approval — do not enter bank details here.</div>
             </div>
           </div>
           <div class="field">
@@ -419,6 +419,8 @@ select{appearance:none;
 
         <div class="card">
           <div class="card-label">Acknowledgments</div>
+          <!-- Honeypot: hidden from real users, bots fill it -->
+          <input type="text" id="hp-website" name="website" autocomplete="off" tabindex="-1" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;"/>
           <label class="ack"><input type="checkbox" id="ack1" required/><span>I understand this is a 1099 independent contractor position — commission only, no salary or benefits.</span></label>
           <label class="ack"><input type="checkbox" id="ack2" required/><span>I understand commission is paid once a provider's profile is verified and live in the app — not on submission.</span></label>
           <label class="ack"><input type="checkbox" id="ack3" required/><span>I agree to represent Morava honestly and will not make false promises to providers.</span></label>
@@ -427,7 +429,7 @@ select{appearance:none;
 
         <button type="submit" class="btn" id="applyBtn">Submit Application →</button>
         <p style="text-align:center;font-size:12px;color:var(--text-3);margin-top:12px;">
-          Questions? Email <a href="mailto:moise@moravacare.com" style="color:var(--teal)">moise@moravacare.com</a> or text <a href="tel:+14328030136" style="color:var(--teal)">(432) 803-0136</a>
+          Questions? Email <a href="mailto:support@moravacare.com" style="color:var(--teal)">support@moravacare.com</a> or text <a href="tel:+14328030136" style="color:var(--teal)">(432) 803-0136</a>
         </p>
       </form>
     </div>
@@ -442,40 +444,52 @@ select{appearance:none;
           <li>Our team reviews your application</li>
           <li>You get a call within 2 business days</li>
           <li>If it's a fit — you receive the onboarding kit and contractor agreement</li>
-          <li>Once signed, you can start submitting providers using the "Submit a Provider" tab</li>
+          <li>Once signed, your account is activated and you can submit providers</li>
         </ul>
       </div>
     </div>
   </div>
 
-  <!-- ── TAB 2: SUBMIT PROVIDER ── -->
+  <!-- ── TAB 2: SUBMIT PROVIDER ──────────────────────────── -->
   <div class="tab-panel" id="tab-submit">
 
-    <div class="notice">
-      <strong>Active reps only.</strong> This form is for submitting providers you've already spoken with and who have agreed to list on Morava. Commission ($15–$20) is paid once their profile is verified and live.
+    <!-- GATE (shown until verified) -->
+    <div class="gate-card" id="repGate">
+      <div class="gate-icon">🔐</div>
+      <h2>Active reps only</h2>
+      <p>Enter the email address you used to apply. We'll verify your rep status before you can submit providers.</p>
+      <div class="gate-row">
+        <input type="email" id="gate-email" placeholder="your@email.com" onkeydown="if(event.key==='Enter'){event.preventDefault();verifyRepGate()}"/>
+        <button class="btn btn-sm" onclick="verifyRepGate()" id="gateBtn">Verify →</button>
+      </div>
+      <div class="gate-error" id="gateError">We couldn't find an approved rep account for that email. <a href="#" onclick="switchTabByName('apply')" style="color:var(--teal)">Apply here</a> if you haven't yet.</div>
+      <div class="gate-pending" id="gatePending">Your application is still under review. We'll email you at <strong id="gatePendingEmail"></strong> within 1–2 business days once approved.</div>
     </div>
 
-    <div id="submitFormWrap">
-      <form id="submitForm">
+    <!-- FORM (hidden until gate passes) -->
+    <div id="submitFormWrap" style="display:none;">
 
-        <div class="card">
-          <div class="card-label">Your Information (Rep)</div>
-          <div class="grid-2">
-            <div class="field">
-              <label>Your Full Name <span class="required">*</span></label>
-              <input type="text" id="r-name" placeholder="Your name" required/>
-            </div>
-            <div class="field">
-              <label>Your Email <span class="required">*</span></label>
-              <input type="email" id="r-email" placeholder="your@email.com" required/>
-            </div>
-          </div>
-          <div class="field">
-            <label>Your Venmo / PayPal / Zelle handle</label>
-            <input type="text" id="r-payment" placeholder="e.g. Venmo @yourname"/>
-            <div class="hint">So we can pay your commission promptly</div>
+      <!-- Rep welcome bar -->
+      <div class="rep-welcome" id="repWelcome">
+        <div class="rep-welcome-left">
+          <div class="rep-welcome-avatar" id="repAvatar">?</div>
+          <div>
+            <div class="rep-welcome-name" id="repWelcomeName">Loading...</div>
+            <div class="rep-welcome-tier" id="repWelcomeTier"></div>
           </div>
         </div>
+        <span class="rep-switch" onclick="resetGate()">Not you? Switch account</span>
+      </div>
+
+      <div class="notice">
+        <strong>Commission rule:</strong> The first rep to submit a provider claims that provider. If we receive duplicate submissions for the same provider, only the first rep gets paid. Always submit as soon as you get a verbal agreement.
+      </div>
+
+      <form id="submitForm">
+        <!-- Rep info is hidden (pre-filled from gate) -->
+        <input type="hidden" id="r-name"/>
+        <input type="hidden" id="r-email"/>
+        <input type="hidden" id="r-payment"/>
 
         <div class="card">
           <div class="card-label">Provider Information</div>
@@ -510,6 +524,7 @@ select{appearance:none;
                 <option>Ophthalmology</option>
                 <option>Doula Services</option>
                 <option>Home Health</option>
+                <option>LADC / Substance Use</option>
                 <option>Other</option>
               </select>
             </div>
@@ -530,9 +545,12 @@ select{appearance:none;
             </div>
           </div>
           <div class="field">
-            <label>NPI Number (if available)</label>
-            <input type="text" id="p-npi" placeholder="1234567890"/>
-            <div class="hint">Find at nppes.cms.hhs.gov — speeds up verification</div>
+            <label>NPI Number <span style="font-weight:400;color:var(--text-3)">(strongly recommended)</span></label>
+            <input type="text" id="p-npi" placeholder="1234567890" maxlength="10" oninput="this.value=this.value.replace(/\D/g,'')" onblur="checkNPI(this.value)"/>
+            <div class="hint">Find at <a href="https://nppes.cms.hhs.gov" target="_blank" style="color:var(--teal)">nppes.cms.hhs.gov</a> — required for verification. Speeds up your commission.</div>
+            <div class="npi-checking" id="npiChecking">⏳ Checking NPI...</div>
+            <div class="npi-taken" id="npiTaken">⚠️ This provider has already been submitted by another rep. First-touch wins — only the first rep gets paid.</div>
+            <div class="npi-ok" id="npiOk">✓ NPI available — not yet claimed.</div>
           </div>
         </div>
 
@@ -553,7 +571,6 @@ select{appearance:none;
               <label class="check-item"><input type="checkbox" value="Not sure"/><span>Not sure / will confirm</span></label>
             </div>
           </div>
-
           <div class="field">
             <label>Telehealth offered?</label>
             <div class="toggle-group" id="p-telehealth">
@@ -563,7 +580,6 @@ select{appearance:none;
               <button type="button" class="toggle" data-val="Not sure">Not sure</button>
             </div>
           </div>
-
           <div class="field">
             <label>Accepting new patients?</label>
             <div class="toggle-group" id="p-accepting">
@@ -575,7 +591,7 @@ select{appearance:none;
         </div>
 
         <div class="card">
-          <div class="card-label">Contact Details</div>
+          <div class="card-label">Outreach Details</div>
           <div class="grid-2">
             <div class="field">
               <label>How did you reach them? <span class="required">*</span></label>
@@ -603,7 +619,7 @@ select{appearance:none;
           </div>
           <div class="field">
             <label>Additional notes</label>
-            <textarea id="p-notes" placeholder="Best contact time, special instructions, what they care about..."></textarea>
+            <textarea id="p-notes" placeholder="Best contact time, what they care about, any special instructions..."></textarea>
           </div>
         </div>
 
@@ -612,11 +628,12 @@ select{appearance:none;
           <label class="ack"><input type="checkbox" id="sack1" required/><span>I have spoken with this provider and they have agreed to be listed on Morava.</span></label>
           <label class="ack"><input type="checkbox" id="sack2" required/><span>The information above is accurate to the best of my knowledge.</span></label>
           <label class="ack"><input type="checkbox" id="sack3" required/><span>I understand commission is paid once their profile is verified and live — not on submission.</span></label>
+          <label class="ack"><input type="checkbox" id="sack4" required/><span>I understand the first rep to submit a provider claims that provider's commission.</span></label>
         </div>
 
         <button type="submit" class="btn" id="submitBtn">Submit Provider →</button>
         <p style="text-align:center;font-size:12px;color:var(--text-3);margin-top:12px;">
-          Questions? Text us at <a href="tel:+14328030136" style="color:var(--teal)">(432) 803-0136</a>
+          Questions? Email <a href="mailto:support@moravacare.com" style="color:var(--teal)">support@moravacare.com</a> or text <a href="tel:+14328030136" style="color:var(--teal)">(432) 803-0136</a>
         </p>
       </form>
     </div>
@@ -628,10 +645,10 @@ select{appearance:none;
       <div class="next-steps">
         <h3>What happens next</h3>
         <ul>
-          <li>Provider is verified on the NPI Registry</li>
+          <li>Provider is verified on the NPI Registry + Oklahoma licensing board</li>
           <li>Their profile is added to the Morava app</li>
           <li>Provider receives their dashboard login by email</li>
-          <li>You get a confirmation message — commission logged</li>
+          <li>You get a confirmation — commission logged to your account</li>
           <li>Commission paid on the 1st of next month</li>
         </ul>
       </div>
@@ -639,47 +656,66 @@ select{appearance:none;
     </div>
   </div>
 
+  <!-- ── TAB 3: MY STATUS ────────────────────────────────── -->
+  <div class="tab-panel" id="tab-status">
+
+    <div class="status-lookup" id="statusLookup">
+      <h3>My Submission Status</h3>
+      <p>Enter your rep email to see all your provider submissions, their verification status, and pending commission.</p>
+      <div class="status-lookup-row">
+        <input type="email" id="status-email" placeholder="your@email.com" onkeydown="if(event.key==='Enter'){event.preventDefault();loadStatus()}"/>
+        <button class="btn btn-sm" onclick="loadStatus()" id="statusBtn">View My Status →</button>
+      </div>
+      <div class="gate-error" id="statusError" style="margin-top:10px;display:none;">No submissions found for that email. Make sure you're using the same email you registered with.</div>
+    </div>
+
+    <div id="statusResults" style="display:none;">
+      <!-- Summary stats injected here -->
+      <div class="stats-grid" id="statsGrid"></div>
+      <!-- Table injected here -->
+      <div class="submissions-table" id="submissionsTable"></div>
+    </div>
+
+    <div class="status-loading" id="statusLoading" style="display:none;">
+      Loading your submissions...
+    </div>
+
+  </div>
+
 </div><!-- end .main -->
 
-<!-- FIREBASE -->
+<!-- FIREBASE MODULE -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, addDoc, serverTimestamp }
+import { getFirestore, collection, addDoc, getDocs, query, where, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// ── SECURITY: Sanitization helpers ──────────────────────────────
-function sanitizeText(str, maxLen = 300) {
+// ── Sanitization ─────────────────────────────────────────
+function san(str, max=300) {
   if (!str || typeof str !== 'string') return '';
-  return str
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;').replace(/'/g,'&#x27;')
     .replace(/javascript:/gi,'').replace(/on\w+=/gi,'')
-    .trim().substring(0, maxLen);
+    .trim().substring(0, max);
 }
-function sanitizeEmail(str) {
+function sanEmail(str) {
   if (!str || typeof str !== 'string') return '';
-  const e = str.trim().toLowerCase().substring(0, 200);
+  const e = str.trim().toLowerCase().substring(0,200);
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) ? e : '';
 }
-function sanitizePhone(str) {
+function sanPhone(str) {
   if (!str || typeof str !== 'string') return '';
-  return str.replace(/[^\d\s\-\(\)\+]/g,'').trim().substring(0, 20);
+  return str.replace(/[^\d\s\-\(\)\+]/g,'').trim().substring(0,20);
 }
-function sanitizeNPI(str) {
+function sanNPI(str) {
   if (!str || typeof str !== 'string') return '';
-  return str.replace(/[^\d]/g,'').substring(0, 10);
+  return str.replace(/[^\d]/g,'').substring(0,10);
 }
-function val(id) {
-  return sanitizeText(document.getElementById(id)?.value || '');
-}
-function emailVal(id) {
-  return sanitizeEmail(document.getElementById(id)?.value || '');
-}
-function phoneVal(id) {
-  return sanitizePhone(document.getElementById(id)?.value || '');
-}
-// ────────────────────────────────────────────────────────────────
+function v(id) { return san(document.getElementById(id)?.value||''); }
+function ve(id) { return sanEmail(document.getElementById(id)?.value||''); }
+function vp(id) { return sanPhone(document.getElementById(id)?.value||''); }
 
+// ── Firebase init ─────────────────────────────────────────
 const app = initializeApp({
   apiKey: "AIzaSyAMYBfxhljita9XVqTc_HHahMA7mFVFPn8",
   authDomain: "accesscare-app.firebaseapp.com",
@@ -690,141 +726,425 @@ const app = initializeApp({
 });
 const db = getFirestore(app);
 
-// ── APPLY FORM ──
+// ── Expose to vanilla JS ──────────────────────────────────
+window._db = db;
+window._fbUtils = { collection, addDoc, getDocs, query, where, serverTimestamp, san, sanEmail, sanPhone, sanNPI, v, ve, vp };
+
+// ── Rep gate verification ─────────────────────────────────
+window.verifyRepGate = async function() {
+  const email = sanEmail(document.getElementById('gate-email').value);
+  if (!email) { document.getElementById('gate-email').classList.add('input-error'); return; }
+  document.getElementById('gate-email').classList.remove('input-error');
+
+  const btn = document.getElementById('gateBtn');
+  btn.disabled = true; btn.textContent = 'Checking...';
+  document.getElementById('gateError').classList.remove('show');
+  document.getElementById('gatePending').classList.remove('show');
+
+  try {
+    const q = query(collection(db, 'repApplications'), where('email','==',email));
+    const snap = await getDocs(q);
+
+    if (snap.empty) {
+      document.getElementById('gateError').classList.add('show');
+      btn.disabled = false; btn.textContent = 'Verify →';
+      return;
+    }
+
+    const rep = snap.docs[0].data();
+
+    if (rep.status === 'approved') {
+      // Cache rep info
+      window._verifiedRep = {
+        name: rep.name || '',
+        email: rep.email || email,
+        payment: rep.paymentHandle || '',
+        verifiedCount: rep.verifiedCount || 0,
+      };
+      // Hide gate, show form
+      document.getElementById('repGate').style.display = 'none';
+      document.getElementById('submitFormWrap').style.display = 'block';
+      // Pre-fill hidden fields
+      document.getElementById('r-name').value = rep.name || '';
+      document.getElementById('r-email').value = email;
+      document.getElementById('r-payment').value = rep.paymentHandle || '';
+      // Welcome bar
+      const initials = (rep.name||'?').split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
+      document.getElementById('repAvatar').textContent = initials;
+      document.getElementById('repWelcomeName').textContent = rep.name || email;
+      const count = rep.verifiedCount || 0;
+      const nextRate = count < 10 ? '$20 at listing 11' : count < 25 ? '$25 at listing 26' : '$25/provider';
+      document.getElementById('repWelcomeTier').textContent = `${count} verified provider${count===1?'':'s'} · Next tier: ${nextRate}`;
+    } else if (rep.status === 'new' || rep.status === 'pending') {
+      document.getElementById('gatePendingEmail').textContent = email;
+      document.getElementById('gatePending').classList.add('show');
+    } else {
+      document.getElementById('gateError').classList.add('show');
+    }
+  } catch(err) {
+    console.error(err);
+    document.getElementById('gateError').classList.add('show');
+  }
+  btn.disabled = false; btn.textContent = 'Verify →';
+};
+
+// ── NPI duplicate check ───────────────────────────────────
+window.checkNPI = async function(rawNpi) {
+  const npi = sanNPI(rawNpi);
+  const checking = document.getElementById('npiChecking');
+  const taken = document.getElementById('npiTaken');
+  const ok = document.getElementById('npiOk');
+  checking.classList.remove('show'); taken.classList.remove('show'); ok.classList.remove('show');
+  if (!npi || npi.length < 10) return;
+
+  checking.classList.add('show');
+  try {
+    const q = query(collection(db,'providerSubmissions'), where('npi','==',npi));
+    const snap = await getDocs(q);
+    checking.classList.remove('show');
+    // Check if any active (non-rejected) submission exists
+    const active = snap.docs.filter(d => d.data().status !== 'not_verified');
+    if (active.length > 0) {
+      taken.classList.add('show');
+      document.getElementById('p-npi').classList.add('input-error');
+    } else {
+      ok.classList.add('show');
+      document.getElementById('p-npi').classList.remove('input-error');
+    }
+  } catch(err) {
+    checking.classList.remove('show');
+  }
+};
+
+// ── Apply form ────────────────────────────────────────────
 document.getElementById('applyForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const btn = document.getElementById('applyBtn');
   btn.disabled = true; btn.textContent = 'Submitting...';
 
-  const methods = [...document.querySelectorAll('#a-methods input:checked')].map(c => c.value);
-  const connections = document.querySelector('#a-connections .toggle.active')?.dataset.val || '';
-  const sales = document.querySelector('#a-sales .toggle.active')?.dataset.val || '';
+  const repEmail = ve('a-email');
+  if (!repEmail) { btn.disabled=false; btn.textContent='Submit Application →'; alert('Please enter a valid email address.'); return; }
 
-  // Validate required email
-  const repEmail = emailVal('a-email');
-  if (!repEmail) {
-    btn.disabled = false; btn.textContent = 'Submit Application →';
-    alert('Please enter a valid email address.'); return;
+  // Honeypot check — if filled, silently reject (bot)
+  const hp = document.getElementById('hp-website')?.value || '';
+  if (hp.trim() !== '') { btn.disabled=false; btn.textContent='Submit Application →'; return; }
+
+  // Rate limit check
+  if (typeof checkRateLimit === 'function' && !checkRateLimit('apply_' + repEmail)) {
+    btn.disabled=false; btn.textContent='Submit Application →';
+    alert('Too many submissions. Please wait a few minutes and try again.');
+    return;
   }
+
+  const methods = [...document.querySelectorAll('#a-methods input:checked')].map(c=>c.value);
+  const connections = document.querySelector('#a-connections .toggle.active')?.dataset.val||'';
+  const sales = document.querySelector('#a-sales .toggle.active')?.dataset.val||'';
+  const citySelect = document.getElementById('a-city').value;
+  const cityOther = san(document.getElementById('a-city-other')?.value||'', 100);
+  const city = citySelect === 'Other Oklahoma city' ? (cityOther || 'Other') : san(citySelect, 100);
+
   try {
-    await addDoc(collection(db, 'repApplications'), {
-      name: val('a-name'),
-      email: repEmail,
-      phone: phoneVal('a-phone'),
-      city: sanitizeText(document.getElementById('a-city').value, 100),
-      role: sanitizeText(document.getElementById('a-role').value, 100),
-      connections: sanitizeText(connections, 100),
-      salesExp: sanitizeText(sales, 100),
-      hoursPerWeek: sanitizeText(document.getElementById('a-hours').value, 50),
-      outreachMethods: sanitizeText(methods.join(', '), 300),
-      paymentMethod: sanitizeText(document.getElementById('a-payment').value, 50),
-      paymentHandle: sanitizeText(document.getElementById('a-handle').value, 100),
-      heardFrom: sanitizeText(document.getElementById('a-source').value, 100),
-      referredBy: val('a-referrer'),
-      whyInterested: sanitizeText(document.getElementById('a-why').value, 1000),
-      status: 'new',
-      submittedAt: serverTimestamp(),
-      source: 'moravacare.com/reps',
+    await addDoc(collection(db,'repApplications'), {
+      name: v('a-name'), email: repEmail, phone: vp('a-phone'), city,
+      role: san(document.getElementById('a-role').value,100),
+      connections: san(connections,100), salesExp: san(sales,100),
+      hoursPerWeek: san(document.getElementById('a-hours').value,50),
+      outreachMethods: san(methods.join(', '),300),
+      paymentMethod: san(document.getElementById('a-payment').value,50),
+      paymentHandle: san(document.getElementById('a-handle').value,100),
+      heardFrom: san(document.getElementById('a-source').value,100),
+      referredBy: v('a-referrer'),
+      whyInterested: san(document.getElementById('a-why').value,1000),
+      status: 'new', verifiedCount: 0, pendingEarnings: 0,
+      submittedAt: serverTimestamp(), source: 'moravacare.com/reps',
     });
-    document.getElementById('applyFormWrap').style.display = 'none';
-    document.getElementById('applySuccess').style.display = 'block';
+    document.getElementById('applyFormWrap').style.display='none';
+    document.getElementById('applySuccess').style.display='block';
   } catch(err) {
     console.error(err);
-    btn.disabled = false;
-    btn.textContent = 'Submit Application →';
-    alert('Something went wrong. Please email moise@moravacare.com directly.');
+    btn.disabled=false; btn.textContent='Submit Application →';
+    alert('Something went wrong. Email apply@moravacare.com directly.');
   }
 });
 
-// ── SUBMIT FORM ──
+// ── Submit form ───────────────────────────────────────────
 document.getElementById('submitForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const btn = document.getElementById('submitBtn');
-  btn.disabled = true; btn.textContent = 'Submitting...';
+  btn.disabled=true; btn.textContent='Submitting...';
 
-  const insurance = [...document.querySelectorAll('#p-insurance input:checked')].map(c => c.value);
-  const telehealth = document.querySelector('#p-telehealth .toggle.active')?.dataset.val || '';
-  const accepting = document.querySelector('#p-accepting .toggle.active')?.dataset.val || '';
+  const repEmail = document.getElementById('r-email').value;
+  const provEmail = ve('p-email');
+  if (!provEmail) { btn.disabled=false; btn.textContent='Submit Provider →'; alert('Please enter a valid provider email.'); return; }
 
-  // Validate required emails
-  const repEmailS = emailVal('r-email');
-  const provEmailS = emailVal('p-email');
-  if (!repEmailS || !provEmailS) {
-    btn.disabled = false; btn.textContent = 'Submit Provider →';
-    alert('Please enter valid email addresses.'); return;
+  const npi = sanNPI(document.getElementById('p-npi').value);
+
+  // Final duplicate check at submit time
+  if (npi && npi.length === 10) {
+    try {
+      const dupQ = query(collection(db,'providerSubmissions'), where('npi','==',npi));
+      const dupSnap = await getDocs(dupQ);
+      const activeDups = dupSnap.docs.filter(d => d.data().status !== 'not_verified');
+      if (activeDups.length > 0) {
+        btn.disabled=false; btn.textContent='Submit Provider →';
+        alert('This NPI has already been claimed by another rep. If you believe this is an error, contact support@moravacare.com.');
+        return;
+      }
+    } catch(_) {}
   }
+
+  const insurance = [...document.querySelectorAll('#p-insurance input:checked')].map(c=>c.value);
+  const telehealth = document.querySelector('#p-telehealth .toggle.active')?.dataset.val||'';
+  const accepting = document.querySelector('#p-accepting .toggle.active')?.dataset.val||'';
+
   try {
-    await addDoc(collection(db, 'providerSubmissions'), {
-      repName: val('r-name'),
-      repEmail: repEmailS,
-      repPayment: val('r-payment'),
-      providerName: val('p-name'),
-      practiceName: val('p-practice'),
-      specialty: sanitizeText(document.getElementById('p-specialty').value, 100),
-      city: val('p-city'),
-      providerPhone: phoneVal('p-phone'),
-      providerEmail: provEmailS,
-      npi: sanitizeNPI(document.getElementById('p-npi').value),
-      insuranceAccepted: insurance.map(i => sanitizeText(i, 100)),
-      telehealth: sanitizeText(telehealth, 50),
-      acceptingNewPatients: sanitizeText(accepting, 50),
-      contactMethod: sanitizeText(document.getElementById('p-contact').value, 100),
-      interestLevel: sanitizeText(document.getElementById('p-interest').value, 100),
-      notes: sanitizeText(document.getElementById('p-notes').value, 1000),
+    await addDoc(collection(db,'providerSubmissions'), {
+      repName: san(document.getElementById('r-name').value,200),
+      repEmail: repEmail,
+      repPayment: san(document.getElementById('r-payment').value,100),
+      claimedBy: repEmail,
+      providerName: v('p-name'), practiceName: v('p-practice'),
+      specialty: san(document.getElementById('p-specialty').value,100),
+      city: v('p-city'), providerPhone: vp('p-phone'), providerEmail: provEmail,
+      npi: npi || '',
+      insuranceAccepted: insurance.map(i=>san(i,100)),
+      telehealth: san(telehealth,50), acceptingNewPatients: san(accepting,50),
+      contactMethod: san(document.getElementById('p-contact').value,100),
+      interestLevel: san(document.getElementById('p-interest').value,100),
+      notes: san(document.getElementById('p-notes').value,1000),
       status: 'pending_verification',
-      commissionPaid: false,
-      submittedAt: serverTimestamp(),
-      source: 'moravacare.com/reps',
+      commissionAmount: null, commissionPaid: false,
+      submittedAt: serverTimestamp(), source: 'moravacare.com/reps',
     });
-    document.getElementById('submitFormWrap').style.display = 'none';
-    document.getElementById('submitSuccess').style.display = 'block';
+    document.getElementById('submitFormWrap').style.display='none';
+    document.getElementById('submitSuccess').style.display='block';
   } catch(err) {
     console.error(err);
-    btn.disabled = false;
-    btn.textContent = 'Submit Provider →';
-    alert('Something went wrong. Questions? Text us at (432) 803-0136.');
+    btn.disabled=false; btn.textContent='Submit Provider →';
+    alert('Something went wrong. Text us at (432) 803-0136.');
   }
 });
+
+// ── Status tracker ────────────────────────────────────────
+window.loadStatus = async function() {
+  const email = sanEmail(document.getElementById('status-email').value);
+  if (!email) { document.getElementById('status-email').classList.add('input-error'); return; }
+  document.getElementById('status-email').classList.remove('input-error');
+  document.getElementById('statusError').style.display='none';
+
+  const btn = document.getElementById('statusBtn');
+  btn.disabled=true; btn.textContent='Loading...';
+  document.getElementById('statusLoading').style.display='block';
+  document.getElementById('statusResults').style.display='none';
+
+  try {
+    const q = query(collection(db,'providerSubmissions'), where('repEmail','==',email));
+    const snap = await getDocs(q);
+    document.getElementById('statusLoading').style.display='none';
+
+    if (snap.empty) {
+      document.getElementById('statusError').style.display='block';
+      btn.disabled=false; btn.textContent='View My Status →';
+      return;
+    }
+
+    const submissions = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a,b) => {
+        const at = a.submittedAt?.toMillis?.() || 0;
+        const bt = b.submittedAt?.toMillis?.() || 0;
+        return bt - at;
+      });
+
+    renderStatus(submissions);
+    document.getElementById('statusResults').style.display='block';
+  } catch(err) {
+    console.error(err);
+    document.getElementById('statusLoading').style.display='none';
+    document.getElementById('statusError').style.display='block';
+  }
+  btn.disabled=false; btn.textContent='View My Status →';
+};
+
+function renderStatus(submissions) {
+  const total = submissions.length;
+  const live = submissions.filter(s=>s.status==='live').length;
+  const pending = submissions.filter(s=>['pending_verification','awaiting_npi','in_review'].includes(s.status)).length;
+  const rejected = submissions.filter(s=>s.status==='not_verified').length;
+
+  const paidCommissions = submissions.filter(s=>s.commissionAmount && !s.commissionPaid).map(s=>s.commissionAmount||0);
+  const pendingPayout = paidCommissions.reduce((a,b)=>a+b,0);
+
+  const nextFirst = getNextFirst();
+
+  document.getElementById('statsGrid').innerHTML = `
+    <div class="stat-card"><div class="stat-val">${total}</div><div class="stat-label">Submitted</div></div>
+    <div class="stat-card"><div class="stat-val teal">${live}</div><div class="stat-label">Live &amp; earning</div></div>
+    <div class="stat-card"><div class="stat-val amber">${pending}</div><div class="stat-label">Pending review</div></div>
+    <div class="stat-card"><div class="stat-val green">$${pendingPayout}</div><div class="stat-label">Pending payout</div></div>
+  `;
+
+  const statusBadge = s => {
+    const map = {
+      live: '<span class="badge b-live">● Live</span>',
+      pending_verification: '<span class="badge b-pending">◌ In review</span>',
+      in_review: '<span class="badge b-review">◑ In review</span>',
+      awaiting_npi: '<span class="badge b-npi">⟳ Awaiting NPI</span>',
+      not_verified: '<span class="badge b-rejected">✕ Not verified</span>',
+    };
+    return map[s] || `<span class="badge b-pending">${s}</span>`;
+  };
+
+  const commCell = s => {
+    if (s.status === 'not_verified') return '<span class="st-commission na">—</span>';
+    if (s.commissionAmount && s.commissionPaid) return `<span class="st-commission paid">$${s.commissionAmount} paid ✓</span>`;
+    if (s.commissionAmount && !s.commissionPaid) return `<span class="st-commission pending">$${s.commissionAmount} pending</span>`;
+    return '<span class="st-commission pending">Pending</span>';
+  };
+
+  const formatDate = ts => {
+    if (!ts) return '—';
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  };
+
+  const rows = submissions.map(s => `
+    <div class="st-row">
+      <div>
+        <div class="st-provider-name">${san(s.providerName||'Unknown',80)}</div>
+        <div class="st-provider-sub">${san(s.specialty||'',50)} · ${san(s.city||'',50)}</div>
+      </div>
+      <div class="st-date">${formatDate(s.submittedAt)}</div>
+      <div>${statusBadge(s.status)}</div>
+      <div>${commCell(s)}</div>
+    </div>
+  `).join('');
+
+  const payoutLine = pendingPayout > 0
+    ? `<div class="payout-banner"><span>Next payout: <strong>${nextFirst}</strong></span><span>Amount: <strong>$${pendingPayout}</strong> (${live} verified provider${live===1?'':'s'})</span></div>`
+    : '';
+
+  document.getElementById('submissionsTable').innerHTML = `
+    <div class="st-header">
+      <div class="st-th">Provider</div>
+      <div class="st-th">Submitted</div>
+      <div class="st-th">Status</div>
+      <div class="st-th">Commission</div>
+    </div>
+    ${rows}
+    ${payoutLine}
+  `;
+}
+
+function getNextFirst() {
+  const now = new Date();
+  const next = new Date(now.getFullYear(), now.getMonth()+1, 1);
+  return next.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+}
 </script>
 
 <script>
-// Tab switching
-function switchTab(id, el) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  el.classList.add('active');
-  document.getElementById('tab-' + id).classList.add('active');
+// ── Payment hint toggle ───────────────────────────────────
+function togglePaymentHint(val) {
+  const hint = document.getElementById('paymentHint');
+  const handleLabel = document.getElementById('handleLabel');
+  if (val === 'Direct Deposit (ACH)') {
+    hint.style.color = 'var(--amber)';
+    hint.style.fontWeight = '600';
+    handleLabel.textContent = '(leave blank for Direct Deposit)';
+  } else {
+    hint.style.color = '';
+    hint.style.fontWeight = '';
+    handleLabel.textContent = '(if Zelle)';
+  }
 }
 
-// Toggle buttons (single select)
+// ── Submission rate limiting ──────────────────────────────
+const _submitCounts = {};
+function checkRateLimit(key) {
+  const now = Date.now();
+  if (!_submitCounts[key]) _submitCounts[key] = [];
+  _submitCounts[key] = _submitCounts[key].filter(t => now - t < 300000); // 5 min window
+  if (_submitCounts[key].length >= 3) return false; // max 3 per 5 min
+  _submitCounts[key].push(now);
+  return true;
+}
+
+
+function switchTab(id, el) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-'+id).classList.add('active');
+}
+function switchTabByName(id) {
+  const tabs = document.querySelectorAll('.tab');
+  const panels = document.querySelectorAll('.tab-panel');
+  const map = ['apply','submit','status'];
+  const idx = map.indexOf(id);
+  if (idx < 0) return;
+  tabs.forEach(t=>t.classList.remove('active'));
+  panels.forEach(p=>p.classList.remove('active'));
+  tabs[idx].classList.add('active');
+  document.getElementById('tab-'+id).classList.add('active');
+}
+
+// ── Toggle buttons ────────────────────────────────────────
 document.querySelectorAll('.toggle-group').forEach(group => {
   group.querySelectorAll('.toggle').forEach(btn => {
     btn.addEventListener('click', () => {
-      group.querySelectorAll('.toggle').forEach(b => b.classList.remove('active'));
+      group.querySelectorAll('.toggle').forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
     });
   });
 });
 
-// Checkbox visual state
+// ── Checkbox visual state ─────────────────────────────────
 document.querySelectorAll('.check-item').forEach(item => {
   const cb = item.querySelector('input[type=checkbox]');
-  cb.addEventListener('change', () => {
-    item.classList.toggle('checked', cb.checked);
-  });
+  cb.addEventListener('change', () => item.classList.toggle('checked', cb.checked));
 });
 
-// Reset submit form
+// ── Other city fallback ───────────────────────────────────
+function toggleOtherCity(val) {
+  const wrap = document.getElementById('otherCityWrap');
+  const input = document.getElementById('a-city-other');
+  if (val === 'Another city in Oklahoma') {
+    wrap.classList.add('show');
+    input.setAttribute('required','');
+  } else {
+    wrap.classList.remove('show');
+    input.removeAttribute('required');
+  }
+}
+
+// ── Reset gate ────────────────────────────────────────────
+function resetGate() {
+  window._verifiedRep = null;
+  document.getElementById('repGate').style.display='block';
+  document.getElementById('submitFormWrap').style.display='none';
+  document.getElementById('submitSuccess').style.display='none';
+  document.getElementById('gate-email').value='';
+  document.getElementById('gateError').classList.remove('show');
+  document.getElementById('gatePending').classList.remove('show');
+  document.getElementById('gateBtn').disabled=false;
+  document.getElementById('gateBtn').textContent='Verify →';
+}
+
+// ── Reset submit form ─────────────────────────────────────
 function resetSubmit() {
   document.getElementById('submitForm').reset();
-  document.querySelectorAll('#tab-submit .toggle').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('#tab-submit .check-item').forEach(i => i.classList.remove('checked'));
-  document.getElementById('submitFormWrap').style.display = 'block';
-  document.getElementById('submitSuccess').style.display = 'none';
-  document.getElementById('submitBtn').disabled = false;
-  document.getElementById('submitBtn').textContent = 'Submit Provider →';
+  document.querySelectorAll('#tab-submit .toggle').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('#tab-submit .check-item').forEach(i=>i.classList.remove('checked'));
+  document.getElementById('npiChecking').classList.remove('show');
+  document.getElementById('npiTaken').classList.remove('show');
+  document.getElementById('npiOk').classList.remove('show');
+  document.getElementById('p-npi').classList.remove('input-error');
+  document.getElementById('submitFormWrap').style.display='block';
+  document.getElementById('submitSuccess').style.display='none';
+  document.getElementById('submitBtn').disabled=false;
+  document.getElementById('submitBtn').textContent='Submit Provider →';
 }
 </script>
-
 </body>
 </html>
