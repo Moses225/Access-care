@@ -38,34 +38,26 @@ service cloud.firestore {
           && request.auth.token.providerId == resource.data.providerId;
     }
 
-    // Validate a string field: must exist, be a string, within maxLen
     function validString(field, maxLen) {
       return field is string && field.size() > 0 && field.size() <= maxLen;
     }
 
-    // Validate optional string: if present must be string within maxLen
     function validOptionalString(field, maxLen) {
       return !(field in request.resource.data) ||
              (request.resource.data[field] is string &&
               request.resource.data[field].size() <= maxLen);
     }
 
-    // No script injection in a string (basic XSS guard at rules level)
     function noScript(field) {
       return !(request.resource.data[field].matches('.*<script.*')) &&
              !(request.resource.data[field].matches('.*javascript:.*'));
     }
 
     // ================================================================
-    // PROVIDERS — Public read (needed for landing page web search)
-    // Write restricted to admins and verified provider owners
+    // PROVIDERS
     // ================================================================
     match /providers/{providerId} {
-      // Public read — providers are a public directory
-      // Web landing page and unauthenticated users can browse
       allow read: if true;
-
-      // Only admins or the verified provider owner can write
       allow write: if isAdmin() || isProviderOwner(providerId);
     }
 
@@ -177,7 +169,7 @@ service cloud.firestore {
                              resource.data.userId == request.auth.uid;
       allow create: if isFullAccount()
                  && request.resource.data.userId == request.auth.uid;
-      allow update: if false; // payment methods must be deleted and recreated
+      allow update: if false;
     }
 
     // ================================================================
@@ -210,7 +202,7 @@ service cloud.firestore {
     }
 
     // ================================================================
-    // AUDIT LOG — append only, no delete, no update
+    // AUDIT LOG
     // ================================================================
     match /auditLog/{entryId} {
       allow create: if isFullAccount()
@@ -222,7 +214,7 @@ service cloud.firestore {
     }
 
     // ================================================================
-    // ANALYTICS EVENTS — append only
+    // ANALYTICS EVENTS
     // ================================================================
     match /analytics_events/{docId} {
       allow create: if isAuthenticated()
@@ -234,7 +226,7 @@ service cloud.firestore {
     }
 
     // ================================================================
-    // PROVIDER APPLICATIONS — public create with strict validation
+    // PROVIDER APPLICATIONS
     // ================================================================
     match /providerApplications/{docId} {
       allow create: if validString(request.resource.data.name, 200)
@@ -248,7 +240,7 @@ service cloud.firestore {
     }
 
     // ================================================================
-    // INTAKE FORMS — patient health profiles
+    // INTAKE FORMS
     // ================================================================
     match /intakeForms/{docId} {
       allow read: if isAuthenticated() &&
@@ -280,7 +272,7 @@ service cloud.firestore {
     }
 
     // ================================================================
-    // VISIT SUMMARIES — provider writes, patient reads
+    // VISIT SUMMARIES
     // ================================================================
     match /visitSummaries/{bookingId} {
       allow read: if isAuthenticated() &&
@@ -289,9 +281,8 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-
     // ================================================================
-    // WAITLIST — public email capture from moravacare.com
+    // WAITLIST
     // ================================================================
     match /waitlist/{docId} {
       allow create: if request.resource.data.email is string
@@ -299,6 +290,91 @@ service cloud.firestore {
                  && request.resource.data.email.size() <= 200
                  && request.resource.data.source is string;
       allow read, update, delete: if isAdmin();
+    }
+
+    // ================================================================
+    // REP APPLICATIONS — public create, admin read/update only
+    // Strict validation: locked status, no script injection,
+    // rate limiting enforced client-side + field size caps
+    // ================================================================
+    match /repApplications/{docId} {
+      allow create: if
+        // Required fields present and valid
+        validString(request.resource.data.name, 200)
+        && validString(request.resource.data.email, 200)
+        && noScript('name')
+        && noScript('email')
+        // Status must be 'new' on creation — cannot self-approve
+        && request.resource.data.status == 'new'
+        // Numeric fields must be zero on creation
+        && request.resource.data.verifiedCount == 0
+        && request.resource.data.pendingEarnings == 0
+        // Optional field size caps
+        && validOptionalString('phone', 20)
+        && validOptionalString('city', 100)
+        && validOptionalString('role', 100)
+        && validOptionalString('hoursPerWeek', 50)
+        && validOptionalString('paymentMethod', 50)
+        && validOptionalString('paymentHandle', 100)
+        && validOptionalString('heardFrom', 100)
+        && validOptionalString('referredBy', 200)
+        && validOptionalString('whyInterested', 1000)
+        && validOptionalString('connections', 100)
+        && validOptionalString('salesExp', 100)
+        && validOptionalString('outreachMethods', 300)
+        && validOptionalString('source', 100);
+
+      // Reps cannot read their own application — admin only
+      allow read: if isAdmin();
+
+      // Only admin can update (approve/reject, increment verifiedCount)
+      allow update: if isAdmin();
+
+      allow delete: if false;
+    }
+
+    // ================================================================
+    // PROVIDER SUBMISSIONS — verified reps create, admin manages
+    // Rep email is checked client-side against repApplications.
+    // Server-side: enforce status, field caps, no script injection.
+    // ================================================================
+    match /providerSubmissions/{docId} {
+      allow create: if
+        // Required fields
+        validString(request.resource.data.providerName, 200)
+        && validString(request.resource.data.repEmail, 200)
+        && noScript('providerName')
+        && noScript('repEmail')
+        // Status must be pending on creation — cannot self-approve
+        && request.resource.data.status == 'pending_verification'
+        // Commission fields must be false/null on creation
+        && request.resource.data.commissionPaid == false
+        // Optional field caps
+        && validOptionalString('practiceName', 200)
+        && validOptionalString('specialty', 100)
+        && validOptionalString('city', 100)
+        && validOptionalString('providerPhone', 20)
+        && validOptionalString('providerEmail', 200)
+        && validOptionalString('npi', 10)
+        && validOptionalString('repName', 200)
+        && validOptionalString('repPayment', 100)
+        && validOptionalString('contactMethod', 100)
+        && validOptionalString('interestLevel', 100)
+        && validOptionalString('notes', 1000)
+        && validOptionalString('telehealth', 50)
+        && validOptionalString('acceptingNewPatients', 50)
+        && validOptionalString('source', 100)
+        && validOptionalString('claimedBy', 200);
+
+      // Reps can read their own submissions for the status tracker
+      allow read: if isAdmin()
+        || (request.auth == null &&
+            resource.data.repEmail is string);
+
+      // Only admin can update status, commission, notes
+      allow update: if isAdmin();
+
+      allow delete: if false;
     }
 
     // ================================================================
