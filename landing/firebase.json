@@ -3,7 +3,15 @@
     "site": "morava-landing",
     "public": ".",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "cleanUrls": true,
     "headers": [
+      {
+        "source": "**/*.html",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
+          { "key": "Pragma", "value": "no-cache" }
+        ]
+      },
       {
         "source": "**",
         "headers": [
@@ -31,6 +39,9 @@
     ],
     "rewrites": [
       { "source": "/reset-password", "destination": "/reset-password.html" },
+      { "source": "/reps", "destination": "/reps.html" },
+      { "source": "/admin", "destination": "/admin.html" },
+      { "source": "/provider-submit", "destination": "/provider-submit.html" },
       { "source": "**", "destination": "/index.html" }
     ]
   }
