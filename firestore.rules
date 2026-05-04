@@ -13,7 +13,7 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
     function isAdmin() {
-      return isAuthenticated() && (request.auth.token.admin == true || request.auth.uid == "ndjFZBd4rDgzzJCXNUvuYS7m2Tr2");
+      return isAuthenticated() && request.auth.token.admin == true;
     }
     function isFullAccount() {
       return isAuthenticated() &&
@@ -324,10 +324,31 @@ service cloud.firestore {
         && validOptionalString('outreachMethods', 300)
         && validOptionalString('source', 100);
 
-      // Reps cannot read their own application — admin only
+      // Only admin can read full application data
       allow read: if isAdmin();
 
       // Only admin can update (approve/reject, increment verifiedCount)
+      allow update: if isAdmin();
+
+      allow delete: if false;
+    }
+
+    // ================================================================
+    // REP APP STATUS — minimal public status check (no sensitive data)
+    // Written automatically when application is submitted.
+    // Contains only: email, status, submittedAt — nothing sensitive.
+    // ================================================================
+    match /repAppStatus/{docId} {
+      // Public create — written alongside repApplications on submit
+      allow create: if
+        validString(request.resource.data.email, 200)
+        && request.resource.data.status == 'new'
+        && noScript('email');
+
+      // Public read — email + status only, no PII or payment data
+      allow read: if true;
+
+      // Only admin updates status (approved/rejected)
       allow update: if isAdmin();
 
       allow delete: if false;

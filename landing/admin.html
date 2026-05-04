@@ -802,6 +802,12 @@ window.approveRep = async function(docId) {
       verifiedCount: rep.verifiedCount||0,
       pendingEarnings: rep.pendingEarnings||0,
     });
+    // Sync minimal status record so rep sees approval in My Status tab
+    const statusQ = query(collection(db,'repAppStatus'), where('email','==',rep.email));
+    const statusSnap = await getDocs(statusQ);
+    if (!statusSnap.empty) {
+      await updateDoc(doc(db,'repAppStatus',statusSnap.docs[0].id), { status: 'approved' });
+    }
     rep.status = 'approved';
     updateStats(); renderApplications();
     showToast(`✓ ${rep.name} approved as a rep.`,'success');
@@ -814,6 +820,12 @@ window.rejectRep = async function(docId) {
   if (!confirm(`Reject ${rep.name}'s application?`)) return;
   try {
     await updateDoc(doc(db,'repApplications',docId), { status: 'rejected', updatedAt: serverTimestamp() });
+    // Sync minimal status record
+    const statusQ = query(collection(db,'repAppStatus'), where('email','==',rep.email));
+    const statusSnap = await getDocs(statusQ);
+    if (!statusSnap.empty) {
+      await updateDoc(doc(db,'repAppStatus',statusSnap.docs[0].id), { status: 'rejected' });
+    }
     rep.status = 'rejected';
     updateStats(); renderApplications();
     showToast(`${rep.name}'s application rejected.`,'success');

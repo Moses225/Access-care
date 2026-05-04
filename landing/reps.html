@@ -447,6 +447,14 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
           <li>Once signed, your account is activated and you can submit providers</li>
         </ul>
       </div>
+      <p style="font-size:13px;color:var(--text-2);line-height:1.7;margin-top:4px;">
+        Want to share your resume? Email it to
+        <a href="mailto:support@moravacare.com" style="color:var(--teal);font-weight:600;">support@moravacare.com</a>
+        with subject line <strong>"Sales Rep Resume"</strong> — it helps speed up the review.
+      </p>
+      <p style="font-size:13px;color:var(--text-3);margin-top:12px;">
+        Check your application status anytime under the <strong>📊 My Status</strong> tab.
+      </p>
     </div>
   </div>
 
@@ -858,6 +866,12 @@ document.getElementById('applyForm').addEventListener('submit', async (e) => {
       status: 'new', verifiedCount: 0, pendingEarnings: 0,
       submittedAt: serverTimestamp(), source: 'moravacare.com/reps',
     });
+    // Write minimal status record — no sensitive fields, safe for public read
+    await addDoc(collection(db,'repAppStatus'), {
+      email: repEmail,
+      status: 'new',
+      submittedAt: serverTimestamp(),
+    });
     document.getElementById('applyFormWrap').style.display='none';
     document.getElementById('applySuccess').style.display='block';
   } catch(err) {
@@ -943,7 +957,20 @@ window.loadStatus = async function() {
     document.getElementById('statusLoading').style.display='none';
 
     if (snap.empty) {
-      document.getElementById('statusError').style.display='block';
+      // No submissions — check minimal status collection (no sensitive data)
+      try {
+        const appQ = query(collection(db,'repAppStatus'), where('email','==',email));
+        const appSnap = await getDocs(appQ);
+        if (!appSnap.empty) {
+          const app = appSnap.docs[0].data();
+          renderApplicationStatus(app, email);
+          document.getElementById('statusResults').style.display='block';
+        } else {
+          document.getElementById('statusError').style.display='block';
+        }
+      } catch(_) {
+        document.getElementById('statusError').style.display='block';
+      }
       btn.disabled=false; btn.textContent='View My Status →';
       return;
     }
@@ -966,6 +993,40 @@ window.loadStatus = async function() {
   btn.disabled=false; btn.textContent='View My Status →';
 };
 
+function renderApplicationStatus(app, email) {
+  const statusMap = {
+    new:      { icon: '⏳', title: 'Under review', color: 'var(--amber)', bg: 'var(--amber-bg)', border: 'var(--amber)', msg: 'Your application is in our review queue. Expect a call within 1–2 business days.' },
+    pending:  { icon: '⏳', title: 'Under review', color: 'var(--amber)', bg: 'var(--amber-bg)', border: 'var(--amber)', msg: 'Your application is in our review queue. Expect a call within 1–2 business days.' },
+    approved: { icon: '✅', title: "You're approved!", color: '#166534', bg: 'var(--green-bg)', border: 'var(--green)', msg: 'Your account is active. Head to the Submit a Provider tab to start earning.' },
+    rejected: { icon: '📋', title: 'Application reviewed', color: 'var(--text-2)', bg: 'var(--bg)', border: 'var(--border)', msg: 'Thank you for applying. We\'re not moving forward at this time. Questions? Email support@moravacare.com.' },
+  };
+  const s = statusMap[app.status] || statusMap['new'];
+  const fmtDate = ts => {
+    if (!ts) return '';
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    return d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  };
+
+  // Hide the stats grid — not relevant for applicants
+  document.getElementById('statsGrid').innerHTML = '';
+
+  document.getElementById('submissionsTable').innerHTML = `
+    <div style="padding:32px;text-align:center;">
+      <div style="font-size:44px;margin-bottom:16px;">${s.icon}</div>
+      <div style="background:${s.bg};border:1.5px solid ${s.border};border-radius:14px;padding:24px 28px;max-width:440px;margin:0 auto;">
+        <div style="font-family:'Nunito',sans-serif;font-size:20px;font-weight:900;color:${s.color};margin-bottom:8px;">${s.title}</div>
+        <div style="font-size:14px;color:var(--text-2);line-height:1.7;">${s.msg}</div>
+        ${app.status === 'approved' ? `
+          <button onclick="switchTabByName('submit')" style="margin-top:16px;padding:10px 22px;background:var(--teal);color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">
+            Submit a Provider →
+          </button>` : ''}
+      </div>
+      <div style="margin-top:16px;font-size:12px;color:var(--text-3);">
+        Application submitted ${fmtDate(app.submittedAt) ? 'on ' + fmtDate(app.submittedAt) : ''} · ${san(email,200)}
+      </div>
+    </div>
+  `;
+}
 function renderStatus(submissions) {
   const total = submissions.length;
   const live = submissions.filter(s=>s.status==='live').length;
