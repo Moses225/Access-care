@@ -287,16 +287,22 @@ export default function BillingSetup({
               <div>→ Adding a card is faster and fully automated</div>
             </div>
             {manualSent ? (
-              <div className="bg-teal-50 border border-teal-200 rounded-xl p-4 text-center">
-                <div className="text-2xl mb-2">✅</div>
-                <div className="text-sm font-semibold text-teal-800">
-                  Request sent
+              <div className="space-y-4">
+                <div className="bg-teal-50 border border-teal-200 rounded-xl p-4 text-center">
+                  <div className="text-2xl mb-2">✅</div>
+                  <div className="text-sm font-semibold text-teal-800">
+                    Request sent
+                  </div>
+                  <div className="text-xs text-teal-600 mt-1">
+                    We'll contact you within 1 business day.
+                  </div>
                 </div>
-                <div className="text-xs text-teal-600 mt-1">
-                  We'll contact you at{" "}
-                  {providerName.split("·")[1]?.trim() || "your email"} within 1
-                  business day.
-                </div>
+                <button
+                  onClick={onClose}
+                  className="w-full bg-teal-500 hover:bg-teal-600 text-white font-semibold py-3 rounded-xl text-sm transition-colors"
+                >
+                  Done
+                </button>
               </div>
             ) : (
               <div className="flex gap-3">
