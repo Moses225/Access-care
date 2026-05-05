@@ -240,11 +240,15 @@ function generateEHRPDF(booking: Booking) {
 </body>
 </html>`;
 
-  const win = window.open("", "_blank", "width=900,height=700");
-  if (win) {
-    win.document.write(html);
-    win.document.close();
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const blobUrl = URL.createObjectURL(blob);
+  const win = window.open(blobUrl, "_blank", "width=900,height=700");
+  if (!win) {
+    alert(
+      "Please allow popups for dashboard.moravacare.com to open the EHR summary.",
+    );
   }
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
 }
 
 // ── Add to Calendar — generates ICS file, works with Google, Apple, Outlook ─
