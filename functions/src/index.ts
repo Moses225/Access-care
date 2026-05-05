@@ -701,23 +701,38 @@ export const stripeWebhook = onRequest(
 // MANUAL BILLING REQUEST — notify Moise when provider requests check/ACH
 // ================================================================
 export const onManualBillingRequest = onDocumentUpdated(
-  { document: 'providers/{providerId}', database: '(default)', region: 'us-central1', secrets: [resendApiKey] },
+  {
+    document: "providers/{providerId}",
+    database: "(default)",
+    region: "us-central1",
+    secrets: [resendApiKey],
+  },
   async (event) => {
     const before = event.data?.before?.data();
-    const after  = event.data?.after?.data();
+    const after = event.data?.after?.data();
     if (!before || !after) return;
-    if (before.manualBilling === true || after.manualBilling !== true) return;
+    console.log(
+      `onManualBillingRequest: before.manualBilling=${before.manualBilling} after.manualBilling=${after.manualBilling}`,
+    );
+    if (before.manualBilling === true || after.manualBilling !== true) {
+      console.log("onManualBillingRequest: skipping — condition not met");
+      return;
+    }
+    console.log("onManualBillingRequest: sending alert email");
     const resend = new Resend(resendApiKey.value());
     await resend.emails.send({
-      from: 'Morava <noreply@moravacare.com>',
-      to: 'moise@moravacare.com',
+      from: "Morava <noreply@moravacare.com>",
+      to: "moise@moravacare.com",
       subject: `Manual billing requested — ${esc(after.name) || event.params.providerId}`,
-      html: wrapEmail('Manual Billing Request', `
+      html: wrapEmail(
+        "Manual Billing Request",
+        `
         <p><strong>${esc(after.name) || event.params.providerId}</strong> has requested manual billing (check or ACH).</p>
-        <p><strong>Email:</strong> ${esc(after.email) || 'Not provided'}</p>
+        <p><strong>Email:</strong> ${esc(after.email) || "Not provided"}</p>
         <p><strong>Provider ID:</strong> ${esc(event.params.providerId)}</p>
         <p>Follow up within 1 business day to arrange payment method.</p>
-      `),
+      `,
+      ),
     });
-  }
+  },
 );
