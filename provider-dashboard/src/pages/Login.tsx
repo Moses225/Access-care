@@ -42,6 +42,9 @@ export default function Login() {
         err instanceof Error && "code" in err
           ? (err as { code: string }).code
           : "";
+      // MFA required — AuthContext stores the resolver, App.tsx shows MFAChallenge
+      // Don't show an error, just let the redirect happen
+      if (code === "auth/multi-factor-auth-required") return;
       if (
         code === "auth/invalid-credential" ||
         code === "auth/wrong-password" ||

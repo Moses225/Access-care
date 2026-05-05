@@ -1,5 +1,6 @@
 import type { User } from "firebase/auth";
 import {
+  getMultiFactorResolver,
   multiFactor,
   onAuthStateChanged,
   PhoneAuthProvider,
@@ -106,7 +107,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const mfaErr = err as MultiFactorError;
       if (mfaErr?.code === "auth/multi-factor-auth-required") {
         // Store resolver — App.tsx will show MFAChallenge
-        setMfaResolver(mfaErr.resolver);
+        const resolver = getMultiFactorResolver(auth, mfaErr);
+        setMfaResolver(resolver);
         throw err; // re-throw so Login.tsx knows to wait
       }
       throw err;
