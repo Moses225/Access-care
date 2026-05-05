@@ -25,7 +25,11 @@
     {
       "site": "morava-landing",
       "public": "landing",
-      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
       "cleanUrls": true,
       "headers": [
         {
@@ -35,7 +39,10 @@
               "key": "Cache-Control",
               "value": "no-cache, no-store, must-revalidate"
             },
-            { "key": "Pragma", "value": "no-cache" }
+            {
+              "key": "Pragma",
+              "value": "no-cache"
+            }
           ]
         },
         {
@@ -45,9 +52,18 @@
               "key": "Strict-Transport-Security",
               "value": "max-age=63072000; includeSubDomains; preload"
             },
-            { "key": "X-Content-Type-Options", "value": "nosniff" },
-            { "key": "X-Frame-Options", "value": "DENY" },
-            { "key": "X-XSS-Protection", "value": "1; mode=block" },
+            {
+              "key": "X-Content-Type-Options",
+              "value": "nosniff"
+            },
+            {
+              "key": "X-Frame-Options",
+              "value": "DENY"
+            },
+            {
+              "key": "X-XSS-Protection",
+              "value": "1; mode=block"
+            },
             {
               "key": "Referrer-Policy",
               "value": "strict-origin-when-cross-origin"
@@ -64,20 +80,36 @@
         }
       ],
       "rewrites": [
-        { "source": "/reset-password", "destination": "/reset-password.html" },
-        { "source": "/reps", "destination": "/reps.html" },
-        { "source": "/admin", "destination": "/admin.html" },
+        {
+          "source": "/reset-password",
+          "destination": "/reset-password.html"
+        },
+        {
+          "source": "/reps",
+          "destination": "/reps.html"
+        },
+        {
+          "source": "/admin",
+          "destination": "/admin.html"
+        },
         {
           "source": "/provider-submit",
           "destination": "/provider-submit.html"
         },
-        { "source": "**", "destination": "/index.html" }
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
       ]
     },
     {
       "site": "morava-dashboard",
       "public": "provider-dashboard/dist",
-      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
       "headers": [
         {
           "source": "**/*.html",
@@ -86,7 +118,10 @@
               "key": "Cache-Control",
               "value": "no-cache, no-store, must-revalidate"
             },
-            { "key": "Pragma", "value": "no-cache" }
+            {
+              "key": "Pragma",
+              "value": "no-cache"
+            }
           ]
         },
         {
@@ -96,9 +131,18 @@
               "key": "Strict-Transport-Security",
               "value": "max-age=63072000; includeSubDomains; preload"
             },
-            { "key": "X-Content-Type-Options", "value": "nosniff" },
-            { "key": "X-Frame-Options", "value": "DENY" },
-            { "key": "X-XSS-Protection", "value": "1; mode=block" },
+            {
+              "key": "X-Content-Type-Options",
+              "value": "nosniff"
+            },
+            {
+              "key": "X-Frame-Options",
+              "value": "DENY"
+            },
+            {
+              "key": "X-XSS-Protection",
+              "value": "1; mode=block"
+            },
             {
               "key": "Referrer-Policy",
               "value": "strict-origin-when-cross-origin"
@@ -109,12 +153,17 @@
             },
             {
               "key": "Content-Security-Policy",
-              "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com https://www.google.com https://www.recaptcha.net https://recaptcha.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com; connect-src 'self' https://firestore.googleapis.com https://www.googleapis.com https://*.firebaseio.com https://firebase.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://firebaseappcheck.googleapis.com https://www.recaptcha.net https://recaptcha.net https://recaptchaenterprise.googleapis.com https://www.google.com; frame-src https://www.google.com https://www.recaptcha.net https://recaptcha.net; object-src 'none'; base-uri 'self';"
+              "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com https://www.google.com https://www.recaptcha.net https://recaptcha.net https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com; connect-src 'self' https://firestore.googleapis.com https://www.googleapis.com https://*.firebaseio.com https://firebase.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://firebaseappcheck.googleapis.com https://www.recaptcha.net https://recaptcha.net https://recaptchaenterprise.googleapis.com https://www.google.com https://api.stripe.com; frame-src https://js.stripe.com https://www.google.com https://www.recaptcha.net https://recaptcha.net https://js.stripe.com; object-src 'none'; base-uri 'self';"
             }
           ]
         }
       ],
-      "rewrites": [{ "source": "**", "destination": "/index.html" }]
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
     }
   ]
 }
