@@ -240,15 +240,10 @@ function generateEHRPDF(booking: Booking) {
 </body>
 </html>`;
 
-  const win = window.open(
-    "",
-    "_blank",
-    "width=900,height=700,noopener,noreferrer",
-  );
-  if (win) {
-    win.document.write(html);
-    win.document.close();
-  }
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const blobUrl = URL.createObjectURL(blob);
+  window.open(blobUrl, "_blank", "width=900,height=700");
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
 }
 
 // ── Add to Calendar — generates ICS file, works with Google, Apple, Outlook ─
@@ -353,7 +348,8 @@ export default function Dashboard() {
   }, [providerProfile?.providerId]);
 
   const today = new Date().toISOString().split("T")[0];
-  const hasStripe = !!(providerProfile as any)?.stripeCustomerId;
+  const hasStripe = !!(providerProfile as unknown as Record<string, unknown>)
+    ?.stripeCustomerId;
 
   const filtered = bookings.filter((b) => {
     if (filter === "upcoming")

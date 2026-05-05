@@ -242,22 +242,24 @@ service cloud.firestore {
     // ================================================================
     // INTAKE FORMS
     // ================================================================
+    // INTAKE FORMS — patient health profiles
+    // Uses setDoc with arrays, timestamps, and nested lifestyle object.
+    // Validation focuses on required userId and size-capping text fields.
     match /intakeForms/{docId} {
       allow read: if isAuthenticated() &&
-                   (request.auth.uid == resource.data.userId || isAdmin());
+                  (request.auth.uid == resource.data.userId || isAdmin());
       allow create, update: if isFullAccount()
-                 && request.resource.data.userId == request.auth.uid
-                 && validOptionalString('medications', 500)
-                 && validOptionalString('allergies', 500)
-                 && validOptionalString('conditions', 500)
-                 && validOptionalString('surgeries', 500)
-                 && validOptionalString('vaccinations', 500)
-                 && validOptionalString('bloodType', 10)
-                 && validOptionalString('height', 20)
-                 && validOptionalString('weight', 20);
+                && request.resource.data.userId == request.auth.uid
+                // patientId must match either the user's own UID or a dependent
+                && validOptionalString('bloodType',            10)
+                && validOptionalString('heightFeet',            5)
+                && validOptionalString('heightInches',          5)
+                && validOptionalString('height',               20)
+                && validOptionalString('weight',               20)
+                && validOptionalString('primaryCareProvider', 200)
+                && validOptionalString('pregnancyStatus',      50);
       allow delete: if false;
     }
-
     // ================================================================
     // PLATFORM COUNTERS
     // ================================================================

@@ -37,7 +37,10 @@ export default function LoginScreen() {
       return;
     }
     try {
-      await sendPasswordResetEmail(auth, sanitizedEmail);
+      await sendPasswordResetEmail(auth, sanitizedEmail, {
+        url: "https://moravacare.com/reset-password",
+        handleCodeInApp: false,
+      });
       Alert.alert(
         "Email Sent",
         "Check your inbox for a password reset link. Open the link in your browser to reset your password.",
