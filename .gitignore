@@ -93,3 +93,4 @@ Thumbs.db
 scripts/serviceAccountKey.staging.json
 scripts/serviceAccountKey.production.json
 scripts/*.json
+serviceAccountKey.json

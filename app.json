@@ -12,14 +12,17 @@
       "resizeMode": "contain",
       "backgroundColor": "#00BCD4"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.moravacare.app",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Morava needs your location to show nearby healthcare providers.",
         "NSCameraUsageDescription": "Morava needs access to your camera to take profile pictures.",
-        "NSPhotoLibraryUsageDescription": "Morava needs access to your photos to set your profile picture."
+        "NSPhotoLibraryUsageDescription": "Morava needs access to your photos to set your profile picture.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
