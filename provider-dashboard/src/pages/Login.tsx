@@ -1,24 +1,46 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
-  const [email, setEmail]       = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError]       = useState('');
-  const [loading, setLoading]   = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPass, setShowPass] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
     try {
-      await login(email, password);
-      navigate('/dashboard');
-    } catch {
-      setError('Invalid email or password. Please try again.');
+      await login(email.trim().toLowerCase(), password);
+      navigate("/dashboard");
+    } catch (err: unknown) {
+      const code =
+        err instanceof Error && "code" in err
+          ? (err as { code: string }).code
+          : "";
+      if (
+        code === "auth/invalid-credential" ||
+        code === "auth/wrong-password" ||
+        code === "auth/user-not-found"
+      ) {
+        setError("Invalid email or password. Please try again.");
+      } else if (code === "auth/too-many-requests") {
+        setError("Too many attempts. Please wait a few minutes and try again.");
+      } else if (code === "auth/network-request-failed") {
+        setError("Network error. Check your connection and try again.");
+      } else {
+        const message = err instanceof Error ? err.message : "";
+        setError(
+          import.meta.env.DEV
+            ? `Auth error: ${code || message}`
+            : "Something went wrong. Please try again.",
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -27,35 +49,42 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
-
-        {/* Logo */}
         <div className="text-center mb-8">
-          <button onClick={() => navigate('/')} className="inline-flex items-center gap-2 mb-6">
+          <button
+            onClick={() => navigate("/")}
+            className="inline-flex items-center gap-2 mb-6"
+          >
             <div className="w-10 h-10 rounded-xl bg-teal-500 flex items-center justify-center">
-              <span className="text-white font-bold text-lg">A</span>
+              <span className="text-white font-bold text-lg">M</span>
             </div>
             <span className="font-display text-2xl text-slate-900">Morava</span>
           </button>
-          <h1 className="font-display text-3xl text-slate-900 mb-2">Provider sign in</h1>
-          <p className="text-slate-500 text-sm">Access your dashboard to manage appointments</p>
+          <h1 className="font-display text-3xl text-slate-900 mb-2">
+            Provider sign in
+          </h1>
+          <p className="text-slate-500 text-sm">
+            Access your dashboard to manage appointments
+          </p>
         </div>
 
-        {/* Card */}
         <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
           {error && (
             <div className="bg-red-50 border border-red-100 text-red-600 text-sm px-4 py-3 rounded-lg mb-6">
               {error}
             </div>
           )}
-
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">
                 Email address
               </label>
               <input
-                type="email" value={email} onChange={e => setEmail(e.target.value)}
-                placeholder="dr.smith@clinic.com" required
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="dr.smith@clinic.com"
+                required
+                autoComplete="email"
                 className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               />
             </div>
@@ -63,14 +92,58 @@ export default function Login() {
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">
                 Password
               </label>
-              <input
-                type="password" value={password} onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••" required
-                className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              />
+              <div className="relative">
+                <input
+                  type={showPass ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  autoComplete="current-password"
+                  className="w-full border border-slate-200 rounded-lg px-4 py-3 pr-11 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPass((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  aria-label={showPass ? "Hide password" : "Show password"}
+                >
+                  {showPass ? (
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94" />
+                      <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19" />
+                      <line x1="1" y1="1" x2="23" y2="23" />
+                    </svg>
+                  ) : (
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  )}
+                </button>
+              </div>
             </div>
             <button
-              type="submit" disabled={loading}
+              type="submit"
+              disabled={loading}
               className="w-full bg-teal-500 hover:bg-teal-600 disabled:opacity-60 text-white font-semibold py-3.5 rounded-xl transition-colors text-sm"
             >
               {loading ? (
@@ -78,14 +151,20 @@ export default function Login() {
                   <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   Signing in...
                 </span>
-              ) : 'Sign in to dashboard →'}
+              ) : (
+                "Sign in to dashboard →"
+              )}
             </button>
           </form>
         </div>
 
         <p className="text-center text-slate-400 text-sm mt-6">
-          Don't have an account?{' '}
-          <a href="/#apply" onClick={() => navigate('/')} className="text-teal-600 hover:underline font-medium">
+          Don't have an account?{" "}
+          <a
+            href="/#apply"
+            onClick={() => navigate("/")}
+            className="text-teal-600 hover:underline font-medium"
+          >
             Apply to join
           </a>
         </p>
