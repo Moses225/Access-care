@@ -3,528 +3,330 @@ import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { defineSecret } from 'firebase-functions/params';
 import * as admin from 'firebase-admin';
 import { Resend } from 'resend';
+import Stripe from 'stripe';
 
 admin.initializeApp();
 const db = admin.firestore();
 
-const resendApiKey  = defineSecret('RESEND_API_KEY');
+const resendApiKey    = defineSecret('RESEND_API_KEY');
 const stripeSecretKey = defineSecret('STRIPE_SECRET_KEY');
 
-// ================================================================
-// PROVIDER APPLICATION — notify Moise + confirm to provider
-// ================================================================
+function esc(str: unknown): string {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g,  '&amp;')
+    .replace(/</g,  '&lt;')
+    .replace(/>/g,  '&gt;')
+    .replace(/"/g,  '&quot;')
+    .replace(/'/g,  '&#x27;')
+    .substring(0, 500);
+}
+
+function wrapEmail(title: string, body: string): string {
+  return `
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+      <div style="background:#0F172A;padding:20px 24px;border-radius:12px 12px 0 0">
+        <span style="color:#fff;font-size:18px;font-weight:bold">Morava</span>
+        <span style="color:#94A3B8;font-size:13px;margin-left:8px">${title}</span>
+      </div>
+      <div style="background:#f8fafc;padding:24px;border:1px solid #e2e8f0;border-radius:0 0 12px 12px">
+        ${body}
+        <p style="color:#94A3B8;font-size:11px;margin-top:24px;border-top:1px solid #e2e8f0;padding-top:12px">
+          Morava Care LLC &middot; Oklahoma City, OK &middot; support@moravacare.com<br/>
+          Do not reply with protected health information.
+        </p>
+      </div>
+    </div>
+  `;
+}
+
 export const onProviderApplication = onDocumentCreated(
-  {
-    document: 'providerApplications/{docId}',
-    database: '(default)',
-    region: 'us-central1',
-    secrets: [resendApiKey],
-  },
+  { document: 'providerApplications/{docId}', database: '(default)', region: 'us-central1', secrets: [resendApiKey] },
   async (event) => {
     const data = event.data?.data();
     if (!data) return;
     const resend = new Resend(resendApiKey.value());
-
     await resend.emails.send({
-      from: 'Morava <noreply@moravacare.com>',
-      to: 'moise@moravacare.com',
-      subject: `New Provider Application — ${data.name}`,
-      html: `
-        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
-          <div style="background:#14B8A6;padding:24px;border-radius:12px 12px 0 0">
-            <h1 style="color:#fff;margin:0;font-size:22px">New Provider Application</h1>
-          </div>
-          <div style="background:#f8fafc;padding:24px;border-radius:0 0 12px 12px;border:1px solid #e2e8f0">
-            <p><strong>Name:</strong> ${data.name}</p>
-            <p><strong>Practice:</strong> ${data.practice || 'Not provided'}</p>
-            <p><strong>Specialty:</strong> ${data.specialty || 'Not provided'}</p>
-            <p><strong>NPI:</strong> ${data.npi || 'Not provided'}</p>
-            <p><strong>Email:</strong> ${data.email}</p>
-            <p><strong>Phone:</strong> ${data.phone || 'Not provided'}</p>
-            <p><strong>Message:</strong> ${data.message || 'None'}</p>
-            <br/>
-            <a href="https://console.firebase.google.com/project/accesscare-app/firestore/data/providerApplications"
-               style="background:#14B8A6;color:#fff;padding:12px 24px;border-radius:50px;text-decoration:none;font-weight:bold">
-              View in Firebase Console →
-            </a>
-          </div>
+      from: 'Morava <noreply@moravacare.com>', to: 'moise@moravacare.com',
+      subject: `New Provider Application — ${esc(data.name)}`,
+      html: wrapEmail('New Provider Application', `
+        <h2 style="color:#0F172A;margin:0 0 16px">New provider application</h2>
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:16px">
+          <p style="margin:0 0 8px"><strong>Name:</strong> ${esc(data.name)}</p>
+          <p style="margin:0 0 8px"><strong>Practice:</strong> ${esc(data.practice) || 'Not provided'}</p>
+          <p style="margin:0 0 8px"><strong>Specialty:</strong> ${esc(data.specialty) || 'Not provided'}</p>
+          <p style="margin:0 0 8px"><strong>NPI:</strong> ${esc(data.npi) || 'Not provided'}</p>
+          <p style="margin:0 0 8px"><strong>Email:</strong> ${esc(data.email)}</p>
+          <p style="margin:0 0 8px"><strong>Phone:</strong> ${esc(data.phone) || 'Not provided'}</p>
+          <p style="margin:0"><strong>Message:</strong> ${esc(data.message) || 'None'}</p>
         </div>
-      `,
+        <a href="https://moravacare.com/admin" style="display:block;background:#14B8A6;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:bold;text-align:center">
+          Review in Admin Panel &rarr;
+        </a>
+      `),
     });
-
-    if (data.email) {
+    if (data.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
       await resend.emails.send({
-        from: 'Morava Care <noreply@moravacare.com>',
-        to: data.email,
+        from: 'Morava Care <noreply@moravacare.com>', to: data.email,
         subject: 'We received your Morava provider application',
-        html: `
-          <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
-            <div style="background:#14B8A6;padding:24px;border-radius:12px 12px 0 0">
-              <h1 style="color:#fff;margin:0;font-size:22px">Thank you, ${data.name}!</h1>
-            </div>
-            <div style="background:#f8fafc;padding:24px;border-radius:0 0 12px 12px;border:1px solid #e2e8f0">
-              <p style="color:#475569">We've received your application to join Morava as a verified provider.</p>
-              <p style="color:#475569"><strong>What happens next:</strong></p>
-              <ol style="color:#475569;line-height:1.8">
-                <li>We'll review your information within 24 hours</li>
-                <li>You'll receive a login link to your provider dashboard</li>
-                <li>Your profile will be marked as verified for patients to see</li>
-                <li>Oklahoma SoonerCare patients can start booking with you</li>
-              </ol>
-              <p style="color:#475569">Questions? Reply to this email or reach us at
-                <a href="mailto:support@moravacare.com" style="color:#14B8A6">support@moravacare.com</a>
-              </p>
-              <br/>
-              <p style="color:#94a3b8;font-size:13px">— Moise Kouassi, Founder · Morava Care LLC · Oklahoma City, OK</p>
-            </div>
-          </div>
-        `,
+        html: wrapEmail('Provider Application', `
+          <h2 style="color:#0F172A;margin:0 0 16px">Thank you, ${esc(data.name)}!</h2>
+          <p style="color:#475569">We've received your application to join Morava as a verified provider.</p>
+          <ol style="color:#475569;line-height:1.8">
+            <li>We'll review your information within 24 hours</li>
+            <li>You'll receive login credentials for your provider dashboard</li>
+            <li>Your profile will be verified for patients to see</li>
+            <li>Oklahoma SoonerCare patients can start booking with you</li>
+          </ol>
+          <p style="color:#475569">Questions? <a href="mailto:support@moravacare.com" style="color:#14B8A6">support@moravacare.com</a></p>
+        `),
       });
     }
   }
 );
 
-// ================================================================
-// WAITLIST WELCOME EMAIL
-// ================================================================
 export const onWaitlistSignup = onDocumentCreated(
-  {
-    document: 'waitlist/{docId}',
-    database: '(default)',
-    region: 'us-central1',
-    secrets: [resendApiKey],
-  },
+  { document: 'waitlist/{docId}', database: '(default)', region: 'us-central1', secrets: [resendApiKey] },
   async (event) => {
     const data = event.data?.data();
     if (!data?.email) return;
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(data.email)) return;
-
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) return;
     const resend = new Resend(resendApiKey.value());
-
     await resend.emails.send({
-      from: 'Moise at Morava <noreply@moravacare.com>',
-      to: data.email,
+      from: 'Moise at Morava <noreply@moravacare.com>', to: data.email,
       subject: "You're on the Morava list 🎉",
-      html: `
-        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
-          <div style="background:linear-gradient(135deg,#14B8A6,#0ea5e9);padding:32px 24px;border-radius:12px 12px 0 0;text-align:center">
-            <h1 style="color:#fff;margin:0 0 8px;font-size:28px">You're on the list!</h1>
-            <p style="color:rgba(255,255,255,0.85);margin:0;font-size:16px">Welcome to Morava — Oklahoma's free healthcare app</p>
-          </div>
-          <div style="background:#fff;padding:32px 24px;border:1px solid #e2e8f0">
-            <p style="color:#0f172a;font-size:16px;line-height:1.7">Hi there 👋</p>
-            <p style="color:#475569;line-height:1.7">
-              Thanks for joining the Morava waitlist. We're building Oklahoma's first free healthcare
-              discovery and booking app — specifically for patients on SoonerCare, Medicaid, and most insurance plans.
-            </p>
-            <div style="background:#f0fdfb;border:1px solid #ccfbf1;border-radius:12px;padding:20px;margin:24px 0">
-              <p style="color:#0f172a;font-weight:bold;margin:0 0 12px">📱 Available now on iOS + Android</p>
-              <a href="https://moravacare.com"
-                 style="background:#14B8A6;color:#fff;padding:12px 28px;border-radius:50px;text-decoration:none;font-weight:bold;display:inline-block">
-                Find a Doctor Now →
-              </a>
-            </div>
-            <p style="color:#475569;line-height:1.7;margin-top:24px">
-              Built with ❤️ in Oklahoma City,<br/>
-              <strong style="color:#0f172a">Moise Kouassi</strong><br/>
-              Founder, Morava Care LLC
-            </p>
-          </div>
+      html: wrapEmail('Welcome', `
+        <h2 style="color:#0F172A;margin:0 0 16px">You're on the list!</h2>
+        <p style="color:#475569;line-height:1.7">Thanks for joining the Morava waitlist. We're building Oklahoma's first free healthcare discovery and booking app.</p>
+        <div style="background:#f0fdfb;border:1px solid #ccfbf1;border-radius:12px;padding:20px;margin:20px 0">
+          <p style="color:#0f172a;font-weight:bold;margin:0 0 12px">Available now on iOS + Android</p>
+          <a href="https://moravacare.com" style="display:inline-block;background:#14B8A6;color:#fff;padding:12px 28px;border-radius:50px;text-decoration:none;font-weight:bold">Find a Doctor Now &rarr;</a>
         </div>
-      `,
+        <p style="color:#475569;margin-top:16px">Built with love in Oklahoma City,<br/><strong>Moise Kouassi</strong> &middot; Founder, Morava Care LLC</p>
+      `),
     });
-
     await resend.emails.send({
-      from: 'Morava <noreply@moravacare.com>',
-      to: 'moise@moravacare.com',
-      subject: `New waitlist signup: ${data.email}`,
-      html: `<p><strong>New waitlist signup:</strong> ${data.email}</p>
-             <p><strong>Source:</strong> ${data.source || 'moravacare.com'}</p>
-             <p><strong>Time:</strong> ${new Date().toLocaleString('en-US', {timeZone: 'America/Chicago'})}</p>`,
+      from: 'Morava <noreply@moravacare.com>', to: 'moise@moravacare.com',
+      subject: `New waitlist signup: ${esc(data.email)}`,
+      html: wrapEmail('Waitlist', `<p><strong>Email:</strong> ${esc(data.email)}</p><p><strong>Source:</strong> ${esc(data.source) || 'moravacare.com'}</p>`),
     });
   }
 );
 
-// ================================================================
-// BOOKING CREATED — email provider immediately
-// ================================================================
+// BOOKING CREATED — PHI policy: NO clinical data in email, ever.
 export const onBookingCreated = onDocumentCreated(
-  {
-    document: 'bookings/{bookingId}',
-    database: '(default)',
-    region: 'us-central1',
-    secrets: [resendApiKey],
-  },
+  { document: 'bookings/{bookingId}', database: '(default)', region: 'us-central1', secrets: [resendApiKey] },
   async (event) => {
     const data = event.data?.data();
     if (!data || data.status !== 'pending') return;
-
-    const resend = new Resend(resendApiKey.value());
-
-    // Get provider email from providerUsers
+    if (!data.providerId || !data.patientName || !data.date || !data.time) return;
     let providerEmail: string | null = null;
     try {
-      const provSnap = await db
-        .collection('providerUsers')
-        .where('providerId', '==', data.providerId)
-        .limit(1)
-        .get();
-      if (!provSnap.empty) {
-        providerEmail = provSnap.docs[0].data().email || null;
+      const snap = await db.collection('providerUsers').where('providerId', '==', data.providerId).limit(1).get();
+      if (!snap.empty) {
+        const e = snap.docs[0].data().email as string | undefined;
+        if (e && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) providerEmail = e;
       }
-    } catch {
-      // non-critical
-    }
-
+    } catch (err) { console.error('onBookingCreated: provider lookup failed', err); return; }
     if (!providerEmail) return;
-
-    const intake = data.patientIntakeSummary;
-    const allergies = intake?.allergies
-      ? (Array.isArray(intake.allergies) ? intake.allergies.join(', ') : intake.allergies)
-      : null;
-
-    await resend.emails.send({
-      from: 'Morava <noreply@moravacare.com>',
-      to: providerEmail,
-      subject: `New booking request — ${data.patientName}`,
-      html: `
-        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
-          <div style="background:#0F172A;padding:20px 24px;border-radius:12px 12px 0 0;display:flex;align-items:center;gap:12px">
-            <div style="background:#14B8A6;width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center">
-              <span style="color:#fff;font-weight:bold;font-size:16px">M</span>
-            </div>
-            <div>
-              <div style="color:#fff;font-size:18px;font-weight:bold">Morava</div>
-              <div style="color:#94A3B8;font-size:12px">New Appointment Request</div>
-            </div>
+    try {
+      const resend = new Resend(resendApiKey.value());
+      await resend.emails.send({
+        from: 'Morava <noreply@moravacare.com>', to: providerEmail,
+        subject: `New booking request — ${esc(data.patientName)}`,
+        html: wrapEmail('New Appointment Request', `
+          <h2 style="color:#0F172A;margin:0 0 16px">New booking request</h2>
+          <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:16px">
+            <p style="margin:0 0 8px;color:#475569"><strong>Patient:</strong> ${esc(data.patientName)}</p>
+            <p style="margin:0 0 8px;color:#475569"><strong>Date:</strong> ${esc(data.date)}</p>
+            <p style="margin:0 0 8px;color:#475569"><strong>Time:</strong> ${esc(data.time)}</p>
+            <p style="margin:0;color:#475569"><strong>Visit Type:</strong> ${esc(data.visitTypeLabel) || 'Not specified'}</p>
           </div>
-          <div style="background:#f8fafc;padding:24px;border:1px solid #e2e8f0">
-            <h2 style="color:#0F172A;margin:0 0 16px">New booking request</h2>
-
-            <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:16px">
-              <p style="margin:0 0 8px"><strong>Patient:</strong> ${data.patientName}</p>
-              <p style="margin:0 0 8px"><strong>Phone:</strong> ${data.patientPhone || 'Not provided'}</p>
-              <p style="margin:0 0 8px"><strong>Date:</strong> ${data.date}</p>
-              <p style="margin:0 0 8px"><strong>Time:</strong> ${data.time}</p>
-              <p style="margin:0 0 8px"><strong>Visit Type:</strong> ${data.visitTypeLabel || 'Not specified'}</p>
-              ${data.serviceCategoryLabel ? `<p style="margin:0 0 8px"><strong>Service:</strong> ${data.serviceCategoryLabel}</p>` : ''}
-              <p style="margin:0"><strong>Reason:</strong> ${data.reasonForVisit || 'Not provided'}</p>
-            </div>
-
-            ${allergies && allergies !== 'No known allergies' ? `
-            <div style="background:#FEF2F2;border:1px solid #EF4444;border-left:4px solid #EF4444;border-radius:8px;padding:12px;margin-bottom:16px">
-              <strong style="color:#991B1B">⚠ Allergies: ${allergies}</strong>
-            </div>` : ''}
-
-            <a href="https://dashboard.moravacare.com"
-               style="display:block;background:#14B8A6;color:#fff;padding:14px 24px;border-radius:10px;text-decoration:none;font-weight:bold;text-align:center;font-size:16px">
-              Confirm or Decline →
-            </a>
-            <p style="color:#94A3B8;font-size:12px;text-align:center;margin-top:12px">
-              Log in at dashboard.moravacare.com · Morava Care LLC
-            </p>
-          </div>
-        </div>
-      `,
-    });
+          <p style="color:#64748B;font-size:13px;margin-bottom:20px">Log in to view the complete patient health summary and confirm or decline.</p>
+          <a href="https://dashboard.moravacare.com" style="display:block;background:#14B8A6;color:#fff;padding:14px 24px;border-radius:10px;text-decoration:none;font-weight:bold;text-align:center;font-size:16px">
+            Review &amp; Confirm &rarr;
+          </a>
+        `),
+      });
+    } catch (err) { console.error('onBookingCreated: email send failed', err); }
   }
 );
 
-// ================================================================
-// BOOKING STATUS CHANGED — notify patient on confirm/decline/reschedule
-// ================================================================
+// BOOKING STATUS CHANGED — PHI policy: no clinical data, scheduling info only.
 export const onBookingStatusChanged = onDocumentUpdated(
-  {
-    document: 'bookings/{bookingId}',
-    database: '(default)',
-    region: 'us-central1',
-    secrets: [resendApiKey],
-  },
+  { document: 'bookings/{bookingId}', database: '(default)', region: 'us-central1', secrets: [resendApiKey] },
   async (event) => {
     const before = event.data?.before?.data();
     const after  = event.data?.after?.data();
     if (!before || !after) return;
-
-    const oldStatus = before.status;
-    const newStatus = after.status;
-    if (oldStatus === newStatus) return;
-
-    // Get patient email
+    if (before.status === after.status) return;
+    if (!['confirmed','cancelled','reschedule_pending'].includes(after.status)) return;
+    if (!after.userId) return;
     let patientEmail: string | null = null;
     try {
-      const userSnap = await db.collection('users').doc(after.userId).get();
-      if (userSnap.exists) {
-        patientEmail = userSnap.data()?.email || null;
+      const snap = await db.collection('users').doc(after.userId).get();
+      if (snap.exists) {
+        const e = snap.data()?.email as string | undefined;
+        if (e && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) patientEmail = e;
       }
-    } catch {
-      // non-critical
-    }
-
+    } catch (err) { console.error('onBookingStatusChanged: patient lookup failed', err); return; }
     if (!patientEmail) return;
-
-    const resend = new Resend(resendApiKey.value());
-    const providerName = after.providerName || 'Your provider';
-    const date = after.date;
-    const time = after.time;
-
-    let subject = '';
-    let bodyHtml = '';
-
-    if (newStatus === 'confirmed') {
-      subject = `✅ Appointment confirmed — ${date} at ${time}`;
+    const providerName = esc(after.providerName || 'Your provider');
+    const date = esc(after.date || '');
+    const time = esc(after.time || '');
+    let subject = '', bodyHtml = '';
+    if (after.status === 'confirmed') {
+      subject = `Appointment confirmed — ${date} at ${time}`;
       bodyHtml = `
-        <div style="background:#F0FDF4;border:1px solid #22C55E;border-left:4px solid #22C55E;border-radius:10px;padding:16px;margin-bottom:16px">
-          <strong style="color:#166534;font-size:16px">Your appointment is confirmed!</strong>
+        <div style="background:#F0FDF4;border-left:4px solid #22C55E;border-radius:8px;padding:14px;margin-bottom:14px">
+          <strong style="color:#166534">Your appointment is confirmed!</strong>
         </div>
-        <p style="color:#475569"><strong>${providerName}</strong> has confirmed your appointment.</p>
-        <p style="color:#475569"><strong>Date:</strong> ${date}<br/><strong>Time:</strong> ${time}</p>
-        <p style="color:#475569">Please arrive 10 minutes early.</p>
+        <p style="color:#475569"><strong>${providerName}</strong> confirmed your appointment for ${date} at ${time}.</p>
+        <p style="color:#475569">Please arrive 10 minutes early with your ID and insurance card.</p>
+        <a href="https://moravacare.com" style="display:block;background:#14B8A6;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:bold;text-align:center;margin-top:16px">View in Morava App &rarr;</a>
       `;
-    } else if (newStatus === 'cancelled') {
-      const reason = after.declineReason || after.patientCancelReason || '';
+    } else if (after.status === 'cancelled') {
+      const reason = after.cancelledBy !== 'patient' ? esc(after.declineReason || '') : esc(after.patientCancelReason || '');
       subject = `Appointment update — ${date}`;
       bodyHtml = `
-        <div style="background:#FEF2F2;border:1px solid #EF4444;border-left:4px solid #EF4444;border-radius:10px;padding:16px;margin-bottom:16px">
-          <strong style="color:#991B1B;font-size:16px">Appointment cancelled</strong>
+        <div style="background:#FEF2F2;border-left:4px solid #EF4444;border-radius:8px;padding:14px;margin-bottom:14px">
+          <strong style="color:#991B1B">Appointment cancelled</strong>
         </div>
         <p style="color:#475569">Your appointment with <strong>${providerName}</strong> on ${date} at ${time} has been cancelled.</p>
         ${reason ? `<p style="color:#475569"><strong>Reason:</strong> ${reason}</p>` : ''}
-        <p style="color:#475569">You can rebook anytime in the Morava app.</p>
-      `;
-    } else if (newStatus === 'reschedule_pending') {
-      const proposedDate = after.proposedDate || '';
-      const proposedTime = after.proposedTime || '';
-      subject = `⟳ Reschedule proposed — ${providerName}`;
-      bodyHtml = `
-        <div style="background:#FAF5FF;border:1px solid #A855F7;border-left:4px solid #A855F7;border-radius:10px;padding:16px;margin-bottom:16px">
-          <strong style="color:#7E22CE;font-size:16px">Your provider proposed a new time</strong>
-        </div>
-        <p style="color:#475569"><strong>${providerName}</strong> has proposed rescheduling your appointment.</p>
-        <p style="color:#475569">
-          <strong>Original:</strong> ${date} at ${time}<br/>
-          <strong>Proposed:</strong> ${proposedDate} at ${proposedTime}
-        </p>
-        <p style="color:#475569">Open the Morava app to accept or decline the new time.</p>
+        <a href="https://moravacare.com" style="display:block;background:#14B8A6;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:bold;text-align:center;margin-top:16px">Find Another Provider &rarr;</a>
       `;
     } else {
-      return; // no email for other transitions
+      const pd = esc(after.proposedDate || ''), pt = esc(after.proposedTime || '');
+      subject = `Reschedule proposed — ${providerName}`;
+      bodyHtml = `
+        <div style="background:#FAF5FF;border-left:4px solid #A855F7;border-radius:8px;padding:14px;margin-bottom:14px">
+          <strong style="color:#7E22CE">New time proposed</strong>
+        </div>
+        <p style="color:#475569"><strong>${providerName}</strong> has proposed rescheduling.</p>
+        <p style="color:#475569"><strong>Original:</strong> ${date} at ${time}<br/><strong>Proposed:</strong> ${pd} at ${pt}</p>
+        <a href="https://moravacare.com" style="display:block;background:#14B8A6;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:bold;text-align:center;margin-top:16px">Respond in Morava App &rarr;</a>
+      `;
     }
-
-    const wrapEmail = (body: string) => `
-      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
-        <div style="background:#0F172A;padding:20px 24px;border-radius:12px 12px 0 0">
-          <span style="color:#fff;font-size:18px;font-weight:bold">Morava</span>
-          <span style="color:#94A3B8;font-size:13px;margin-left:8px">Appointment Update</span>
-        </div>
-        <div style="background:#f8fafc;padding:24px;border:1px solid #e2e8f0;border-radius:0 0 12px 12px">
-          ${body}
-          <a href="https://moravacare.com"
-             style="display:block;background:#14B8A6;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:bold;text-align:center;margin-top:20px">
-            Open Morava App →
-          </a>
-          <p style="color:#94A3B8;font-size:12px;text-align:center;margin-top:12px">
-            Morava Care LLC · Oklahoma City, OK · support@moravacare.com
-          </p>
-        </div>
-      </div>
-    `;
-
-    await resend.emails.send({
-      from: 'Morava <noreply@moravacare.com>',
-      to: patientEmail,
-      subject,
-      html: wrapEmail(bodyHtml),
-    });
+    try {
+      const resend = new Resend(resendApiKey.value());
+      await resend.emails.send({ from: 'Morava <noreply@moravacare.com>', to: patientEmail, subject, html: wrapEmail('Appointment Update', bodyHtml) });
+    } catch (err) { console.error('onBookingStatusChanged: email send failed', err); }
   }
 );
 
-// ================================================================
-// NIGHTLY AUTO-COMPLETE — marks past confirmed bookings as completed
-// Runs every day at midnight Central time
-// ================================================================
+// NIGHTLY AUTO-COMPLETE — paginated to handle >499 bookings safely
 export const nightlyAutoComplete = onSchedule(
-  {
-    schedule: '0 5 * * *', // midnight CST = 5am UTC
-    timeZone: 'America/Chicago',
-    region: 'us-central1',
-  },
+  { schedule: '0 5 * * *', timeZone: 'America/Chicago', region: 'us-central1' },
   async () => {
-    const today = new Date().toISOString().split('T')[0];
-
-    const snap = await db
-      .collection('bookings')
-      .where('status', '==', 'confirmed')
-      .where('date', '<', today)
-      .get();
-
-    if (snap.empty) return;
-
-    const batch = db.batch();
-    snap.docs.forEach((d) => {
-      batch.update(d.ref, {
-        status: 'completed',
-        completedAt: admin.firestore.FieldValue.serverTimestamp(),
-        completedBy: 'system',
-        billable: true,
-      });
-    });
-
-    await batch.commit();
-    console.log(`Auto-completed ${snap.docs.length} bookings for dates before ${today}`);
+    const cn = new Date(new Date().toLocaleString('en-US', {timeZone:'America/Chicago'}));
+    const today = `${cn.getFullYear()}-${String(cn.getMonth()+1).padStart(2,'0')}-${String(cn.getDate()).padStart(2,'0')}`;
+    const snap = await db.collection('bookings').where('status','==','confirmed').where('date','<',today).get();
+    if (snap.empty) { console.log('nightlyAutoComplete: nothing to complete.'); return; }
+    const CHUNK = 499;
+    let total = 0;
+    for (let i = 0; i < snap.docs.length; i += CHUNK) {
+      const batch = db.batch();
+      snap.docs.slice(i, i + CHUNK).forEach(d => batch.update(d.ref, {
+        status: 'completed', completedAt: admin.firestore.FieldValue.serverTimestamp(),
+        completedBy: 'system', billable: true,
+      }));
+      await batch.commit();
+      total += Math.min(CHUNK, snap.docs.length - i);
+    }
+    console.log(`nightlyAutoComplete: completed ${total} bookings before ${today}.`);
   }
 );
 
-// ================================================================
-// MONTHLY BILLING — charges providers via Stripe on the 1st
-// Runs on the 1st of each month at 8am Central
-// ================================================================
+// MONTHLY BILLING — double-charge protection + idempotency keys + PHI-free emails
 export const monthlyBilling = onSchedule(
-  {
-    schedule: '0 13 1 * *', // 8am CST on the 1st = 1pm UTC
-    timeZone: 'America/Chicago',
-    region: 'us-central1',
-    secrets: [stripeSecretKey, resendApiKey],
-  },
+  { schedule: '0 13 1 * *', timeZone: 'America/Chicago', region: 'us-central1', secrets: [stripeSecretKey, resendApiKey] },
   async () => {
-    // Dynamically import stripe to avoid issues if key not yet set
-    const Stripe = (await import('stripe')).default;
-    const stripe = new Stripe(stripeSecretKey.value(), { apiVersion: '2026-04-22.dahlia' });
+    const stripe = new Stripe(stripeSecretKey.value(), { apiVersion: '2026-04-22.dahlia' as any });
     const resend = new Resend(resendApiKey.value());
+    const now = new Date(new Date().toLocaleString('en-US', {timeZone:'America/Chicago'}));
+    const p = (n: number) => String(n).padStart(2,'0');
+    const fmt = (d: Date) => `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
+    const startDate = fmt(new Date(now.getFullYear(), now.getMonth()-1, 1));
+    const endDate   = fmt(new Date(now.getFullYear(), now.getMonth(),   1));
+    const periodKey = `${startDate}_${endDate}`;
 
-    // Find the billing window: first day of last month to first day of this month
-    const now = new Date();
-    const firstOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const firstOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const startDate = firstOfLastMonth.toISOString().split('T')[0];
-    const endDate   = firstOfThisMonth.toISOString().split('T')[0];
+    // invoiced != true prevents double-charging on retries
+    const snap = await db.collection('bookings')
+      .where('status','==','completed').where('billable','==',true)
+      .where('invoiced','!=',true).where('date','>=',startDate).where('date','<',endDate).get();
+    if (snap.empty) { console.log(`monthlyBilling: no unbilled visits for ${periodKey}.`); return; }
 
-    // Get all completed, billable bookings in the window
-    const snap = await db
-      .collection('bookings')
-      .where('status', '==', 'completed')
-      .where('billable', '==', true)
-      .where('date', '>=', startDate)
-      .where('date', '<', endDate)
-      .get();
-
-    if (snap.empty) {
-      console.log('No billable bookings this month.');
-      return;
-    }
-
-    // Group by providerId
-    const byProvider: Record<string, { count: number; bookingIds: string[] }> = {};
-    snap.docs.forEach((d) => {
-      const pid = d.data().providerId;
+    const byProvider: Record<string, { count: number; ids: string[] }> = {};
+    snap.docs.forEach(d => {
+      const pid = d.data().providerId as string | undefined;
       if (!pid) return;
-      if (!byProvider[pid]) byProvider[pid] = { count: 0, bookingIds: [] };
+      if (!byProvider[pid]) byProvider[pid] = { count: 0, ids: [] };
       byProvider[pid].count++;
-      byProvider[pid].bookingIds.push(d.id);
+      byProvider[pid].ids.push(d.id);
     });
 
-    // For each provider: get their Stripe customer ID and charge them
-    for (const [providerId, info] of Object.entries(byProvider)) {
+    for (const [pid, info] of Object.entries(byProvider)) {
       try {
-        // Get provider document to find Stripe customer ID and founding rate
-        const provSnap = await db.collection('providers').doc(providerId).get();
-        if (!provSnap.exists) continue;
-
-        const provData = provSnap.data()!;
-        const stripeCustomerId: string | undefined = provData.stripeCustomerId;
-        if (!stripeCustomerId) {
-          // No card on file — log and skip (notify Moise)
-          console.warn(`Provider ${providerId} has no Stripe customer ID — skipping`);
+        const pSnap = await db.collection('providers').doc(pid).get();
+        if (!pSnap.exists) continue;
+        const pd = pSnap.data()!;
+        const cid  = pd.stripeCustomerId      as string | undefined;
+        const pmid = pd.stripePaymentMethodId as string | undefined;
+        if (!cid || !pmid) {
           await resend.emails.send({
-            from: 'Morava Billing <noreply@moravacare.com>',
-            to: 'moise@moravacare.com',
-            subject: `⚠ Billing skipped — no card on file: ${provData.name || providerId}`,
-            html: `<p>${provData.name || providerId} has ${info.count} completed visits but no card on file. Manual follow-up required.</p>`,
+            from: 'Morava Billing <noreply@moravacare.com>', to: 'moise@moravacare.com',
+            subject: `Billing skipped — no card: ${esc(pd.name) || pid}`,
+            html: wrapEmail('Billing Alert', `<p>Provider <strong>${esc(pd.name)||pid}</strong> has <strong>${info.count} visits</strong> but no payment method. Period: ${startDate} to ${endDate}.</p>`),
           });
           continue;
         }
-
-        // Founding providers pay $6, standard pay $8
-        const ratePerVisit = provData.foundingProvider === true ? 6 : 8;
-        const amountCents  = info.count * ratePerVisit * 100;
-
-        // Charge via Stripe
-        const paymentIntent = await stripe.paymentIntents.create({
-          amount: amountCents,
-          currency: 'usd',
-          customer: stripeCustomerId,
-          payment_method_types: ['card'],
-          confirm: true,
-          off_session: true,
-          description: `Morava — ${info.count} completed visits (${startDate} to ${endDate})`,
-          metadata: {
-            providerId,
-            visitCount: info.count.toString(),
-            period: `${startDate} to ${endDate}`,
-            bookingIds: info.bookingIds.slice(0, 10).join(','), // Stripe metadata limit
-          },
-        });
-
-        console.log(`Charged ${providerId}: $${amountCents / 100} (${info.count} visits) — ${paymentIntent.id}`);
-
-        // Mark bookings as invoiced
-        const batch = db.batch();
-        info.bookingIds.forEach((bid) => {
-          batch.update(db.collection('bookings').doc(bid), {
-            invoiced: true,
-            invoicedAt: admin.firestore.FieldValue.serverTimestamp(),
-            stripePaymentIntentId: paymentIntent.id,
-          });
-        });
-        await batch.commit();
-
-        // Send receipt email to provider
-        const providerUsersSnap = await db
-          .collection('providerUsers')
-          .where('providerId', '==', providerId)
-          .limit(1)
-          .get();
-        const providerEmail = providerUsersSnap.empty
-          ? null
-          : providerUsersSnap.docs[0].data().email;
-
-        if (providerEmail) {
+        const rate   = pd.foundingProvider === true ? 6 : 8;
+        const amount = info.count * rate * 100;
+        const pi = await stripe.paymentIntents.create(
+          { amount, currency:'usd', customer:cid, payment_method:pmid, confirm:true, off_session:true,
+            description:`Morava — ${info.count} visit${info.count!==1?'s':''} (${startDate} to ${endDate})`,
+            metadata:{ providerId:pid, visitCount:String(info.count), period:periodKey, bookingIds:info.ids.slice(0,10).join(',') } },
+          { idempotencyKey:`billing-${pid}-${periodKey}` }
+        );
+        console.log(`monthlyBilling: charged ${pid} $${amount/100} — ${pi.id}`);
+        const CHUNK = 499;
+        for (let i = 0; i < info.ids.length; i += CHUNK) {
+          const batch = db.batch();
+          info.ids.slice(i, i+CHUNK).forEach(bid => batch.update(db.collection('bookings').doc(bid), {
+            invoiced:true, invoicedAt:admin.firestore.FieldValue.serverTimestamp(), stripePaymentIntentId:pi.id,
+          }));
+          await batch.commit();
+        }
+        const puSnap = await db.collection('providerUsers').where('providerId','==',pid).limit(1).get();
+        const pe = puSnap.empty ? null : puSnap.docs[0].data().email as string | undefined;
+        if (pe && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pe)) {
           await resend.emails.send({
-            from: 'Morava Billing <noreply@moravacare.com>',
-            to: providerEmail,
-            subject: `Morava — Monthly billing receipt — $${(amountCents / 100).toFixed(2)}`,
-            html: `
-              <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
-                <div style="background:#0F172A;padding:20px 24px;border-radius:12px 12px 0 0">
-                  <span style="color:#fff;font-size:18px;font-weight:bold">Morava</span>
-                  <span style="color:#94A3B8;font-size:13px;margin-left:8px">Monthly Billing Receipt</span>
-                </div>
-                <div style="background:#f8fafc;padding:24px;border:1px solid #e2e8f0;border-radius:0 0 12px 12px">
-                  <h2 style="color:#0F172A;margin:0 0 16px">Receipt — ${new Date().toLocaleDateString('en-US', {month:'long', year:'numeric'})}</h2>
-                  <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:16px">
-                    <p style="margin:0 0 8px;color:#475569"><strong>Period:</strong> ${startDate} to ${endDate}</p>
-                    <p style="margin:0 0 8px;color:#475569"><strong>Completed visits:</strong> ${info.count}</p>
-                    <p style="margin:0 0 8px;color:#475569"><strong>Rate:</strong> $${ratePerVisit}/visit ${provData.foundingProvider ? '(Founding Provider rate — locked for life)' : ''}</p>
-                    <p style="margin:0;color:#0F172A;font-size:18px;font-weight:bold">Total charged: $${(amountCents / 100).toFixed(2)}</p>
-                  </div>
-                  <p style="color:#64748B;font-size:12px">Questions? Reply to this email or contact support@moravacare.com</p>
-                </div>
+            from:'Morava Billing <noreply@moravacare.com>', to:pe,
+            subject:`Morava receipt — $${(amount/100).toFixed(2)}`,
+            html: wrapEmail('Monthly Receipt', `
+              <h2 style="color:#0F172A;margin:0 0 16px">Receipt — ${new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'})}</h2>
+              <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:16px">
+                <p style="margin:0 0 8px;color:#475569"><strong>Period:</strong> ${startDate} to ${endDate}</p>
+                <p style="margin:0 0 8px;color:#475569"><strong>Visits:</strong> ${info.count}</p>
+                <p style="margin:0 0 8px;color:#475569"><strong>Rate:</strong> $${rate}/visit${pd.foundingProvider?' (Founding Provider — locked for life)':''}</p>
+                <p style="margin:0;color:#0F172A;font-size:20px;font-weight:bold">Total: $${(amount/100).toFixed(2)}</p>
               </div>
-            `,
+            `),
           });
         }
       } catch (err) {
-        console.error(`Billing error for ${providerId}:`, err);
-        await resend.emails.send({
-          from: 'Morava Billing <noreply@moravacare.com>',
-          to: 'moise@moravacare.com',
-          subject: `⚠ Billing failed for provider: ${providerId}`,
-          html: `<p>Billing failed for provider <strong>${providerId}</strong>. Error: ${(err as Error).message}</p>`,
-        });
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`monthlyBilling: error for ${pid}:`, msg);
+        try {
+          await resend.emails.send({
+            from:'Morava Billing <noreply@moravacare.com>', to:'moise@moravacare.com',
+            subject:`Billing error — provider ${pid}`,
+            html: wrapEmail('Billing Error', `<p>Provider: <strong>${esc(pid)}</strong><br/>Period: ${startDate} to ${endDate}<br/>Error: ${esc(msg)}<br/>Visits: ${info.count}</p>`),
+          });
+        } catch { console.error('Failed to send billing error alert.'); }
       }
     }
-
-    console.log('Monthly billing run complete.');
+    console.log(`monthlyBilling: complete for ${periodKey}.`);
   }
 );
