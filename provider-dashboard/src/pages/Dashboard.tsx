@@ -240,10 +240,11 @@ function generateEHRPDF(booking: Booking) {
 </body>
 </html>`;
 
-  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-  const blobUrl = URL.createObjectURL(blob);
-  window.open(blobUrl, "_blank", "width=900,height=700");
-  setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+  const win = window.open("", "_blank", "width=900,height=700");
+  if (win) {
+    win.document.write(html);
+    win.document.close();
+  }
 }
 
 // ── Add to Calendar — generates ICS file, works with Google, Apple, Outlook ─
