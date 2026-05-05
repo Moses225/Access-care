@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { db } from "../firebase";
+import MFASetup from "./MFASetup";
 
 interface Booking {
   id: string;
@@ -309,7 +310,7 @@ function formatDateLong(dateStr: string) {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { user, providerProfile, logout } = useAuth();
+  const { user, providerProfile, logout, isMFAEnrolled } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"upcoming" | "all" | "past">("upcoming");
@@ -329,6 +330,8 @@ export default function Dashboard() {
 
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [showNotifBanner, setShowNotifBanner] = useState(true);
+  const [showMFASetup, setShowMFASetup] = useState(false);
+  const [mfaBannerDismissed, setMfaBannerDismissed] = useState(false);
 
   useEffect(() => {
     if (!providerProfile?.providerId) return;
@@ -518,6 +521,36 @@ export default function Dashboard() {
       </nav>
 
       <div className="max-w-5xl mx-auto px-6 py-8">
+        {/* ── 2FA setup banner ────────────────────────────────────────────── */}
+        {!isMFAEnrolled && !mfaBannerDismissed && (
+          <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
+            <span className="text-blue-500 text-xl flex-shrink-0">🔐</span>
+            <div className="flex-1">
+              <div className="font-semibold text-blue-800 text-sm mb-1">
+                Enable two-factor authentication
+              </div>
+              <div className="text-blue-700 text-xs">
+                Protect your account and unlock billing setup. Takes 60 seconds
+                — you'll need your phone.
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={() => setShowMFASetup(true)}
+                className="text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg transition-colors"
+              >
+                Enable now
+              </button>
+              <button
+                onClick={() => setMfaBannerDismissed(true)}
+                className="text-blue-400 hover:text-blue-600 text-lg"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* ── Billing setup banner ────────────────────────────────────────── */}
         {!hasStripe && showBillingBanner && (
           <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
@@ -1095,6 +1128,13 @@ export default function Dashboard() {
             </button>
           </div>
         </div>
+      )}
+      {/* ── 2FA Setup Modal ──────────────────────────────────────────────── */}
+      {showMFASetup && (
+        <MFASetup
+          onClose={() => setShowMFASetup(false)}
+          onEnrolled={() => setShowMFASetup(false)}
+        />
       )}
     </div>
   );
