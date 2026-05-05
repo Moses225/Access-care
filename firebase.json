@@ -109,7 +109,7 @@
             },
             {
               "key": "Content-Security-Policy",
-              "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com; connect-src 'self' https://firestore.googleapis.com https://www.googleapis.com https://*.firebaseio.com https://firebase.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://firebaseappcheck.googleapis.com; frame-src 'none'; object-src 'none'; base-uri 'self';"
+              "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com https://www.google.com https://www.recaptcha.net https://recaptcha.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com; connect-src 'self' https://firestore.googleapis.com https://www.googleapis.com https://*.firebaseio.com https://firebase.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://firebaseappcheck.googleapis.com https://www.recaptcha.net https://recaptcha.net https://recaptchaenterprise.googleapis.com https://www.google.com; frame-src https://www.google.com https://www.recaptcha.net https://recaptcha.net; object-src 'none'; base-uri 'self';"
             }
           ]
         }
