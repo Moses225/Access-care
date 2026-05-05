@@ -527,9 +527,10 @@ export default function Dashboard() {
                 Set up billing to stay active on Morava
               </div>
               <div className="text-amber-700 text-xs">
-                Morava charges $6 per completed visit — only when a patient
-                shows up. Add a card on file to keep your listing active when
-                billing begins.
+                As a Founding Provider, your rate is locked at{" "}
+                <strong>$6 per completed visit</strong> — for life. Standard
+                rate after launch is $8. You only pay when a patient shows up.
+                Add a card on file before billing begins.
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
