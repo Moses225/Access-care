@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { db } from "../firebase";
+import BillingSetup from "./BillingSetup";
 import MFASetup from "./MFASetup";
 
 interface Booking {
@@ -561,9 +562,9 @@ export default function Dashboard() {
               </div>
               <div className="text-amber-700 text-xs">
                 As a Founding Provider, your rate is locked at{" "}
-                <strong>$6 per completed visit</strong> — for life. Standard
-                rate after launch is $8. You only pay when a patient shows up.
-                Add a card on file before billing begins.
+                <strong>$6 per completed visit</strong> — for 2 years. Standard
+                rate is $10/visit. You only pay when a patient shows up. Add a
+                card on file before billing begins.
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
@@ -1085,49 +1086,17 @@ export default function Dashboard() {
       )}
 
       {/* ── Billing setup modal ────────────────────────────────────────────── */}
-      {showBillingModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl">
-            <h3 className="font-display text-xl text-slate-900 mb-2">
-              Set up billing
-            </h3>
-            <p className="text-slate-500 text-sm mb-4 leading-relaxed">
-              Morava charges <strong>$6 per completed visit</strong> — billed
-              automatically on the 1st of each month. You only pay when a
-              patient shows up. No monthly fees.
-            </p>
-            <div className="bg-teal-50 border border-teal-200 rounded-xl p-4 mb-6">
-              <div className="text-sm font-semibold text-teal-800 mb-1">
-                How billing works
-              </div>
-              <ul className="text-xs text-teal-700 space-y-1">
-                <li>→ Patient books and attends their appointment</li>
-                <li>→ Morava logs the completed visit</li>
-                <li>
-                  → On the 1st of each month, your card is charged for all
-                  completed visits
-                </li>
-                <li>→ No-shows and cancellations are never charged</li>
-              </ul>
-            </div>
-            <p className="text-slate-500 text-sm mb-6">
-              To add your card on file, email{" "}
-              <a
-                href="mailto:support@moravacare.com"
-                className="text-teal-600 font-medium"
-              >
-                support@moravacare.com
-              </a>{" "}
-              and we'll set up your billing account within 24 hours.
-            </p>
-            <button
-              onClick={() => setShowBillingModal(false)}
-              className="w-full bg-teal-500 hover:bg-teal-600 text-white font-semibold py-3 rounded-xl text-sm transition-colors"
-            >
-              Got it
-            </button>
-          </div>
-        </div>
+      {showBillingModal && providerProfile && (
+        <BillingSetup
+          providerId={providerProfile.providerId}
+          providerName={providerProfile.name}
+          isFoundingProvider={true}
+          onClose={() => setShowBillingModal(false)}
+          onSuccess={() => {
+            setShowBillingModal(false);
+            setShowBillingBanner(false);
+          }}
+        />
       )}
       {/* ── 2FA Setup Modal ──────────────────────────────────────────────── */}
       {showMFASetup && (

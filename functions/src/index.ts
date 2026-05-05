@@ -4,6 +4,7 @@ import {
   onDocumentCreated,
   onDocumentUpdated,
 } from "firebase-functions/v2/firestore";
+import { HttpsError, onCall, onRequest } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { Resend } from "resend";
 import Stripe from "stripe";
@@ -482,5 +483,200 @@ export const monthlyBilling = onSchedule(
       }
     }
     console.log(`monthlyBilling: complete for ${periodKey}.`);
+  },
+);
+// ================================================================
+// ON PROVIDER GO LIVE — auto-verifies email when admin marks live
+// Triggers on providerSubmissions status change to 'live'
+// ================================================================
+export const onProviderGoLive = onDocumentUpdated(
+  {
+    document: "providerSubmissions/{docId}",
+    database: "(default)",
+    region: "us-central1",
+  },
+  async (event) => {
+    const before = event.data?.before?.data();
+    const after = event.data?.after?.data();
+    if (!before || !after) return;
+
+    // Only fire when status transitions TO 'live'
+    if (before.status === "live" || after.status !== "live") return;
+
+    const email = after.email as string | undefined;
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      console.warn(
+        `onProviderGoLive: invalid or missing email for doc ${event.params.docId}`,
+      );
+      return;
+    }
+
+    try {
+      // Look up Firebase Auth user by email
+      const userRecord = await admin.auth().getUserByEmail(email);
+
+      // Mark email as verified — required for MFA enrollment
+      await admin.auth().updateUser(userRecord.uid, { emailVerified: true });
+
+      console.log(
+        `onProviderGoLive: email verified for ${email} (${userRecord.uid})`,
+      );
+    } catch (err) {
+      // auth/user-not-found means the provider account hasn't been created yet
+      // This is non-fatal — email can be verified when the account is created
+      const errMsg = err instanceof Error ? err.message : String(err);
+      console.warn(
+        `onProviderGoLive: could not verify email for ${email}: ${errMsg}`,
+      );
+    }
+  },
+);
+
+// ================================================================
+// CREATE SETUP INTENT — callable from provider dashboard
+// Creates a Stripe Setup Intent and returns the client secret.
+// The dashboard uses this to collect and save the provider's card
+// without charging it. Saves stripeCustomerId + stripePaymentMethodId
+// to providers/{providerId} on webhook confirmation.
+//
+// SECURITY:
+//   - Requires authenticated Firebase user (auth context enforced)
+//   - Verifies caller's providerId matches their custom claim
+//   - Never logs or returns full card details
+//   - Idempotent: reuses existing Stripe customer if present
+// ================================================================
+export const createSetupIntent = onCall(
+  {
+    region: "us-central1",
+    secrets: [stripeSecretKey],
+  },
+  async (request) => {
+    // Require authenticated user
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Authentication required.");
+    }
+
+    const callerUid = request.auth.uid;
+    const callerProviderId = request.auth.token?.providerId as
+      | string
+      | undefined;
+    const providerId = request.data?.providerId as string | undefined;
+
+    if (!providerId) {
+      throw new HttpsError("invalid-argument", "providerId is required.");
+    }
+
+    // Security check: caller's custom claim must match the providerId they're setting up billing for
+    if (callerProviderId !== providerId) {
+      console.error(
+        `createSetupIntent: UID ${callerUid} claimed providerId ${callerProviderId} but requested ${providerId}`,
+      );
+      throw new HttpsError(
+        "permission-denied",
+        "Not authorized for this provider account.",
+      );
+    }
+
+    const stripe = new Stripe(stripeSecretKey.value(), {
+      apiVersion: "2026-04-22.dahlia" as any,
+    });
+
+    // Fetch provider document to get name/email and check for existing customer
+    const provSnap = await db.collection("providers").doc(providerId).get();
+    if (!provSnap.exists) {
+      throw new HttpsError("not-found", "Provider not found.");
+    }
+
+    const provData = provSnap.data()!;
+    let stripeCustomerId = provData.stripeCustomerId as string | undefined;
+
+    // Reuse existing Stripe customer or create new one
+    if (!stripeCustomerId) {
+      const customer = await stripe.customers.create({
+        email: provData.email || "",
+        name: provData.name || providerId,
+        metadata: { providerId, firebaseUid: callerUid },
+      });
+      stripeCustomerId = customer.id;
+
+      // Save customer ID immediately — prevents duplicate customers on retry
+      await db.collection("providers").doc(providerId).update({
+        stripeCustomerId,
+      });
+    }
+
+    // Create Setup Intent — captures card without charging
+    const setupIntent = await stripe.setupIntents.create({
+      customer: stripeCustomerId,
+      payment_method_types: ["card"],
+      usage: "off_session", // required for automated monthly billing
+      metadata: {
+        providerId,
+        firebaseUid: callerUid,
+      },
+    });
+
+    // Return only what the client needs — never expose the full setup intent
+    return {
+      clientSecret: setupIntent.client_secret,
+      customerId: stripeCustomerId,
+    };
+  },
+);
+
+// ================================================================
+// STRIPE WEBHOOK — confirms card saved after Setup Intent succeeds
+// Saves stripePaymentMethodId to providers/{providerId}
+// This is what the billing function uses to charge the provider
+// ================================================================
+export const stripeWebhook = onRequest(
+  {
+    region: "us-central1",
+    secrets: [stripeSecretKey],
+  },
+  async (req, res) => {
+    // Stripe webhooks use POST only
+    if (req.method !== "POST") {
+      res.status(405).send("Method not allowed");
+      return;
+    }
+
+    // Parse raw body — webhook signature requires raw bytes
+    // Note: webhook secret must be set as Firebase secret after Stripe webhook is configured
+    // TODO: add STRIPE_WEBHOOK_SECRET once Stripe webhook endpoint is configured
+    // For now we parse without signature verification and filter by event type
+    // TODO: add STRIPE_WEBHOOK_SECRET once Stripe webhook endpoint is configured
+    let event;
+    try {
+      const raw = (req as any).rawBody; // eslint-disable-line @typescript-eslint/no-explicit-any
+      event = JSON.parse(raw ? raw.toString() : JSON.stringify(req.body));
+    } catch {
+      res.status(400).send("Invalid payload");
+      return;
+    }
+
+    if (event.type === "setup_intent.succeeded") {
+      const setupIntent = event.data.object;
+      const providerId = setupIntent.metadata?.providerId;
+      const paymentMethodId = setupIntent.payment_method;
+
+      if (providerId && paymentMethodId) {
+        try {
+          await db.collection("providers").doc(providerId).update({
+            stripePaymentMethodId: paymentMethodId,
+            billingSetupAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+          console.log(
+            `stripeWebhook: saved payment method ${paymentMethodId} for provider ${providerId}`,
+          );
+        } catch (err) {
+          console.error("stripeWebhook: failed to save payment method:", err);
+          res.status(500).send("Database update failed");
+          return;
+        }
+      }
+    }
+
+    res.status(200).json({ received: true });
   },
 );
