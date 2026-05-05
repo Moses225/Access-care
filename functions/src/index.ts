@@ -457,7 +457,7 @@ export const monthlyBilling = onSchedule(
               <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:16px">
                 <p style="margin:0 0 8px;color:#475569"><strong>Period:</strong> ${startDate} to ${endDate}</p>
                 <p style="margin:0 0 8px;color:#475569"><strong>Visits:</strong> ${info.count}</p>
-                <p style="margin:0 0 8px;color:#475569"><strong>Rate:</strong> $${rate}/visit${pd.foundingProvider ? " (Founding Provider — locked for life)" : ""}</p>
+                <p style="margin:0 0 8px;color:#475569"><strong>Rate:</strong> $${rate}/visit${pd.foundingProvider ? " (Founding Provider rate — locked for 2 years)" : ""}</p>
                 <p style="margin:0;color:#0F172A;font-size:20px;font-weight:bold">Total: $${(amount / 100).toFixed(2)}</p>
               </div>
             `,
@@ -629,10 +629,12 @@ export const createSetupIntent = onCall(
 // Saves stripePaymentMethodId to providers/{providerId}
 // This is what the billing function uses to charge the provider
 // ================================================================
+const stripeWebhookSecret = defineSecret("STRIPE_WEBHOOK_SECRET");
+
 export const stripeWebhook = onRequest(
   {
     region: "us-central1",
-    secrets: [stripeSecretKey],
+    secrets: [stripeSecretKey, stripeWebhookSecret],
   },
   async (req, res) => {
     // Stripe webhooks use POST only
@@ -641,17 +643,31 @@ export const stripeWebhook = onRequest(
       return;
     }
 
-    // Parse raw body — webhook signature requires raw bytes
-    // Note: webhook secret must be set as Firebase secret after Stripe webhook is configured
-    // TODO: add STRIPE_WEBHOOK_SECRET once Stripe webhook endpoint is configured
-    // For now we parse without signature verification and filter by event type
-    // TODO: add STRIPE_WEBHOOK_SECRET once Stripe webhook endpoint is configured
+    // Verify webhook signature — rejects any request not genuinely from Stripe
+    const sig = req.headers["stripe-signature"];
+    if (!sig) {
+      res.status(400).send("Missing stripe-signature header");
+      return;
+    }
+
+    const stripe = new Stripe(stripeSecretKey.value(), {
+      apiVersion: "2026-04-22.dahlia" as any,
+    });
+
     let event;
     try {
-      const raw = (req as any).rawBody; // eslint-disable-line @typescript-eslint/no-explicit-any
-      event = JSON.parse(raw ? raw.toString() : JSON.stringify(req.body));
-    } catch {
-      res.status(400).send("Invalid payload");
+      const raw = (req as unknown as { rawBody?: Buffer }).rawBody;
+      const payload = raw ?? Buffer.from(JSON.stringify(req.body));
+      event = stripe.webhooks.constructEvent(
+        payload,
+        sig,
+        stripeWebhookSecret.value(),
+      );
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : "Signature verification failed";
+      console.error("stripeWebhook: signature verification failed:", msg);
+      res.status(400).send(`Webhook error: ${msg}`);
       return;
     }
 
