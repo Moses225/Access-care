@@ -1,6 +1,8 @@
+import { sendPasswordResetEmail } from "firebase/auth";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { auth } from "../firebase";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -10,6 +12,23 @@ export default function Login() {
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+
+  const handleReset = async () => {
+    if (!email.trim()) {
+      setError(
+        "Enter your email address above first, then click Forgot Password.",
+      );
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email.trim().toLowerCase());
+      setError("");
+      setResetSent(true);
+    } catch {
+      setError("Could not send reset email. Check the address and try again.");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,6 +174,19 @@ export default function Login() {
                 "Sign in to dashboard →"
               )}
             </button>
+            {resetSent ? (
+              <div className="mt-3 text-center text-sm text-teal-600 bg-teal-50 border border-teal-100 rounded-lg px-4 py-3">
+                ✓ Password reset email sent — check your inbox.
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handleReset}
+                className="w-full text-center text-sm text-slate-400 hover:text-teal-600 transition-colors mt-3 py-2"
+              >
+                Forgot password?
+              </button>
+            )}
           </form>
         </div>
 
