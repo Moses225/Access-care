@@ -1,557 +1,1457 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Morava — Admin</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-<style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --teal:#14b8a6;--teal-dark:#0d9488;--teal-light:#ccfbf1;--teal-xlight:#f0fdfb;
-  --navy:#0f172a;--text:#1e293b;--text-2:#475569;--text-3:#94a3b8;
-  --border:#e2e8f0;--bg:#f8fafc;--white:#fff;
-  --red:#ef4444;--red-bg:#fef2f2;--amber:#f59e0b;--amber-bg:#fef3c7;
-  --green:#22c55e;--green-bg:#f0fdf4;--blue:#3b82f6;--blue-bg:#eff6ff;
-  --purple:#8b5cf6;--purple-bg:#f5f3ff;
-}
-body{font-family:"Plus Jakarta Sans",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
-button{font-family:inherit;cursor:pointer;}
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Morava — Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      :root {
+        --teal: #14b8a6;
+        --teal-dark: #0d9488;
+        --teal-light: #ccfbf1;
+        --teal-xlight: #f0fdfb;
+        --navy: #0f172a;
+        --text: #1e293b;
+        --text-2: #475569;
+        --text-3: #94a3b8;
+        --border: #e2e8f0;
+        --bg: #f8fafc;
+        --white: #fff;
+        --red: #ef4444;
+        --red-bg: #fef2f2;
+        --amber: #f59e0b;
+        --amber-bg: #fef3c7;
+        --green: #22c55e;
+        --green-bg: #f0fdf4;
+        --blue: #3b82f6;
+        --blue-bg: #eff6ff;
+        --purple: #8b5cf6;
+        --purple-bg: #f5f3ff;
+      }
+      body {
+        font-family: "Plus Jakarta Sans", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+      }
+      button {
+        font-family: inherit;
+        cursor: pointer;
+      }
 
-/* ── LOGIN SCREEN ──────────────────────────────────────── */
-#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
-.login-card{background:var(--white);border-radius:20px;border:1.5px solid var(--border);padding:48px 40px;width:100%;max-width:400px;text-align:center;}
-.login-logo{width:48px;height:48px;background:var(--teal);border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;}
-.login-card h1{font-family:"Nunito",sans-serif;font-weight:900;font-size:24px;color:var(--navy);margin-bottom:6px;}
-.login-card p{font-size:13px;color:var(--text-2);margin-bottom:28px;}
-.login-field{margin-bottom:14px;text-align:left;}
-.login-field label{display:block;font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px;}
-.login-field input{width:100%;padding:11px 14px;border:2px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;transition:border-color .2s;}
-.login-field input:focus{border-color:var(--teal);}
-.login-btn{width:100%;padding:13px;background:var(--teal);color:white;border:none;border-radius:10px;font-size:15px;font-weight:700;margin-top:8px;transition:background .2s;}
-.login-btn:hover{background:var(--teal-dark)}
-.login-btn:disabled{opacity:.6;cursor:not-allowed}
-.login-error{font-size:13px;color:var(--red);margin-top:10px;display:none;}
-.login-error.show{display:block;}
+      /* ── LOGIN SCREEN ──────────────────────────────────────── */
+      #loginScreen {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+      }
+      .login-card {
+        background: var(--white);
+        border-radius: 20px;
+        border: 1.5px solid var(--border);
+        padding: 48px 40px;
+        width: 100%;
+        max-width: 400px;
+        text-align: center;
+      }
+      .login-logo {
+        width: 48px;
+        height: 48px;
+        background: var(--teal);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+      }
+      .login-card h1 {
+        font-family: "Nunito", sans-serif;
+        font-weight: 900;
+        font-size: 24px;
+        color: var(--navy);
+        margin-bottom: 6px;
+      }
+      .login-card p {
+        font-size: 13px;
+        color: var(--text-2);
+        margin-bottom: 28px;
+      }
+      .login-field {
+        margin-bottom: 14px;
+        text-align: left;
+      }
+      .login-field label {
+        display: block;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text);
+        margin-bottom: 6px;
+      }
+      .login-field input {
+        width: 100%;
+        padding: 11px 14px;
+        border: 2px solid var(--border);
+        border-radius: 10px;
+        font-size: 14px;
+        font-family: inherit;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      .login-field input:focus {
+        border-color: var(--teal);
+      }
+      .login-btn {
+        width: 100%;
+        padding: 13px;
+        background: var(--teal);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 15px;
+        font-weight: 700;
+        margin-top: 8px;
+        transition: background 0.2s;
+      }
+      .login-btn:hover {
+        background: var(--teal-dark);
+      }
+      .login-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      .login-error {
+        font-size: 13px;
+        color: var(--red);
+        margin-top: 10px;
+        display: none;
+      }
+      .login-error.show {
+        display: block;
+      }
 
-/* ── NAV ───────────────────────────────────────────────── */
-nav{background:var(--navy);padding:0 28px;position:sticky;top:0;z-index:100;}
-.nav-inner{max-width:1200px;margin:0 auto;height:60px;display:flex;align-items:center;justify-content:space-between;}
-.nav-brand{display:flex;align-items:center;gap:10px;}
-.nav-logo-box{width:28px;height:28px;background:var(--teal);border-radius:7px;display:flex;align-items:center;justify-content:center;}
-.nav-name{font-family:"Nunito",sans-serif;font-weight:900;font-size:16px;color:white;}
-.nav-badge{font-size:10px;font-weight:700;color:var(--navy);background:var(--teal);padding:2px 8px;border-radius:50px;}
-.nav-right{display:flex;align-items:center;gap:16px;}
-.nav-admin-email{font-size:12px;color:rgba(255,255,255,.5);}
-.logout-btn{font-size:12px;font-weight:600;color:rgba(255,255,255,.6);background:none;border:1px solid rgba(255,255,255,.2);padding:5px 12px;border-radius:6px;transition:all .2s;}
-.logout-btn:hover{color:white;border-color:rgba(255,255,255,.5);}
+      /* ── NAV ───────────────────────────────────────────────── */
+      nav {
+        background: var(--navy);
+        padding: 0 28px;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+      .nav-inner {
+        max-width: 1200px;
+        margin: 0 auto;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .nav-brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .nav-logo-box {
+        width: 28px;
+        height: 28px;
+        background: var(--teal);
+        border-radius: 7px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .nav-name {
+        font-family: "Nunito", sans-serif;
+        font-weight: 900;
+        font-size: 16px;
+        color: white;
+      }
+      .nav-badge {
+        font-size: 10px;
+        font-weight: 700;
+        color: var(--navy);
+        background: var(--teal);
+        padding: 2px 8px;
+        border-radius: 50px;
+      }
+      .nav-right {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .nav-admin-email {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.5);
+      }
+      .logout-btn {
+        font-size: 12px;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.6);
+        background: none;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 5px 12px;
+        border-radius: 6px;
+        transition: all 0.2s;
+      }
+      .logout-btn:hover {
+        color: white;
+        border-color: rgba(255, 255, 255, 0.5);
+      }
 
-/* ── MAIN ──────────────────────────────────────────────── */
-.admin-main{max-width:1200px;margin:0 auto;padding:28px 28px 60px;}
+      /* ── MAIN ──────────────────────────────────────────────── */
+      .admin-main {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 28px 28px 60px;
+      }
 
-/* ── STATS BAR ─────────────────────────────────────────── */
-.stats-bar{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:28px;}
-.stat{background:var(--white);border-radius:14px;border:1.5px solid var(--border);padding:18px 20px;}
-.stat-val{font-family:"Nunito",sans-serif;font-size:28px;font-weight:900;color:var(--navy);}
-.stat-val.teal{color:var(--teal-dark);}
-.stat-val.amber{color:var(--amber);}
-.stat-val.green{color:var(--green);}
-.stat-val.purple{color:var(--purple);}
-.stat-label{font-size:11px;color:var(--text-3);margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
+      /* ── STATS BAR ─────────────────────────────────────────── */
+      .stats-bar {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 12px;
+        margin-bottom: 28px;
+      }
+      .stat {
+        background: var(--white);
+        border-radius: 14px;
+        border: 1.5px solid var(--border);
+        padding: 18px 20px;
+      }
+      .stat-val {
+        font-family: "Nunito", sans-serif;
+        font-size: 28px;
+        font-weight: 900;
+        color: var(--navy);
+      }
+      .stat-val.teal {
+        color: var(--teal-dark);
+      }
+      .stat-val.amber {
+        color: var(--amber);
+      }
+      .stat-val.green {
+        color: var(--green);
+      }
+      .stat-val.purple {
+        color: var(--purple);
+      }
+      .stat-label {
+        font-size: 11px;
+        color: var(--text-3);
+        margin-top: 4px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
 
-/* ── TABS ──────────────────────────────────────────────── */
-.tabs{display:flex;border-bottom:2px solid var(--border);margin-bottom:24px;}
-.tab{padding:14px 20px;font-size:14px;font-weight:700;color:var(--text-2);background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .2s;}
-.tab.active{color:var(--teal);border-bottom-color:var(--teal);}
-.tab:hover:not(.active){color:var(--text)}
-.tab-panel{display:none;}
-.tab-panel.active{display:block;}
+      /* ── TABS ──────────────────────────────────────────────── */
+      .tabs {
+        display: flex;
+        border-bottom: 2px solid var(--border);
+        margin-bottom: 24px;
+      }
+      .tab {
+        padding: 14px 20px;
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--text-2);
+        background: none;
+        border: none;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -2px;
+        transition: all 0.2s;
+      }
+      .tab.active {
+        color: var(--teal);
+        border-bottom-color: var(--teal);
+      }
+      .tab:hover:not(.active) {
+        color: var(--text);
+      }
+      .tab-panel {
+        display: none;
+      }
+      .tab-panel.active {
+        display: block;
+      }
 
-/* ── FILTER BAR ────────────────────────────────────────── */
-.filter-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
-.filter-btn{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;border:1.5px solid var(--border);background:var(--white);color:var(--text-2);transition:all .2s;}
-.filter-btn.active{border-color:var(--teal);color:var(--teal);background:var(--teal-xlight);}
-.filter-count{font-size:10px;font-weight:700;background:var(--bg);padding:1px 5px;border-radius:10px;margin-left:4px;}
-.search-input{margin-left:auto;padding:7px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none;width:200px;transition:border-color .2s;}
-.search-input:focus{border-color:var(--teal);}
-.refresh-btn{padding:7px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:600;background:var(--white);color:var(--text-2);transition:all .2s;}
-.refresh-btn:hover{border-color:var(--teal);color:var(--teal);}
+      /* ── FILTER BAR ────────────────────────────────────────── */
+      .filter-bar {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .filter-btn {
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 700;
+        border: 1.5px solid var(--border);
+        background: var(--white);
+        color: var(--text-2);
+        transition: all 0.2s;
+      }
+      .filter-btn.active {
+        border-color: var(--teal);
+        color: var(--teal);
+        background: var(--teal-xlight);
+      }
+      .filter-count {
+        font-size: 10px;
+        font-weight: 700;
+        background: var(--bg);
+        padding: 1px 5px;
+        border-radius: 10px;
+        margin-left: 4px;
+      }
+      .search-input {
+        margin-left: auto;
+        padding: 7px 12px;
+        border: 1.5px solid var(--border);
+        border-radius: 8px;
+        font-size: 13px;
+        font-family: inherit;
+        outline: none;
+        width: 200px;
+        transition: border-color 0.2s;
+      }
+      .search-input:focus {
+        border-color: var(--teal);
+      }
+      .refresh-btn {
+        padding: 7px 12px;
+        border: 1.5px solid var(--border);
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        background: var(--white);
+        color: var(--text-2);
+        transition: all 0.2s;
+      }
+      .refresh-btn:hover {
+        border-color: var(--teal);
+        color: var(--teal);
+      }
 
-/* ── TABLE ─────────────────────────────────────────────── */
-.data-table{background:var(--white);border-radius:16px;border:1.5px solid var(--border);overflow:hidden;}
-.table-loading{padding:48px;text-align:center;font-size:14px;color:var(--text-3);}
-.table-empty{padding:48px;text-align:center;}
-.table-empty-icon{font-size:32px;margin-bottom:10px;}
-.table-empty p{font-size:14px;color:var(--text-3);}
+      /* ── TABLE ─────────────────────────────────────────────── */
+      .data-table {
+        background: var(--white);
+        border-radius: 16px;
+        border: 1.5px solid var(--border);
+        overflow: hidden;
+      }
+      .table-loading {
+        padding: 48px;
+        text-align: center;
+        font-size: 14px;
+        color: var(--text-3);
+      }
+      .table-empty {
+        padding: 48px;
+        text-align: center;
+      }
+      .table-empty-icon {
+        font-size: 32px;
+        margin-bottom: 10px;
+      }
+      .table-empty p {
+        font-size: 14px;
+        color: var(--text-3);
+      }
 
-/* Submission rows */
-.sub-row{border-bottom:1px solid var(--border);transition:background .15s;}
-.sub-row:last-child{border-bottom:none;}
-.sub-row:hover{background:#fafbfc;}
-.sub-main{display:grid;grid-template-columns:1.8fr 1.4fr 0.9fr 0.8fr 1fr 1.2fr;align-items:center;padding:14px 18px;gap:12px;cursor:pointer;}
-.sub-expand{padding:0 18px 18px;border-top:1px solid var(--border);background:var(--bg);display:none;}
-.sub-expand.open{display:block;}
-.sub-expand-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:16px 0 8px;}
-.expand-field{font-size:12px;}
-.expand-label{font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em;font-size:10px;margin-bottom:3px;}
-.expand-val{color:var(--text);line-height:1.5;}
-.action-row{display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--border);margin-top:12px;flex-wrap:wrap;align-items:center;}
+      /* Submission rows */
+      .sub-row {
+        border-bottom: 1px solid var(--border);
+        transition: background 0.15s;
+      }
+      .sub-row:last-child {
+        border-bottom: none;
+      }
+      .sub-row:hover {
+        background: #fafbfc;
+      }
+      .sub-main {
+        display: grid;
+        grid-template-columns: 1.8fr 1.4fr 0.9fr 0.8fr 1fr 1.2fr;
+        align-items: center;
+        padding: 14px 18px;
+        gap: 12px;
+        cursor: pointer;
+      }
+      .sub-expand {
+        padding: 0 18px 18px;
+        border-top: 1px solid var(--border);
+        background: var(--bg);
+        display: none;
+      }
+      .sub-expand.open {
+        display: block;
+      }
+      .sub-expand-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        padding: 16px 0 8px;
+      }
+      .expand-field {
+        font-size: 12px;
+      }
+      .expand-label {
+        font-weight: 700;
+        color: var(--text-3);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        font-size: 10px;
+        margin-bottom: 3px;
+      }
+      .expand-val {
+        color: var(--text);
+        line-height: 1.5;
+      }
+      .action-row {
+        display: flex;
+        gap: 8px;
+        padding-top: 12px;
+        border-top: 1px solid var(--border);
+        margin-top: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
 
-.col-provider{font-size:13px;font-weight:700;color:var(--text);}
-.col-sub{font-size:11px;color:var(--text-3);margin-top:2px;}
-.col-rep{font-size:13px;color:var(--text-2);}
-.col-date{font-size:12px;color:var(--text-3);}
+      .col-provider {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--text);
+      }
+      .col-sub {
+        font-size: 11px;
+        color: var(--text-3);
+        margin-top: 2px;
+      }
+      .col-rep {
+        font-size: 13px;
+        color: var(--text-2);
+      }
+      .col-date {
+        font-size: 12px;
+        color: var(--text-3);
+      }
 
-/* Badges */
-.badge{display:inline-flex;align-items:center;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;}
-.b-pending{background:var(--amber-bg);color:#92400e;}
-.b-live{background:var(--green-bg);color:#166534;}
-.b-rejected{background:var(--red-bg);color:#991b1b;}
-.b-npi{background:var(--purple-bg);color:#5b21b6;}
-.b-review{background:var(--blue-bg);color:#1e40af;}
-.b-new{background:var(--bg);color:var(--text-3);border:1px solid var(--border);}
-.b-approved{background:var(--green-bg);color:#166534;}
+      /* Badges */
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 3px 9px;
+        border-radius: 20px;
+      }
+      .b-pending {
+        background: var(--amber-bg);
+        color: #92400e;
+      }
+      .b-live {
+        background: var(--green-bg);
+        color: #166534;
+      }
+      .b-rejected {
+        background: var(--red-bg);
+        color: #991b1b;
+      }
+      .b-npi {
+        background: var(--purple-bg);
+        color: #5b21b6;
+      }
+      .b-review {
+        background: var(--blue-bg);
+        color: #1e40af;
+      }
+      .b-new {
+        background: var(--bg);
+        color: var(--text-3);
+        border: 1px solid var(--border);
+      }
+      .b-approved {
+        background: var(--green-bg);
+        color: #166534;
+      }
 
-/* Interest badges */
-.interest-confirmed{font-size:11px;font-weight:700;color:#166534;}
-.interest-interested{font-size:11px;font-weight:700;color:#92400e;}
-.interest-warm{font-size:11px;font-weight:600;color:var(--text-3);}
+      /* Interest badges */
+      .interest-confirmed {
+        font-size: 11px;
+        font-weight: 700;
+        color: #166534;
+      }
+      .interest-interested {
+        font-size: 11px;
+        font-weight: 700;
+        color: #92400e;
+      }
+      .interest-warm {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text-3);
+      }
 
-/* Action buttons */
-.act-btn{padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;border:1.5px solid;transition:all .2s;}
-.act-live{background:var(--green-bg);color:#166534;border-color:#86efac;}
-.act-live:hover{background:#dcfce7;}
-.act-reject{background:var(--red-bg);color:#991b1b;border-color:#fca5a5;}
-.act-reject:hover{background:#fee2e2;}
-.act-npi{background:var(--purple-bg);color:#5b21b6;border-color:#c4b5fd;}
-.act-npi:hover{background:#ede9fe;}
-.act-note{background:var(--white);color:var(--text-2);border-color:var(--border);}
-.act-note:hover{border-color:var(--teal);color:var(--teal);}
-.act-approve{background:var(--teal-xlight);color:var(--teal-dark);border-color:var(--teal-light);}
-.act-approve:hover{background:var(--teal-light);}
-.act-view{background:var(--blue-bg);color:#1e40af;border-color:#bfdbfe;}
-.act-view:hover{background:#dbeafe;}
+      /* Action buttons */
+      .act-btn {
+        padding: 7px 14px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 700;
+        border: 1.5px solid;
+        transition: all 0.2s;
+      }
+      .act-live {
+        background: var(--green-bg);
+        color: #166534;
+        border-color: #86efac;
+      }
+      .act-live:hover {
+        background: #dcfce7;
+      }
+      .act-reject {
+        background: var(--red-bg);
+        color: #991b1b;
+        border-color: #fca5a5;
+      }
+      .act-reject:hover {
+        background: #fee2e2;
+      }
+      .act-npi {
+        background: var(--purple-bg);
+        color: #5b21b6;
+        border-color: #c4b5fd;
+      }
+      .act-npi:hover {
+        background: #ede9fe;
+      }
+      .act-note {
+        background: var(--white);
+        color: var(--text-2);
+        border-color: var(--border);
+      }
+      .act-note:hover {
+        border-color: var(--teal);
+        color: var(--teal);
+      }
+      .act-approve {
+        background: var(--teal-xlight);
+        color: var(--teal-dark);
+        border-color: var(--teal-light);
+      }
+      .act-approve:hover {
+        background: var(--teal-light);
+      }
+      .act-view {
+        background: var(--blue-bg);
+        color: #1e40af;
+        border-color: #bfdbfe;
+      }
+      .act-view:hover {
+        background: #dbeafe;
+      }
 
-/* Note input inline */
-.note-input-wrap{display:none;margin-top:8px;}
-.note-input-wrap.show{display:flex;gap:8px;}
-.note-input-wrap input{flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none;}
-.note-input-wrap input:focus{border-color:var(--teal);}
-.note-save{padding:8px 14px;background:var(--teal);color:white;border:none;border-radius:8px;font-size:12px;font-weight:700;}
-.saved-note{font-size:12px;color:var(--text-3);font-style:italic;margin-top:6px;}
+      /* Note input inline */
+      .note-input-wrap {
+        display: none;
+        margin-top: 8px;
+      }
+      .note-input-wrap.show {
+        display: flex;
+        gap: 8px;
+      }
+      .note-input-wrap input {
+        flex: 1;
+        padding: 8px 12px;
+        border: 1.5px solid var(--border);
+        border-radius: 8px;
+        font-size: 13px;
+        font-family: inherit;
+        outline: none;
+      }
+      .note-input-wrap input:focus {
+        border-color: var(--teal);
+      }
+      .note-save {
+        padding: 8px 14px;
+        background: var(--teal);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .saved-note {
+        font-size: 12px;
+        color: var(--text-3);
+        font-style: italic;
+        margin-top: 6px;
+      }
 
-/* Rep application rows */
-.rep-row{border-bottom:1px solid var(--border);transition:background .15s;}
-.rep-row:last-child{border-bottom:none;}
-.rep-row:hover{background:#fafbfc;}
-.rep-main{display:grid;grid-template-columns:1.6fr 1.6fr 1fr 0.8fr 1fr 1fr;align-items:center;padding:14px 18px;gap:12px;cursor:pointer;}
-.rep-expand{padding:0 18px 18px;border-top:1px solid var(--border);background:var(--bg);display:none;}
-.rep-expand.open{display:block;}
+      /* Rep application rows */
+      .rep-row {
+        border-bottom: 1px solid var(--border);
+        transition: background 0.15s;
+      }
+      .rep-row:last-child {
+        border-bottom: none;
+      }
+      .rep-row:hover {
+        background: #fafbfc;
+      }
+      .rep-main {
+        display: grid;
+        grid-template-columns: 1.6fr 1.6fr 1fr 0.8fr 1fr 1fr;
+        align-items: center;
+        padding: 14px 18px;
+        gap: 12px;
+        cursor: pointer;
+      }
+      .rep-expand {
+        padding: 0 18px 18px;
+        border-top: 1px solid var(--border);
+        background: var(--bg);
+        display: none;
+      }
+      .rep-expand.open {
+        display: block;
+      }
 
-/* ── COMMISSION MODAL ──────────────────────────────────── */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:none;align-items:center;justify-content:center;padding:24px;}
-.modal-overlay.open{display:flex;}
-.modal{background:var(--white);border-radius:20px;padding:36px;width:100%;max-width:460px;box-shadow:0 20px 60px rgba(0,0,0,.15);}
-.modal h2{font-family:"Nunito",sans-serif;font-weight:900;font-size:22px;color:var(--navy);margin-bottom:6px;}
-.modal-sub{font-size:13px;color:var(--text-2);margin-bottom:24px;line-height:1.6;}
-.modal-detail{background:var(--bg);border-radius:12px;padding:16px;margin-bottom:20px;}
-.modal-detail-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);}
-.modal-detail-row:last-child{border-bottom:none;}
-.modal-detail-label{font-size:12px;color:var(--text-3);font-weight:600;}
-.modal-detail-val{font-size:13px;color:var(--text);font-weight:700;}
-.modal-commission-highlight{background:var(--green-bg);border:1.5px solid #86efac;border-radius:10px;padding:14px 16px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;}
-.modal-commission-amount{font-family:"Nunito",sans-serif;font-size:28px;font-weight:900;color:#166534;}
-.modal-commission-note{font-size:12px;color:var(--text-2);max-width:200px;line-height:1.5;}
-.modal-warn{background:var(--amber-bg);border-radius:8px;padding:10px 14px;font-size:12px;color:#92400e;margin-bottom:20px;line-height:1.6;}
-.modal-btns{display:flex;gap:10px;}
-.modal-confirm{flex:1;padding:13px;background:var(--green);color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;transition:background .2s;}
-.modal-confirm:hover{background:#16a34a;}
-.modal-confirm:disabled{opacity:.6;cursor:not-allowed;}
-.modal-cancel{padding:13px 20px;background:var(--white);color:var(--text-2);border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-weight:600;transition:all .2s;}
-.modal-cancel:hover{border-color:var(--text-3);}
+      /* ── COMMISSION MODAL ──────────────────────────────────── */
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.45);
+        z-index: 1000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+      }
+      .modal-overlay.open {
+        display: flex;
+      }
+      .modal {
+        background: var(--white);
+        border-radius: 20px;
+        padding: 36px;
+        width: 100%;
+        max-width: 460px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+      }
+      .modal h2 {
+        font-family: "Nunito", sans-serif;
+        font-weight: 900;
+        font-size: 22px;
+        color: var(--navy);
+        margin-bottom: 6px;
+      }
+      .modal-sub {
+        font-size: 13px;
+        color: var(--text-2);
+        margin-bottom: 24px;
+        line-height: 1.6;
+      }
+      .modal-detail {
+        background: var(--bg);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 20px;
+      }
+      .modal-detail-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 0;
+        border-bottom: 1px solid var(--border);
+      }
+      .modal-detail-row:last-child {
+        border-bottom: none;
+      }
+      .modal-detail-label {
+        font-size: 12px;
+        color: var(--text-3);
+        font-weight: 600;
+      }
+      .modal-detail-val {
+        font-size: 13px;
+        color: var(--text);
+        font-weight: 700;
+      }
+      .modal-commission-highlight {
+        background: var(--green-bg);
+        border: 1.5px solid #86efac;
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .modal-commission-amount {
+        font-family: "Nunito", sans-serif;
+        font-size: 28px;
+        font-weight: 900;
+        color: #166534;
+      }
+      .modal-commission-note {
+        font-size: 12px;
+        color: var(--text-2);
+        max-width: 200px;
+        line-height: 1.5;
+      }
+      .modal-warn {
+        background: var(--amber-bg);
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: 12px;
+        color: #92400e;
+        margin-bottom: 20px;
+        line-height: 1.6;
+      }
+      .modal-btns {
+        display: flex;
+        gap: 10px;
+      }
+      .modal-confirm {
+        flex: 1;
+        padding: 13px;
+        background: var(--green);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 700;
+        transition: background 0.2s;
+      }
+      .modal-confirm:hover {
+        background: #16a34a;
+      }
+      .modal-confirm:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      .modal-cancel {
+        padding: 13px 20px;
+        background: var(--white);
+        color: var(--text-2);
+        border: 1.5px solid var(--border);
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.2s;
+      }
+      .modal-cancel:hover {
+        border-color: var(--text-3);
+      }
 
-/* Reject modal */
-.reject-reason{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;margin-bottom:16px;resize:vertical;min-height:70px;outline:none;}
-.reject-reason:focus{border-color:var(--red);}
+      /* Reject modal */
+      .reject-reason {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1.5px solid var(--border);
+        border-radius: 8px;
+        font-size: 13px;
+        font-family: inherit;
+        margin-bottom: 16px;
+        resize: vertical;
+        min-height: 70px;
+        outline: none;
+      }
+      .reject-reason:focus {
+        border-color: var(--red);
+      }
 
-/* ── TOAST ─────────────────────────────────────────────── */
-.toast{position:fixed;bottom:24px;right:24px;background:var(--navy);color:white;padding:12px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:2000;transform:translateY(80px);opacity:0;transition:all .3s;pointer-events:none;}
-.toast.show{transform:translateY(0);opacity:1;}
-.toast.success{background:var(--teal-dark);}
-.toast.error{background:var(--red);}
+      /* ── TOAST ─────────────────────────────────────────────── */
+      .toast {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        background: var(--navy);
+        color: white;
+        padding: 12px 18px;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 600;
+        z-index: 2000;
+        transform: translateY(80px);
+        opacity: 0;
+        transition: all 0.3s;
+        pointer-events: none;
+      }
+      .toast.show {
+        transform: translateY(0);
+        opacity: 1;
+      }
+      .toast.success {
+        background: var(--teal-dark);
+      }
+      .toast.error {
+        background: var(--red);
+      }
 
-@media(max-width:900px){
-  .stats-bar{grid-template-columns:repeat(3,1fr)}
-  .sub-main{grid-template-columns:1fr 1fr;gap:8px;}
-  .sub-main > *:nth-child(n+3){display:none;}
-  .rep-main{grid-template-columns:1fr 1fr;}
-  .rep-main > *:nth-child(n+3){display:none;}
-  .admin-main{padding:16px 16px 60px;}
-  .sub-expand-grid{grid-template-columns:1fr 1fr;}
-}
-</style>
-</head>
-<body>
-
-<!-- ── LOGIN ─────────────────────────────────────────────── -->
-<div id="loginScreen">
-  <div class="login-card">
-    <div class="login-logo">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
-        <path d="M3 17 Q7 7 12 12 Q17 17 21 7"/>
-        <circle cx="21" cy="7" r="2" fill="white" stroke="none"/>
-      </svg>
-    </div>
-    <h1>Morava Admin</h1>
-    <p>Sign in with your Morava admin account to manage provider submissions and rep applications.</p>
-    <div class="login-field">
-      <label>Email</label>
-      <input type="email" id="login-email" placeholder="moise@moravacare.com" onkeydown="if(event.key==='Enter')doLogin()"/>
-    </div>
-    <div class="login-field">
-      <label>Password</label>
-      <input type="password" id="login-pw" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
-    </div>
-    <button class="login-btn" id="loginBtn" onclick="doLogin()">Sign In →</button>
-    <div class="login-error" id="loginError"></div>
-  </div>
-</div>
-
-<!-- ── ADMIN PANEL ───────────────────────────────────────── -->
-<div id="adminPanel" style="display:none;">
-  <nav>
-    <div class="nav-inner">
-      <div class="nav-brand">
-        <div class="nav-logo-box">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
-            <path d="M3 17 Q7 7 12 12 Q17 17 21 7"/>
-            <circle cx="21" cy="7" r="2" fill="white" stroke="none"/>
+      @media (max-width: 900px) {
+        .stats-bar {
+          grid-template-columns: repeat(3, 1fr);
+        }
+        .sub-main {
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+        }
+        .sub-main > *:nth-child(n + 3) {
+          display: none;
+        }
+        .rep-main {
+          grid-template-columns: 1fr 1fr;
+        }
+        .rep-main > *:nth-child(n + 3) {
+          display: none;
+        }
+        .admin-main {
+          padding: 16px 16px 60px;
+        }
+        .sub-expand-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ── LOGIN ─────────────────────────────────────────────── -->
+    <div id="loginScreen">
+      <div class="login-card">
+        <div class="login-logo">
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="white"
+            stroke-width="2.5"
+            stroke-linecap="round"
+          >
+            <path d="M3 17 Q7 7 12 12 Q17 17 21 7" />
+            <circle cx="21" cy="7" r="2" fill="white" stroke="none" />
           </svg>
         </div>
-        <span class="nav-name">Morava</span>
-        <span class="nav-badge">Admin</span>
-      </div>
-      <div class="nav-right">
-        <span class="nav-admin-email" id="adminEmailDisplay"></span>
-        <button class="logout-btn" onclick="doLogout()">Sign out</button>
-      </div>
-    </div>
-  </nav>
-
-  <div class="admin-main">
-    <!-- Stats bar -->
-    <div class="stats-bar" id="statsBar">
-      <div class="stat"><div class="stat-val" id="stat-total">—</div><div class="stat-label">Total Submissions</div></div>
-      <div class="stat"><div class="stat-val amber" id="stat-pending">—</div><div class="stat-label">Pending Review</div></div>
-      <div class="stat"><div class="stat-val teal" id="stat-live">—</div><div class="stat-label">Live Providers</div></div>
-      <div class="stat"><div class="stat-val purple" id="stat-reps">—</div><div class="stat-label">Active Reps</div></div>
-      <div class="stat"><div class="stat-val green" id="stat-commission">—</div><div class="stat-label">Commission Owed</div></div>
-    </div>
-
-    <!-- Tabs -->
-    <div class="tabs">
-      <button class="tab active" onclick="switchTab('submissions',this)">📋 Provider Submissions</button>
-      <button class="tab" onclick="switchTab('applications',this)">🙋 Rep Applications</button>
-    </div>
-
-    <!-- ── SUBMISSIONS TAB ──────────────────────────────── -->
-    <div class="tab-panel active" id="tab-submissions">
-      <div class="filter-bar">
-        <button class="filter-btn active" onclick="filterSubmissions('all',this)">All <span class="filter-count" id="fc-all">0</span></button>
-        <button class="filter-btn" onclick="filterSubmissions('pending_verification',this)">Pending <span class="filter-count" id="fc-pending">0</span></button>
-        <button class="filter-btn" onclick="filterSubmissions('live',this)">Live <span class="filter-count" id="fc-live">0</span></button>
-        <button class="filter-btn" onclick="filterSubmissions('not_verified',this)">Not Verified <span class="filter-count" id="fc-rejected">0</span></button>
-        <button class="filter-btn" onclick="filterSubmissions('awaiting_npi',this)">Awaiting NPI <span class="filter-count" id="fc-npi">0</span></button>
-        <input class="search-input" id="subSearch" placeholder="Search provider or rep..." oninput="renderSubmissions()"/>
-        <button class="refresh-btn" onclick="loadAll()">↻ Refresh</button>
-      </div>
-      <div class="data-table" id="submissionsTable">
-        <div class="table-loading">Loading submissions...</div>
+        <h1>Morava Admin</h1>
+        <p>
+          Sign in with your Morava admin account to manage provider submissions
+          and rep applications.
+        </p>
+        <div class="login-field">
+          <label>Email</label>
+          <input
+            type="email"
+            id="login-email"
+            placeholder="moise@moravacare.com"
+            onkeydown="if (event.key === 'Enter') doLogin();"
+          />
+        </div>
+        <div class="login-field">
+          <label>Password</label>
+          <input
+            type="password"
+            id="login-pw"
+            placeholder="••••••••"
+            onkeydown="if (event.key === 'Enter') doLogin();"
+          />
+        </div>
+        <button class="login-btn" id="loginBtn" onclick="doLogin()">
+          Sign In →
+        </button>
+        <div class="login-error" id="loginError"></div>
       </div>
     </div>
 
-    <!-- ── APPLICATIONS TAB ─────────────────────────────── -->
-    <div class="tab-panel" id="tab-applications">
-      <div class="filter-bar">
-        <button class="filter-btn active" onclick="filterApps('all',this)">All <span class="filter-count" id="ac-all">0</span></button>
-        <button class="filter-btn" onclick="filterApps('new',this)">New <span class="filter-count" id="ac-new">0</span></button>
-        <button class="filter-btn" onclick="filterApps('approved',this)">Approved <span class="filter-count" id="ac-approved">0</span></button>
-        <button class="filter-btn" onclick="filterApps('rejected',this)">Rejected <span class="filter-count" id="ac-rejected">0</span></button>
-        <input class="search-input" id="appSearch" placeholder="Search name or email..." oninput="renderApplications()"/>
-        <button class="refresh-btn" onclick="loadAll()">↻ Refresh</button>
+    <!-- ── ADMIN PANEL ───────────────────────────────────────── -->
+    <div id="adminPanel" style="display: none">
+      <nav>
+        <div class="nav-inner">
+          <div class="nav-brand">
+            <div class="nav-logo-box">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="white"
+                stroke-width="2.5"
+                stroke-linecap="round"
+              >
+                <path d="M3 17 Q7 7 12 12 Q17 17 21 7" />
+                <circle cx="21" cy="7" r="2" fill="white" stroke="none" />
+              </svg>
+            </div>
+            <span class="nav-name">Morava</span>
+            <span class="nav-badge">Admin</span>
+          </div>
+          <div class="nav-right">
+            <span class="nav-admin-email" id="adminEmailDisplay"></span>
+            <button class="logout-btn" onclick="doLogout()">Sign out</button>
+          </div>
+        </div>
+      </nav>
+
+      <div class="admin-main">
+        <!-- Stats bar -->
+        <div class="stats-bar" id="statsBar">
+          <div class="stat">
+            <div class="stat-val" id="stat-total">—</div>
+            <div class="stat-label">Total Submissions</div>
+          </div>
+          <div class="stat">
+            <div class="stat-val amber" id="stat-pending">—</div>
+            <div class="stat-label">Pending Review</div>
+          </div>
+          <div class="stat">
+            <div class="stat-val teal" id="stat-live">—</div>
+            <div class="stat-label">Live Providers</div>
+          </div>
+          <div class="stat">
+            <div class="stat-val purple" id="stat-reps">—</div>
+            <div class="stat-label">Active Reps</div>
+          </div>
+          <div class="stat">
+            <div class="stat-val green" id="stat-commission">—</div>
+            <div class="stat-label">Commission Owed</div>
+          </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+          <button class="tab active" onclick="switchTab('submissions', this)">
+            📋 Provider Submissions
+          </button>
+          <button class="tab" onclick="switchTab('applications', this)">
+            🙋 Rep Applications
+          </button>
+        </div>
+
+        <!-- ── SUBMISSIONS TAB ──────────────────────────────── -->
+        <div class="tab-panel active" id="tab-submissions">
+          <div class="filter-bar">
+            <button
+              class="filter-btn active"
+              onclick="filterSubmissions('all', this)"
+            >
+              All <span class="filter-count" id="fc-all">0</span>
+            </button>
+            <button
+              class="filter-btn"
+              onclick="filterSubmissions('pending_verification', this)"
+            >
+              Pending <span class="filter-count" id="fc-pending">0</span>
+            </button>
+            <button
+              class="filter-btn"
+              onclick="filterSubmissions('live', this)"
+            >
+              Live <span class="filter-count" id="fc-live">0</span>
+            </button>
+            <button
+              class="filter-btn"
+              onclick="filterSubmissions('not_verified', this)"
+            >
+              Not Verified <span class="filter-count" id="fc-rejected">0</span>
+            </button>
+            <button
+              class="filter-btn"
+              onclick="filterSubmissions('awaiting_npi', this)"
+            >
+              Awaiting NPI <span class="filter-count" id="fc-npi">0</span>
+            </button>
+            <input
+              class="search-input"
+              id="subSearch"
+              placeholder="Search provider or rep..."
+              oninput="renderSubmissions()"
+            />
+            <button class="refresh-btn" onclick="loadAll()">↻ Refresh</button>
+          </div>
+          <div class="data-table" id="submissionsTable">
+            <div class="table-loading">Loading submissions...</div>
+          </div>
+        </div>
+
+        <!-- ── APPLICATIONS TAB ─────────────────────────────── -->
+        <div class="tab-panel" id="tab-applications">
+          <div class="filter-bar">
+            <button class="filter-btn active" onclick="filterApps('all', this)">
+              All <span class="filter-count" id="ac-all">0</span>
+            </button>
+            <button class="filter-btn" onclick="filterApps('new', this)">
+              New <span class="filter-count" id="ac-new">0</span>
+            </button>
+            <button class="filter-btn" onclick="filterApps('approved', this)">
+              Approved <span class="filter-count" id="ac-approved">0</span>
+            </button>
+            <button class="filter-btn" onclick="filterApps('rejected', this)">
+              Rejected <span class="filter-count" id="ac-rejected">0</span>
+            </button>
+            <input
+              class="search-input"
+              id="appSearch"
+              placeholder="Search name or email..."
+              oninput="renderApplications()"
+            />
+            <button class="refresh-btn" onclick="loadAll()">↻ Refresh</button>
+          </div>
+          <div class="data-table" id="applicationsTable">
+            <div class="table-loading">Loading applications...</div>
+          </div>
+        </div>
       </div>
-      <div class="data-table" id="applicationsTable">
-        <div class="table-loading">Loading applications...</div>
+    </div>
+
+    <!-- ── MARK LIVE MODAL ───────────────────────────────────── -->
+    <div class="modal-overlay" id="liveModal">
+      <div class="modal">
+        <h2>Mark Provider Live</h2>
+        <div class="modal-sub" id="liveModalSub">
+          Confirm this provider and log commission for the rep.
+        </div>
+        <div class="modal-detail" id="liveModalDetail"></div>
+        <div class="modal-commission-highlight">
+          <div>
+            <div
+              style="
+                font-size: 11px;
+                font-weight: 700;
+                color: #166534;
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+                margin-bottom: 4px;
+              "
+            >
+              Commission to log
+            </div>
+            <div class="modal-commission-amount" id="liveCommissionAmount">
+              $0
+            </div>
+          </div>
+          <div class="modal-commission-note" id="liveCommissionNote"></div>
+        </div>
+        <div class="modal-warn" id="liveModalWarn" style="display: none"></div>
+        <div
+          style="
+            margin: 16px 0;
+            padding: 14px;
+            background: #f0fdfb;
+            border: 1.5px solid #0d9488;
+            border-radius: 10px;
+          "
+        >
+          <label
+            style="
+              display: flex;
+              align-items: flex-start;
+              gap: 10px;
+              cursor: pointer;
+            "
+          >
+            <input
+              type="checkbox"
+              id="baaSignedCheck"
+              style="
+                margin-top: 2px;
+                width: 16px;
+                height: 16px;
+                accent-color: #0d9488;
+                flex-shrink: 0;
+              "
+              onchange="
+                document.getElementById('liveConfirmBtn').disabled =
+                  !this.checked
+              "
+            />
+            <span style="font-size: 13px; color: #0f172a; line-height: 1.5">
+              <strong>BAA + Listing Agreement signed</strong><br />
+              <span style="color: #475569; font-size: 12px"
+                >I confirm the provider has signed both the Business Associate
+                Agreement and the Provider Listing Agreement before going
+                live.</span
+              >
+            </span>
+          </label>
+        </div>
+        <div class="modal-btns">
+          <button class="modal-cancel" onclick="closeModal('liveModal')">
+            Cancel
+          </button>
+          <button
+            class="modal-confirm"
+            id="liveConfirmBtn"
+            onclick="confirmLive()"
+            disabled
+          >
+            ✓ Mark Live & Log Commission
+          </button>
+        </div>
       </div>
     </div>
-  </div>
-</div>
 
-<!-- ── MARK LIVE MODAL ───────────────────────────────────── -->
-<div class="modal-overlay" id="liveModal">
-  <div class="modal">
-    <h2>Mark Provider Live</h2>
-    <div class="modal-sub" id="liveModalSub">Confirm this provider and log commission for the rep.</div>
-    <div class="modal-detail" id="liveModalDetail"></div>
-    <div class="modal-commission-highlight">
-      <div>
-        <div style="font-size:11px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Commission to log</div>
-        <div class="modal-commission-amount" id="liveCommissionAmount">$0</div>
+    <!-- ── REJECT MODAL ──────────────────────────────────────── -->
+    <div class="modal-overlay" id="rejectModal">
+      <div class="modal">
+        <h2>Mark Not Verified</h2>
+        <div class="modal-sub" id="rejectModalSub">
+          This provider could not be verified. No commission will be logged for
+          this submission.
+        </div>
+        <textarea
+          class="reject-reason"
+          id="rejectReason"
+          placeholder="Optional: reason for rejection (e.g. NPI not found, provider is retired, could not confirm contact)"
+        ></textarea>
+        <div class="modal-btns">
+          <button class="modal-cancel" onclick="closeModal('rejectModal')">
+            Cancel
+          </button>
+          <button
+            class="modal-confirm"
+            style="background: var(--red)"
+            onclick="confirmReject()"
+          >
+            Mark Not Verified
+          </button>
+        </div>
       </div>
-      <div class="modal-commission-note" id="liveCommissionNote"></div>
     </div>
-    <div class="modal-warn" id="liveModalWarn" style="display:none;"></div>
-    <div class="modal-btns">
-      <button class="modal-cancel" onclick="closeModal('liveModal')">Cancel</button>
-      <button class="modal-confirm" id="liveConfirmBtn" onclick="confirmLive()">✓ Mark Live & Log Commission</button>
-    </div>
-  </div>
-</div>
 
-<!-- ── REJECT MODAL ──────────────────────────────────────── -->
-<div class="modal-overlay" id="rejectModal">
-  <div class="modal">
-    <h2>Mark Not Verified</h2>
-    <div class="modal-sub" id="rejectModalSub">This provider could not be verified. No commission will be logged for this submission.</div>
-    <textarea class="reject-reason" id="rejectReason" placeholder="Optional: reason for rejection (e.g. NPI not found, provider is retired, could not confirm contact)"></textarea>
-    <div class="modal-btns">
-      <button class="modal-cancel" onclick="closeModal('rejectModal')">Cancel</button>
-      <button class="modal-confirm" style="background:var(--red);" onclick="confirmReject()">Mark Not Verified</button>
-    </div>
-  </div>
-</div>
+    <!-- ── TOAST ─────────────────────────────────────────────── -->
+    <div class="toast" id="toast"></div>
 
-<!-- ── TOAST ─────────────────────────────────────────────── -->
-<div class="toast" id="toast"></div>
+    <!-- ── FIREBASE ──────────────────────────────────────────── -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+      import {
+        getFirestore,
+        collection,
+        getDocs,
+        doc,
+        updateDoc,
+        serverTimestamp,
+        query,
+        where,
+      } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+      import {
+        getAuth,
+        signInWithEmailAndPassword,
+        onAuthStateChanged,
+        signOut,
+      } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-<!-- ── FIREBASE ──────────────────────────────────────────── -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, getDocs, doc, updateDoc, serverTimestamp, query, where }
-  from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut }
-  from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+      // ── SECURITY: Sanitize all displayed text to prevent XSS ──
+      function esc(str) {
+        if (!str) return "—";
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#x27;")
+          .substring(0, 500);
+      }
 
-// ── SECURITY: Sanitize all displayed text to prevent XSS ──
-function esc(str) {
-  if (!str) return '—';
-  return String(str)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;')
-    .replace(/'/g,'&#x27;').substring(0, 500);
-}
+      const ADMIN_EMAIL = "moise@moravacare.com";
 
-const ADMIN_EMAIL = 'moise@moravacare.com';
+      const app = initializeApp({
+        apiKey: "AIzaSyAMYBfxhljita9XVqTc_HHahMA7mFVFPn8",
+        authDomain: "accesscare-app.firebaseapp.com",
+        projectId: "accesscare-app",
+        storageBucket: "accesscare-app.firebasestorage.app",
+        messagingSenderId: "283308941540",
+        appId: "1:283308941540:web:e3c57ebf0e16ca9c8f4cf1",
+      });
+      const db = getFirestore(app);
+      const auth = getAuth(app);
 
-const app = initializeApp({
-  apiKey: "AIzaSyAMYBfxhljita9XVqTc_HHahMA7mFVFPn8",
-  authDomain: "accesscare-app.firebaseapp.com",
-  projectId: "accesscare-app",
-  storageBucket: "accesscare-app.firebasestorage.app",
-  messagingSenderId: "283308941540",
-  appId: "1:283308941540:web:e3c57ebf0e16ca9c8f4cf1",
-});
-const db = getFirestore(app);
-const auth = getAuth(app);
+      // ── State ─────────────────────────────────────────────────
+      let allSubmissions = [];
+      let allApplications = [];
+      let currentSubFilter = "all";
+      let currentAppFilter = "all";
+      let pendingLiveDocId = null;
+      let pendingRejectDocId = null;
 
-// ── State ─────────────────────────────────────────────────
-let allSubmissions = [];
-let allApplications = [];
-let currentSubFilter = 'all';
-let currentAppFilter = 'all';
-let pendingLiveDocId = null;
-let pendingRejectDocId = null;
+      // ── Auth ──────────────────────────────────────────────────
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          if (user.email !== ADMIN_EMAIL) {
+            // Wrong account — sign out immediately
+            signOut(auth);
+            showLoginError(
+              "Access denied. This panel is restricted to Morava administrators.",
+            );
+            return;
+          }
+          document.getElementById("loginScreen").style.display = "none";
+          document.getElementById("adminPanel").style.display = "block";
+          document.getElementById("adminEmailDisplay").textContent = user.email;
+          loadAll();
+        } else {
+          document.getElementById("loginScreen").style.display = "flex";
+          document.getElementById("adminPanel").style.display = "none";
+        }
+      });
 
-// ── Auth ──────────────────────────────────────────────────
-onAuthStateChanged(auth, user => {
-  if (user) {
-    if (user.email !== ADMIN_EMAIL) {
-      // Wrong account — sign out immediately
-      signOut(auth);
-      showLoginError('Access denied. This panel is restricted to Morava administrators.');
-      return;
-    }
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('adminPanel').style.display = 'block';
-    document.getElementById('adminEmailDisplay').textContent = user.email;
-    loadAll();
-  } else {
-    document.getElementById('loginScreen').style.display = 'flex';
-    document.getElementById('adminPanel').style.display = 'none';
-  }
-});
+      window.doLogin = async function () {
+        const email = document
+          .getElementById("login-email")
+          .value.trim()
+          .toLowerCase();
+        const pw = document.getElementById("login-pw").value;
+        const btn = document.getElementById("loginBtn");
+        if (!email || !pw) {
+          showLoginError("Please enter your email and password.");
+          return;
+        }
 
-window.doLogin = async function() {
-  const email = document.getElementById('login-email').value.trim().toLowerCase();
-  const pw = document.getElementById('login-pw').value;
-  const btn = document.getElementById('loginBtn');
-  if (!email || !pw) { showLoginError('Please enter your email and password.'); return; }
+        // Only allow admin email to attempt login
+        if (email !== ADMIN_EMAIL) {
+          showLoginError("Access denied.");
+          return;
+        }
 
-  // Only allow admin email to attempt login
-  if (email !== ADMIN_EMAIL) { showLoginError('Access denied.'); return; }
+        btn.disabled = true;
+        btn.textContent = "Signing in...";
+        clearLoginError();
+        try {
+          await signInWithEmailAndPassword(auth, email, pw);
+        } catch (err) {
+          const msgs = {
+            "auth/wrong-password": "Incorrect password.",
+            "auth/user-not-found": "No account found for that email.",
+            "auth/invalid-credential": "Incorrect email or password.",
+            "auth/too-many-requests":
+              "Too many attempts. Please wait and try again.",
+          };
+          showLoginError(
+            msgs[err.code] || "Sign-in failed. Check your credentials.",
+          );
+        }
+        btn.disabled = false;
+        btn.textContent = "Sign In →";
+      };
 
-  btn.disabled = true; btn.textContent = 'Signing in...';
-  clearLoginError();
-  try {
-    await signInWithEmailAndPassword(auth, email, pw);
-  } catch(err) {
-    const msgs = {
-      'auth/wrong-password': 'Incorrect password.',
-      'auth/user-not-found': 'No account found for that email.',
-      'auth/invalid-credential': 'Incorrect email or password.',
-      'auth/too-many-requests': 'Too many attempts. Please wait and try again.',
-    };
-    showLoginError(msgs[err.code] || 'Sign-in failed. Check your credentials.');
-  }
-  btn.disabled = false; btn.textContent = 'Sign In →';
-};
+      window.doLogout = async function () {
+        await signOut(auth);
+      };
 
-window.doLogout = async function() {
-  await signOut(auth);
-};
+      function showLoginError(msg) {
+        const el = document.getElementById("loginError");
+        el.textContent = msg;
+        el.classList.add("show");
+      }
+      function clearLoginError() {
+        document.getElementById("loginError").classList.remove("show");
+      }
 
-function showLoginError(msg) {
-  const el = document.getElementById('loginError');
-  el.textContent = msg; el.classList.add('show');
-}
-function clearLoginError() {
-  document.getElementById('loginError').classList.remove('show');
-}
+      // ── Load data ─────────────────────────────────────────────
+      window.loadAll = async function () {
+        try {
+          const [subSnap, appSnap] = await Promise.all([
+            getDocs(collection(db, "providerSubmissions")),
+            getDocs(collection(db, "repApplications")),
+          ]);
+          allSubmissions = subSnap.docs
+            .map((d) => ({ _id: d.id, ...d.data() }))
+            .sort(
+              (a, b) =>
+                (b.submittedAt?.toMillis?.() ?? 0) -
+                (a.submittedAt?.toMillis?.() ?? 0),
+            );
 
-// ── Load data ─────────────────────────────────────────────
-window.loadAll = async function() {
-  try {
-    const [subSnap, appSnap] = await Promise.all([
-      getDocs(collection(db, 'providerSubmissions')),
-      getDocs(collection(db, 'repApplications')),
-    ]);
-    allSubmissions = subSnap.docs
-      .map(d => ({ _id: d.id, ...d.data() }))
-      .sort((a,b) => (b.submittedAt?.toMillis?.()??0) - (a.submittedAt?.toMillis?.()??0));
+          allApplications = appSnap.docs
+            .map((d) => ({ _id: d.id, ...d.data() }))
+            .sort(
+              (a, b) =>
+                (b.submittedAt?.toMillis?.() ?? 0) -
+                (a.submittedAt?.toMillis?.() ?? 0),
+            );
 
-    allApplications = appSnap.docs
-      .map(d => ({ _id: d.id, ...d.data() }))
-      .sort((a,b) => (b.submittedAt?.toMillis?.()??0) - (a.submittedAt?.toMillis?.()??0));
+          updateStats();
+          renderSubmissions();
+          renderApplications();
+        } catch (err) {
+          console.error(err);
+          showToast("Failed to load data. Check console.", "error");
+        }
+      };
 
-    updateStats();
-    renderSubmissions();
-    renderApplications();
-  } catch(err) {
-    console.error(err);
-    showToast('Failed to load data. Check console.', 'error');
-  }
-};
+      function updateStats() {
+        const total = allSubmissions.length;
+        const pending = allSubmissions.filter((s) =>
+          ["pending_verification", "awaiting_npi", "in_review"].includes(
+            s.status,
+          ),
+        ).length;
+        const live = allSubmissions.filter((s) => s.status === "live").length;
+        const activeReps = new Set(
+          allApplications
+            .filter((r) => r.status === "approved")
+            .map((r) => r.email),
+        ).size;
+        const commissionOwed = allSubmissions
+          .filter(
+            (s) =>
+              s.status === "live" && s.commissionAmount && !s.commissionPaid,
+          )
+          .reduce((a, s) => a + (s.commissionAmount || 0), 0);
 
-function updateStats() {
-  const total = allSubmissions.length;
-  const pending = allSubmissions.filter(s=>['pending_verification','awaiting_npi','in_review'].includes(s.status)).length;
-  const live = allSubmissions.filter(s=>s.status==='live').length;
-  const activeReps = new Set(allApplications.filter(r=>r.status==='approved').map(r=>r.email)).size;
-  const commissionOwed = allSubmissions
-    .filter(s=>s.status==='live' && s.commissionAmount && !s.commissionPaid)
-    .reduce((a,s)=>a+(s.commissionAmount||0),0);
+        document.getElementById("stat-total").textContent = total;
+        document.getElementById("stat-pending").textContent = pending;
+        document.getElementById("stat-live").textContent = live;
+        document.getElementById("stat-reps").textContent = activeReps;
+        document.getElementById("stat-commission").textContent =
+          "$" + commissionOwed;
 
-  document.getElementById('stat-total').textContent = total;
-  document.getElementById('stat-pending').textContent = pending;
-  document.getElementById('stat-live').textContent = live;
-  document.getElementById('stat-reps').textContent = activeReps;
-  document.getElementById('stat-commission').textContent = '$'+commissionOwed;
+        // Filter counts
+        document.getElementById("fc-all").textContent = total;
+        document.getElementById("fc-pending").textContent =
+          allSubmissions.filter((s) =>
+            ["pending_verification", "in_review", "awaiting_npi"].includes(
+              s.status,
+            ),
+          ).length;
+        document.getElementById("fc-live").textContent = live;
+        document.getElementById("fc-rejected").textContent =
+          allSubmissions.filter((s) => s.status === "not_verified").length;
+        document.getElementById("fc-npi").textContent = allSubmissions.filter(
+          (s) => s.status === "awaiting_npi",
+        ).length;
 
-  // Filter counts
-  document.getElementById('fc-all').textContent = total;
-  document.getElementById('fc-pending').textContent = allSubmissions.filter(s=>['pending_verification','in_review','awaiting_npi'].includes(s.status)).length;
-  document.getElementById('fc-live').textContent = live;
-  document.getElementById('fc-rejected').textContent = allSubmissions.filter(s=>s.status==='not_verified').length;
-  document.getElementById('fc-npi').textContent = allSubmissions.filter(s=>s.status==='awaiting_npi').length;
+        document.getElementById("ac-all").textContent = allApplications.length;
+        document.getElementById("ac-new").textContent = allApplications.filter(
+          (a) => a.status === "new",
+        ).length;
+        document.getElementById("ac-approved").textContent =
+          allApplications.filter((a) => a.status === "approved").length;
+        document.getElementById("ac-rejected").textContent =
+          allApplications.filter((a) => a.status === "rejected").length;
+      }
 
-  document.getElementById('ac-all').textContent = allApplications.length;
-  document.getElementById('ac-new').textContent = allApplications.filter(a=>a.status==='new').length;
-  document.getElementById('ac-approved').textContent = allApplications.filter(a=>a.status==='approved').length;
-  document.getElementById('ac-rejected').textContent = allApplications.filter(a=>a.status==='rejected').length;
-}
+      // ── Render submissions ────────────────────────────────────
+      window.filterSubmissions = function (filter, btn) {
+        currentSubFilter = filter;
+        document
+          .querySelectorAll("#tab-submissions .filter-btn")
+          .forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        renderSubmissions();
+      };
 
-// ── Render submissions ────────────────────────────────────
-window.filterSubmissions = function(filter, btn) {
-  currentSubFilter = filter;
-  document.querySelectorAll('#tab-submissions .filter-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  renderSubmissions();
-};
+      window.renderSubmissions = function () {
+        const search = (document.getElementById("subSearch")?.value || "")
+          .toLowerCase()
+          .trim();
+        let data = allSubmissions;
 
-window.renderSubmissions = function() {
-  const search = (document.getElementById('subSearch')?.value||'').toLowerCase().trim();
-  let data = allSubmissions;
+        if (currentSubFilter !== "all") {
+          if (
+            ["pending_verification", "in_review", "awaiting_npi"].includes(
+              currentSubFilter,
+            ) &&
+            currentSubFilter === "pending_verification"
+          ) {
+            data = data.filter((s) =>
+              ["pending_verification", "in_review", "awaiting_npi"].includes(
+                s.status,
+              ),
+            );
+          } else {
+            data = data.filter((s) => s.status === currentSubFilter);
+          }
+        }
+        if (search) {
+          data = data.filter(
+            (s) =>
+              (s.providerName || "").toLowerCase().includes(search) ||
+              (s.practiceName || "").toLowerCase().includes(search) ||
+              (s.repName || "").toLowerCase().includes(search) ||
+              (s.repEmail || "").toLowerCase().includes(search) ||
+              (s.city || "").toLowerCase().includes(search) ||
+              (s.npi || "").includes(search),
+          );
+        }
 
-  if (currentSubFilter !== 'all') {
-    if (['pending_verification','in_review','awaiting_npi'].includes(currentSubFilter) && currentSubFilter === 'pending_verification') {
-      data = data.filter(s => ['pending_verification','in_review','awaiting_npi'].includes(s.status));
-    } else {
-      data = data.filter(s => s.status === currentSubFilter);
-    }
-  }
-  if (search) {
-    data = data.filter(s =>
-      (s.providerName||'').toLowerCase().includes(search) ||
-      (s.practiceName||'').toLowerCase().includes(search) ||
-      (s.repName||'').toLowerCase().includes(search) ||
-      (s.repEmail||'').toLowerCase().includes(search) ||
-      (s.city||'').toLowerCase().includes(search) ||
-      (s.npi||'').includes(search)
-    );
-  }
+        const table = document.getElementById("submissionsTable");
+        if (data.length === 0) {
+          table.innerHTML = `<div class="table-empty"><div class="table-empty-icon">📭</div><p>No submissions match this filter.</p></div>`;
+          return;
+        }
 
-  const table = document.getElementById('submissionsTable');
-  if (data.length === 0) {
-    table.innerHTML = `<div class="table-empty"><div class="table-empty-icon">📭</div><p>No submissions match this filter.</p></div>`;
-    return;
-  }
+        table.innerHTML = data.map((s) => buildSubRow(s)).join("");
+      };
 
-  table.innerHTML = data.map(s => buildSubRow(s)).join('');
-};
+      function statusBadge(status) {
+        const map = {
+          pending_verification: `<span class="badge b-pending">◌ Pending</span>`,
+          in_review: `<span class="badge b-review">◑ In review</span>`,
+          awaiting_npi: `<span class="badge b-npi">⟳ Awaiting NPI</span>`,
+          live: `<span class="badge b-live">● Live</span>`,
+          not_verified: `<span class="badge b-rejected">✕ Not verified</span>`,
+        };
+        return map[status] || `<span class="badge b-new">${esc(status)}</span>`;
+      }
 
-function statusBadge(status) {
-  const map = {
-    pending_verification: `<span class="badge b-pending">◌ Pending</span>`,
-    in_review: `<span class="badge b-review">◑ In review</span>`,
-    awaiting_npi: `<span class="badge b-npi">⟳ Awaiting NPI</span>`,
-    live: `<span class="badge b-live">● Live</span>`,
-    not_verified: `<span class="badge b-rejected">✕ Not verified</span>`,
-  };
-  return map[status] || `<span class="badge b-new">${esc(status)}</span>`;
-}
+      function interestBadge(interest) {
+        if (!interest) return "—";
+        if (interest.includes("Confirmed"))
+          return `<span class="interest-confirmed">✅ Confirmed</span>`;
+        if (interest.includes("Interested"))
+          return `<span class="interest-interested">🤔 Interested</span>`;
+        return `<span class="interest-warm">🌡️ Warm</span>`;
+      }
 
-function interestBadge(interest) {
-  if (!interest) return '—';
-  if (interest.includes('Confirmed')) return `<span class="interest-confirmed">✅ Confirmed</span>`;
-  if (interest.includes('Interested')) return `<span class="interest-interested">🤔 Interested</span>`;
-  return `<span class="interest-warm">🌡️ Warm</span>`;
-}
+      function fmtDate(ts) {
+        if (!ts) return "—";
+        const d = ts.toDate ? ts.toDate() : new Date(ts);
+        return d.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+      }
 
-function fmtDate(ts) {
-  if (!ts) return '—';
-  const d = ts.toDate ? ts.toDate() : new Date(ts);
-  return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-}
+      function buildSubRow(s) {
+        const id = esc(s._id);
+        const isLive = s.status === "live";
+        const isRejected = s.status === "not_verified";
 
-function buildSubRow(s) {
-  const id = esc(s._id);
-  const isLive = s.status === 'live';
-  const isRejected = s.status === 'not_verified';
-
-  const actionBtns = isLive
-    ? `<span class="badge b-live" style="padding:6px 12px;">✓ Live — $${s.commissionAmount||'?'} logged</span>`
-    : isRejected
-    ? `<span class="badge b-rejected" style="padding:6px 12px;">✕ Not verified</span>`
-    : `
+        const actionBtns = isLive
+          ? `<span class="badge b-live" style="padding:6px 12px;">✓ Live — $${s.commissionAmount || "?"} logged</span>`
+          : isRejected
+            ? `<span class="badge b-rejected" style="padding:6px 12px;">✕ Not verified</span>`
+            : `
       <button class="act-btn act-live" onclick="openLiveModal('${id}')">✓ Mark Live</button>
       <button class="act-btn act-reject" onclick="openRejectModal('${id}')">✕ Not Verified</button>
       <button class="act-btn act-npi" onclick="setStatus('${id}','awaiting_npi')">⟳ Awaiting NPI</button>
     `;
 
-  const savedNote = s.adminNote ? `<div class="saved-note">"${esc(s.adminNote)}"</div>` : '';
+        const savedNote = s.adminNote
+          ? `<div class="saved-note">"${esc(s.adminNote)}"</div>`
+          : "";
 
-  return `
+        return `
     <div class="sub-row" id="row-${id}">
       <div class="sub-main" onclick="toggleExpand('sub-expand-${id}')">
         <div>
@@ -559,21 +1459,21 @@ function buildSubRow(s) {
           <div class="col-sub">${esc(s.practiceName)} · ${esc(s.city)}</div>
         </div>
         <div class="col-rep">${esc(s.repName)}<div style="font-size:11px;color:var(--text-3)">${esc(s.repEmail)}</div></div>
-        <div>${esc(s.specialty||'—')}</div>
+        <div>${esc(s.specialty || "—")}</div>
         <div class="col-date">${fmtDate(s.submittedAt)}</div>
         <div>${interestBadge(s.interestLevel)}</div>
         <div>${statusBadge(s.status)}</div>
       </div>
       <div class="sub-expand" id="sub-expand-${id}">
         <div class="sub-expand-grid">
-          <div class="expand-field"><div class="expand-label">NPI</div><div class="expand-val">${esc(s.npi)||'Not provided'}</div></div>
+          <div class="expand-field"><div class="expand-label">NPI</div><div class="expand-val">${esc(s.npi) || "Not provided"}</div></div>
           <div class="expand-field"><div class="expand-label">Provider Phone</div><div class="expand-val">${esc(s.providerPhone)}</div></div>
           <div class="expand-field"><div class="expand-label">Provider Email</div><div class="expand-val">${esc(s.providerEmail)}</div></div>
           <div class="expand-field"><div class="expand-label">How Reached</div><div class="expand-val">${esc(s.contactMethod)}</div></div>
           <div class="expand-field"><div class="expand-label">Telehealth</div><div class="expand-val">${esc(s.telehealth)}</div></div>
           <div class="expand-field"><div class="expand-label">Accepting Patients</div><div class="expand-val">${esc(s.acceptingNewPatients)}</div></div>
-          <div class="expand-field" style="grid-column:1/-1"><div class="expand-label">Insurance Accepted</div><div class="expand-val">${Array.isArray(s.insuranceAccepted)?s.insuranceAccepted.map(esc).join(', '):'—'}</div></div>
-          ${s.notes?`<div class="expand-field" style="grid-column:1/-1"><div class="expand-label">Rep Notes</div><div class="expand-val">${esc(s.notes)}</div></div>`:''}
+          <div class="expand-field" style="grid-column:1/-1"><div class="expand-label">Insurance Accepted</div><div class="expand-val">${Array.isArray(s.insuranceAccepted) ? s.insuranceAccepted.map(esc).join(", ") : "—"}</div></div>
+          ${s.notes ? `<div class="expand-field" style="grid-column:1/-1"><div class="expand-label">Rep Notes</div><div class="expand-val">${esc(s.notes)}</div></div>` : ""}
         </div>
         <div class="action-row">
           ${actionBtns}
@@ -586,282 +1486,383 @@ function buildSubRow(s) {
         ${savedNote}
       </div>
     </div>`;
-}
+      }
 
-// ── Render rep applications ───────────────────────────────
-window.filterApps = function(filter, btn) {
-  currentAppFilter = filter;
-  document.querySelectorAll('#tab-applications .filter-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  renderApplications();
-};
+      // ── Render rep applications ───────────────────────────────
+      window.filterApps = function (filter, btn) {
+        currentAppFilter = filter;
+        document
+          .querySelectorAll("#tab-applications .filter-btn")
+          .forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        renderApplications();
+      };
 
-window.renderApplications = function() {
-  const search = (document.getElementById('appSearch')?.value||'').toLowerCase().trim();
-  let data = allApplications;
-  if (currentAppFilter !== 'all') data = data.filter(a => a.status === currentAppFilter);
-  if (search) data = data.filter(a =>
-    (a.name||'').toLowerCase().includes(search) ||
-    (a.email||'').toLowerCase().includes(search) ||
-    (a.city||'').toLowerCase().includes(search)
-  );
+      window.renderApplications = function () {
+        const search = (document.getElementById("appSearch")?.value || "")
+          .toLowerCase()
+          .trim();
+        let data = allApplications;
+        if (currentAppFilter !== "all")
+          data = data.filter((a) => a.status === currentAppFilter);
+        if (search)
+          data = data.filter(
+            (a) =>
+              (a.name || "").toLowerCase().includes(search) ||
+              (a.email || "").toLowerCase().includes(search) ||
+              (a.city || "").toLowerCase().includes(search),
+          );
 
-  const table = document.getElementById('applicationsTable');
-  if (data.length === 0) {
-    table.innerHTML = `<div class="table-empty"><div class="table-empty-icon">📭</div><p>No applications match this filter.</p></div>`;
-    return;
-  }
-  table.innerHTML = data.map(a => buildAppRow(a)).join('');
-};
+        const table = document.getElementById("applicationsTable");
+        if (data.length === 0) {
+          table.innerHTML = `<div class="table-empty"><div class="table-empty-icon">📭</div><p>No applications match this filter.</p></div>`;
+          return;
+        }
+        table.innerHTML = data.map((a) => buildAppRow(a)).join("");
+      };
 
-function appStatusBadge(status) {
-  const map = {
-    new: `<span class="badge b-new">New</span>`,
-    pending: `<span class="badge b-pending">Reviewing</span>`,
-    approved: `<span class="badge b-approved">● Approved</span>`,
-    rejected: `<span class="badge b-rejected">Rejected</span>`,
-  };
-  return map[status] || `<span class="badge b-new">${esc(status)}</span>`;
-}
+      function appStatusBadge(status) {
+        const map = {
+          new: `<span class="badge b-new">New</span>`,
+          pending: `<span class="badge b-pending">Reviewing</span>`,
+          approved: `<span class="badge b-approved">● Approved</span>`,
+          rejected: `<span class="badge b-rejected">Rejected</span>`,
+        };
+        return map[status] || `<span class="badge b-new">${esc(status)}</span>`;
+      }
 
-function buildAppRow(a) {
-  const id = esc(a._id);
-  const isApproved = a.status === 'approved';
-  const isRejected = a.status === 'rejected';
-  const submissionCount = allSubmissions.filter(s=>s.repEmail===a.email).length;
-  const liveCount = allSubmissions.filter(s=>s.repEmail===a.email && s.status==='live').length;
+      function buildAppRow(a) {
+        const id = esc(a._id);
+        const isApproved = a.status === "approved";
+        const isRejected = a.status === "rejected";
+        const submissionCount = allSubmissions.filter(
+          (s) => s.repEmail === a.email,
+        ).length;
+        const liveCount = allSubmissions.filter(
+          (s) => s.repEmail === a.email && s.status === "live",
+        ).length;
 
-  const actionBtns = isApproved
-    ? `<span class="badge b-approved" style="padding:6px 12px;">✓ Approved</span>`
-    : isRejected
-    ? `<button class="act-btn act-approve" onclick="approveRep('${id}')">Re-approve</button>`
-    : `<button class="act-btn act-approve" onclick="approveRep('${id}')">✓ Approve</button>
+        const actionBtns = isApproved
+          ? `<span class="badge b-approved" style="padding:6px 12px;">✓ Approved</span>`
+          : isRejected
+            ? `<button class="act-btn act-approve" onclick="approveRep('${id}')">Re-approve</button>`
+            : `<button class="act-btn act-approve" onclick="approveRep('${id}')">✓ Approve</button>
        <button class="act-btn act-reject" onclick="rejectRep('${id}')">✕ Reject</button>`;
 
-  return `
+        return `
     <div class="rep-row" id="reprow-${id}">
       <div class="rep-main" onclick="toggleExpand('rep-expand-${id}')">
         <div>
           <div class="col-provider">${esc(a.name)}</div>
-          <div class="col-sub">${esc(a.city)} · ${esc(a.role||'—')}</div>
+          <div class="col-sub">${esc(a.city)} · ${esc(a.role || "—")}</div>
         </div>
-        <div class="col-rep">${esc(a.email)}<div style="font-size:11px;color:var(--text-3)">${esc(a.phone||'—')}</div></div>
+        <div class="col-rep">${esc(a.email)}<div style="font-size:11px;color:var(--text-3)">${esc(a.phone || "—")}</div></div>
         <div class="col-date">${fmtDate(a.submittedAt)}</div>
-        <div style="font-size:12px;color:var(--text-2)">${esc(a.hoursPerWeek||'—')}</div>
+        <div style="font-size:12px;color:var(--text-2)">${esc(a.hoursPerWeek || "—")}</div>
         <div style="font-size:12px;">${submissionCount} submitted · ${liveCount} live</div>
         <div>${appStatusBadge(a.status)}</div>
       </div>
       <div class="rep-expand" id="rep-expand-${id}">
         <div class="sub-expand-grid" style="padding:16px 0 8px;">
-          <div class="expand-field"><div class="expand-label">Payment Method</div><div class="expand-val">${esc(a.paymentMethod)} — ${esc(a.paymentHandle||'not provided')}</div></div>
+          <div class="expand-field"><div class="expand-label">Payment Method</div><div class="expand-val">${esc(a.paymentMethod)} — ${esc(a.paymentHandle || "not provided")}</div></div>
           <div class="expand-field"><div class="expand-label">Sales Experience</div><div class="expand-val">${esc(a.salesExp)}</div></div>
           <div class="expand-field"><div class="expand-label">Connections</div><div class="expand-val">${esc(a.connections)}</div></div>
           <div class="expand-field"><div class="expand-label">Outreach Methods</div><div class="expand-val">${esc(a.outreachMethods)}</div></div>
-          <div class="expand-field"><div class="expand-label">Heard From</div><div class="expand-val">${esc(a.heardFrom)} ${a.referredBy?'('+esc(a.referredBy)+')':''}</div></div>
-          <div class="expand-field"><div class="expand-label">Verified Providers</div><div class="expand-val">${a.verifiedCount||0}</div></div>
-          ${a.whyInterested?`<div class="expand-field" style="grid-column:1/-1"><div class="expand-label">Why Interested</div><div class="expand-val">${esc(a.whyInterested)}</div></div>`:''}
+          <div class="expand-field"><div class="expand-label">Heard From</div><div class="expand-val">${esc(a.heardFrom)} ${a.referredBy ? "(" + esc(a.referredBy) + ")" : ""}</div></div>
+          <div class="expand-field"><div class="expand-label">Verified Providers</div><div class="expand-val">${a.verifiedCount || 0}</div></div>
+          ${a.whyInterested ? `<div class="expand-field" style="grid-column:1/-1"><div class="expand-label">Why Interested</div><div class="expand-val">${esc(a.whyInterested)}</div></div>` : ""}
         </div>
         <div class="action-row">${actionBtns}</div>
       </div>
     </div>`;
-}
+      }
 
-// ── Actions ───────────────────────────────────────────────
-window.toggleExpand = function(id) {
-  const el = document.getElementById(id);
-  if (el) el.classList.toggle('open');
-};
+      // ── Actions ───────────────────────────────────────────────
+      window.toggleExpand = function (id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle("open");
+      };
 
-window.setStatus = async function(docId, status) {
-  try {
-    await updateDoc(doc(db,'providerSubmissions',docId), { status, updatedAt: serverTimestamp() });
-    const sub = allSubmissions.find(s=>s._id===docId);
-    if (sub) sub.status = status;
-    updateStats(); renderSubmissions();
-    showToast('Status updated to: '+status, 'success');
-  } catch(err) { showToast('Update failed.','error'); console.error(err); }
-};
+      window.setStatus = async function (docId, status) {
+        try {
+          await updateDoc(doc(db, "providerSubmissions", docId), {
+            status,
+            updatedAt: serverTimestamp(),
+          });
+          const sub = allSubmissions.find((s) => s._id === docId);
+          if (sub) sub.status = status;
+          updateStats();
+          renderSubmissions();
+          showToast("Status updated to: " + status, "success");
+        } catch (err) {
+          showToast("Update failed.", "error");
+          console.error(err);
+        }
+      };
 
-// ── Mark Live modal ───────────────────────────────────────
-window.openLiveModal = async function(docId) {
-  pendingLiveDocId = docId;
-  const sub = allSubmissions.find(s=>s._id===docId);
-  if (!sub) return;
+      // ── Mark Live modal ───────────────────────────────────────
+      window.openLiveModal = async function (docId) {
+        pendingLiveDocId = docId;
+        const sub = allSubmissions.find((s) => s._id === docId);
+        if (!sub) return;
 
-  // Get rep's verified count
-  const rep = allApplications.find(a=>a.email===sub.repEmail);
-  const currentCount = rep?.verifiedCount || 0;
-  const newCount = currentCount + 1;
-  const commission = newCount <= 10 ? 15 : newCount <= 25 ? 20 : 25;
+        // Get rep's verified count
+        const rep = allApplications.find((a) => a.email === sub.repEmail);
+        const currentCount = rep?.verifiedCount || 0;
+        const newCount = currentCount + 1;
+        const commission = newCount <= 10 ? 15 : newCount <= 25 ? 20 : 25;
 
-  document.getElementById('liveModalSub').textContent =
-    `Marking "${esc(sub.providerName)}" as live and logging commission for ${esc(sub.repName)}.`;
+        document.getElementById("liveModalSub").textContent =
+          `Marking "${esc(sub.providerName)}" as live and logging commission for ${esc(sub.repName)}.`;
 
-  document.getElementById('liveModalDetail').innerHTML = `
+        document.getElementById("liveModalDetail").innerHTML = `
     <div class="modal-detail-row"><span class="modal-detail-label">Provider</span><span class="modal-detail-val">${esc(sub.providerName)}</span></div>
     <div class="modal-detail-row"><span class="modal-detail-label">Practice</span><span class="modal-detail-val">${esc(sub.practiceName)}</span></div>
-    <div class="modal-detail-row"><span class="modal-detail-label">NPI</span><span class="modal-detail-val">${esc(sub.npi||'Not provided')}</span></div>
+    <div class="modal-detail-row"><span class="modal-detail-label">NPI</span><span class="modal-detail-val">${esc(sub.npi || "Not provided")}</span></div>
     <div class="modal-detail-row"><span class="modal-detail-label">Rep</span><span class="modal-detail-val">${esc(sub.repName)} (${esc(sub.repEmail)})</span></div>
     <div class="modal-detail-row"><span class="modal-detail-label">Rep's verified count</span><span class="modal-detail-val">${currentCount} → ${newCount} after this</span></div>
   `;
 
-  document.getElementById('liveCommissionAmount').textContent = '$'+commission;
-  document.getElementById('liveCommissionNote').innerHTML =
-    `This is their provider #${newCount}.<br>Tier: ${newCount<=10?'1–10 ($15)':newCount<=25?'11–25 ($20)':'26+ ($25)'}`;
+        document.getElementById("liveCommissionAmount").textContent =
+          "$" + commission;
+        document.getElementById("liveCommissionNote").innerHTML =
+          `This is their provider #${newCount}.<br>Tier: ${newCount <= 10 ? "1–10 ($15)" : newCount <= 25 ? "11–25 ($20)" : "26+ ($25)"}`;
 
-  const warn = document.getElementById('liveModalWarn');
-  if (!sub.npi) {
-    warn.textContent = '⚠️ No NPI on file — make sure you\'ve verified this provider through the NPI registry and Oklahoma licensing board before marking live.';
-    warn.style.display = 'block';
-  } else { warn.style.display = 'none'; }
+        const warn = document.getElementById("liveModalWarn");
+        if (!sub.npi) {
+          warn.textContent =
+            "⚠️ No NPI on file — make sure you've verified this provider through the NPI registry and Oklahoma licensing board before marking live.";
+          warn.style.display = "block";
+        } else {
+          warn.style.display = "none";
+        }
 
-  document.getElementById('liveModal').classList.add('open');
-};
+        document.getElementById("liveModal").classList.add("open");
+      };
 
-window.confirmLive = async function() {
-  if (!pendingLiveDocId) return;
-  const btn = document.getElementById('liveConfirmBtn');
-  btn.disabled = true; btn.textContent = 'Saving...';
+      window.confirmLive = async function () {
+        if (!pendingLiveDocId) return;
+        const btn = document.getElementById("liveConfirmBtn");
+        btn.disabled = true;
+        btn.textContent = "Saving...";
 
-  const sub = allSubmissions.find(s=>s._id===pendingLiveDocId);
-  const rep = allApplications.find(a=>a.email===sub?.repEmail);
-  const currentCount = rep?.verifiedCount || 0;
-  const newCount = currentCount + 1;
-  const commission = newCount <= 10 ? 15 : newCount <= 25 ? 20 : 25;
+        const sub = allSubmissions.find((s) => s._id === pendingLiveDocId);
+        const rep = allApplications.find((a) => a.email === sub?.repEmail);
+        const currentCount = rep?.verifiedCount || 0;
+        const newCount = currentCount + 1;
+        const commission = newCount <= 10 ? 15 : newCount <= 25 ? 20 : 25;
 
-  try {
-    // Update submission to live
-    await updateDoc(doc(db,'providerSubmissions',pendingLiveDocId), {
-      status: 'live',
-      commissionAmount: commission,
-      commissionPaid: false,
-      goLiveDate: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
+        try {
+          // Update submission to live
+          await updateDoc(doc(db, "providerSubmissions", pendingLiveDocId), {
+            status: "live",
+            commissionAmount: commission,
+            commissionPaid: false,
+            goLiveDate: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          });
 
-    // Update rep's verifiedCount and pendingEarnings
-    if (rep?._id) {
-      await updateDoc(doc(db,'repApplications',rep._id), {
-        verifiedCount: newCount,
-        pendingEarnings: (rep.pendingEarnings||0) + commission,
-        updatedAt: serverTimestamp(),
+          // Update rep's verifiedCount and pendingEarnings
+          if (rep?._id) {
+            await updateDoc(doc(db, "repApplications", rep._id), {
+              verifiedCount: newCount,
+              pendingEarnings: (rep.pendingEarnings || 0) + commission,
+              updatedAt: serverTimestamp(),
+            });
+            rep.verifiedCount = newCount;
+            rep.pendingEarnings = (rep.pendingEarnings || 0) + commission;
+          }
+
+          if (sub) {
+            sub.status = "live";
+            sub.commissionAmount = commission;
+          }
+          updateStats();
+          renderSubmissions();
+          closeModal("liveModal");
+          showToast(
+            `✓ Provider live · $${commission} commission logged for ${sub?.repName || "rep"}`,
+            "success",
+          );
+
+          // Auto-create provider account and send welcome email
+          if (sub?.email && sub?.providerName) {
+            try {
+              const onboardFn = httpsCallable(functions, "onboardProvider");
+              await onboardFn({
+                providerId: sub.providerId || pendingLiveDocId,
+                providerName: sub.providerName,
+                email: sub.email,
+                specialty: sub.specialty || "",
+              });
+              showToast(`✓ Welcome email sent to ${sub.email}`, "success");
+            } catch (onboardErr) {
+              console.warn("onboardProvider failed:", onboardErr);
+              showToast(
+                "⚠ Provider marked live but welcome email failed — send credentials manually.",
+                "error",
+              );
+            }
+          }
+        } catch (err) {
+          console.error(err);
+          showToast("Update failed. Check console.", "error");
+        }
+        btn.disabled = false;
+        btn.textContent = "✓ Mark Live & Log Commission";
+        pendingLiveDocId = null;
+      };
+
+      // ── Reject modal ──────────────────────────────────────────
+      window.openRejectModal = function (docId) {
+        pendingRejectDocId = docId;
+        const sub = allSubmissions.find((s) => s._id === docId);
+        document.getElementById("rejectModalSub").textContent =
+          `Marking "${esc(sub?.providerName || "this provider")}" as not verified. No commission will be logged.`;
+        document.getElementById("rejectReason").value = "";
+        document.getElementById("rejectModal").classList.add("open");
+      };
+
+      window.confirmReject = async function () {
+        if (!pendingRejectDocId) return;
+        const reason = document
+          .getElementById("rejectReason")
+          .value.trim()
+          .substring(0, 500);
+        try {
+          await updateDoc(doc(db, "providerSubmissions", pendingRejectDocId), {
+            status: "not_verified",
+            rejectionReason: reason || "",
+            updatedAt: serverTimestamp(),
+          });
+          const sub = allSubmissions.find((s) => s._id === pendingRejectDocId);
+          if (sub) {
+            sub.status = "not_verified";
+            sub.rejectionReason = reason;
+          }
+          updateStats();
+          renderSubmissions();
+          closeModal("rejectModal");
+          showToast("Provider marked as not verified.", "success");
+        } catch (err) {
+          showToast("Update failed.", "error");
+          console.error(err);
+        }
+        pendingRejectDocId = null;
+      };
+
+      // ── Rep approval ──────────────────────────────────────────
+      window.approveRep = async function (docId) {
+        const rep = allApplications.find((a) => a._id === docId);
+        if (!rep) return;
+        if (
+          !confirm(`Approve ${rep.name} (${rep.email}) as a Morava sales rep?`)
+        )
+          return;
+        try {
+          await updateDoc(doc(db, "repApplications", docId), {
+            status: "approved",
+            approvedAt: serverTimestamp(),
+            verifiedCount: rep.verifiedCount || 0,
+            pendingEarnings: rep.pendingEarnings || 0,
+          });
+          rep.status = "approved";
+          updateStats();
+          renderApplications();
+          showToast(`✓ ${rep.name} approved as a rep.`, "success");
+        } catch (err) {
+          showToast("Update failed.", "error");
+          console.error(err);
+        }
+      };
+
+      window.rejectRep = async function (docId) {
+        const rep = allApplications.find((a) => a._id === docId);
+        if (!rep) return;
+        if (!confirm(`Reject ${rep.name}'s application?`)) return;
+        try {
+          await updateDoc(doc(db, "repApplications", docId), {
+            status: "rejected",
+            updatedAt: serverTimestamp(),
+          });
+          rep.status = "rejected";
+          updateStats();
+          renderApplications();
+          showToast(`${rep.name}'s application rejected.`, "success");
+        } catch (err) {
+          showToast("Update failed.", "error");
+          console.error(err);
+        }
+      };
+
+      // ── Notes ─────────────────────────────────────────────────
+      window.toggleNote = function (id) {
+        document.getElementById(id).classList.toggle("show");
+      };
+
+      window.saveNote = async function (docId) {
+        const input = document.getElementById("note-input-" + docId);
+        const note = (input?.value || "")
+          .trim()
+          .substring(0, 300)
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+        if (!note) return;
+        try {
+          await updateDoc(doc(db, "providerSubmissions", docId), {
+            adminNote: note,
+            updatedAt: serverTimestamp(),
+          });
+          const sub = allSubmissions.find((s) => s._id === docId);
+          if (sub) sub.adminNote = note;
+          renderSubmissions();
+          showToast("Note saved.", "success");
+        } catch (err) {
+          showToast("Save failed.", "error");
+        }
+      };
+
+      // ── Modal helpers ─────────────────────────────────────────
+      window.closeModal = function (id) {
+        document.getElementById(id).classList.remove("open");
+        if (id === "liveModal") {
+          const cb = document.getElementById("baaSignedCheck");
+          if (cb) {
+            cb.checked = false;
+          }
+          const btn = document.getElementById("liveConfirmBtn");
+          if (btn) {
+            btn.disabled = true;
+          }
+        }
+      };
+      document.querySelectorAll(".modal-overlay").forEach((m) => {
+        m.addEventListener("click", (e) => {
+          if (e.target === m) m.classList.remove("open");
+        });
       });
-      rep.verifiedCount = newCount;
-      rep.pendingEarnings = (rep.pendingEarnings||0) + commission;
-    }
 
-    if (sub) { sub.status = 'live'; sub.commissionAmount = commission; }
-    updateStats(); renderSubmissions();
-    closeModal('liveModal');
-    showToast(`✓ Provider live · $${commission} commission logged for ${sub?.repName||'rep'}`, 'success');
-  } catch(err) {
-    console.error(err);
-    showToast('Update failed. Check console.','error');
-  }
-  btn.disabled = false; btn.textContent = '✓ Mark Live & Log Commission';
-  pendingLiveDocId = null;
-};
+      // ── Toast ─────────────────────────────────────────────────
+      function showToast(msg, type = "") {
+        const t = document.getElementById("toast");
+        t.textContent = msg;
+        t.className = "toast show" + (type ? " " + type : "");
+        setTimeout(() => (t.className = "toast"), 3000);
+      }
+    </script>
 
-// ── Reject modal ──────────────────────────────────────────
-window.openRejectModal = function(docId) {
-  pendingRejectDocId = docId;
-  const sub = allSubmissions.find(s=>s._id===docId);
-  document.getElementById('rejectModalSub').textContent =
-    `Marking "${esc(sub?.providerName||'this provider')}" as not verified. No commission will be logged.`;
-  document.getElementById('rejectReason').value = '';
-  document.getElementById('rejectModal').classList.add('open');
-};
-
-window.confirmReject = async function() {
-  if (!pendingRejectDocId) return;
-  const reason = document.getElementById('rejectReason').value.trim().substring(0,500);
-  try {
-    await updateDoc(doc(db,'providerSubmissions',pendingRejectDocId), {
-      status: 'not_verified',
-      rejectionReason: reason || '',
-      updatedAt: serverTimestamp(),
-    });
-    const sub = allSubmissions.find(s=>s._id===pendingRejectDocId);
-    if (sub) { sub.status='not_verified'; sub.rejectionReason=reason; }
-    updateStats(); renderSubmissions();
-    closeModal('rejectModal');
-    showToast('Provider marked as not verified.','success');
-  } catch(err) { showToast('Update failed.','error'); console.error(err); }
-  pendingRejectDocId = null;
-};
-
-// ── Rep approval ──────────────────────────────────────────
-window.approveRep = async function(docId) {
-  const rep = allApplications.find(a=>a._id===docId);
-  if (!rep) return;
-  if (!confirm(`Approve ${rep.name} (${rep.email}) as a Morava sales rep?`)) return;
-  try {
-    await updateDoc(doc(db,'repApplications',docId), {
-      status: 'approved',
-      approvedAt: serverTimestamp(),
-      verifiedCount: rep.verifiedCount||0,
-      pendingEarnings: rep.pendingEarnings||0,
-    });
-    rep.status = 'approved';
-    updateStats(); renderApplications();
-    showToast(`✓ ${rep.name} approved as a rep.`,'success');
-  } catch(err) { showToast('Update failed.','error'); console.error(err); }
-};
-
-window.rejectRep = async function(docId) {
-  const rep = allApplications.find(a=>a._id===docId);
-  if (!rep) return;
-  if (!confirm(`Reject ${rep.name}'s application?`)) return;
-  try {
-    await updateDoc(doc(db,'repApplications',docId), { status: 'rejected', updatedAt: serverTimestamp() });
-    rep.status = 'rejected';
-    updateStats(); renderApplications();
-    showToast(`${rep.name}'s application rejected.`,'success');
-  } catch(err) { showToast('Update failed.','error'); console.error(err); }
-};
-
-// ── Notes ─────────────────────────────────────────────────
-window.toggleNote = function(id) {
-  document.getElementById(id).classList.toggle('show');
-};
-
-window.saveNote = async function(docId) {
-  const input = document.getElementById('note-input-'+docId);
-  const note = (input?.value||'').trim().substring(0,300)
-    .replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  if (!note) return;
-  try {
-    await updateDoc(doc(db,'providerSubmissions',docId), { adminNote: note, updatedAt: serverTimestamp() });
-    const sub = allSubmissions.find(s=>s._id===docId);
-    if (sub) sub.adminNote = note;
-    renderSubmissions();
-    showToast('Note saved.','success');
-  } catch(err) { showToast('Save failed.','error'); }
-};
-
-// ── Modal helpers ─────────────────────────────────────────
-window.closeModal = function(id) {
-  document.getElementById(id).classList.remove('open');
-};
-document.querySelectorAll('.modal-overlay').forEach(m => {
-  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
-});
-
-// ── Toast ─────────────────────────────────────────────────
-function showToast(msg, type='') {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.className = 'toast show'+(type?' '+type:'');
-  setTimeout(()=>t.className='toast',3000);
-}
-</script>
-
-<script>
-function switchTab(id, el) {
-  document.querySelectorAll('.tabs .tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
-  el.classList.add('active');
-  document.getElementById('tab-'+id).classList.add('active');
-}
-</script>
-</body>
+    <script>
+      function switchTab(id, el) {
+        document
+          .querySelectorAll(".tabs .tab")
+          .forEach((t) => t.classList.remove("active"));
+        document
+          .querySelectorAll(".tab-panel")
+          .forEach((p) => p.classList.remove("active"));
+        el.classList.add("active");
+        document.getElementById("tab-" + id).classList.add("active");
+      }
+    </script>
+  </body>
 </html>

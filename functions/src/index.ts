@@ -198,6 +198,34 @@ export const onBookingCreated = onDocumentCreated(
     } catch (err) {
       console.error("onBookingCreated: email send failed", err);
     }
+
+    // Push notification to patient — booking received confirmation
+    if (data.userId) {
+      try {
+        const patientDoc = await db.collection("users").doc(data.userId).get();
+        const pushToken = patientDoc.data()?.expoPushToken;
+        if (pushToken?.startsWith("ExponentPushToken[")) {
+          await fetch("https://exp.host/--/api/v2/push/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              to: pushToken,
+              title: "📋 Booking Request Sent",
+              body: `Your request to see ${esc(data.providerName || "your provider")} on ${esc(data.date)} is pending confirmation.`,
+              data: {
+                bookingId: event.params.bookingId,
+                type: "booking_pending",
+              },
+              sound: "default",
+              priority: "high",
+              channelId: "appointments",
+            }),
+          });
+        }
+      } catch (pushErr) {
+        console.error("onBookingCreated: push failed", pushErr);
+      }
+    }
   },
 );
 
@@ -283,6 +311,45 @@ export const onBookingStatusChanged = onDocumentUpdated(
       });
     } catch (err) {
       console.error("onBookingStatusChanged: email send failed", err);
+    }
+
+    // Push notification to patient
+    if (after.userId) {
+      try {
+        const patientDoc = await db.collection("users").doc(after.userId).get();
+        const pushToken = patientDoc.data()?.expoPushToken;
+        if (pushToken?.startsWith("ExponentPushToken[")) {
+          let pushTitle = "";
+          let pushBody = "";
+          if (after.status === "confirmed") {
+            pushTitle = "✅ Appointment Confirmed!";
+            pushBody = `${esc(after.providerName || "Your provider")} confirmed your appointment on ${esc(after.date)} at ${esc(after.time)}.`;
+          } else if (after.status === "cancelled") {
+            pushTitle = "❌ Appointment Cancelled";
+            pushBody = `Your appointment with ${esc(after.providerName || "your provider")} on ${esc(after.date)} was cancelled.`;
+          } else if (after.status === "reschedule_pending") {
+            pushTitle = "📅 Reschedule Proposed";
+            pushBody = `${esc(after.providerName || "Your provider")} proposed a new time for your appointment.`;
+          }
+          if (pushTitle) {
+            await fetch("https://exp.host/--/api/v2/push/send", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                to: pushToken,
+                title: pushTitle,
+                body: pushBody,
+                data: { bookingId: event.params.bookingId, type: after.status },
+                sound: "default",
+                priority: "high",
+                channelId: "appointments",
+              }),
+            });
+          }
+        }
+      } catch (pushErr) {
+        console.error("onBookingStatusChanged: push failed", pushErr);
+      }
     }
   },
 );
