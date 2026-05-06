@@ -729,7 +729,7 @@ export const onManualBillingRequest = onDocumentUpdated(
         "Manual Billing Request",
         `
         <p><strong>${esc(after.name) || event.params.providerId}</strong> has requested manual billing (check or ACH).</p>
-        <p><strong>Email:</strong> ${esc(after.email) || "Not provided"}</p>
+        <p><strong>Email:</strong> ${esc(after.email) || esc(after.contactEmail) || "See providerUsers collection"}</p>
         <p><strong>Provider ID:</strong> ${esc(event.params.providerId)}</p>
         <p>Follow up within 1 business day to arrange payment method.</p>
       `,

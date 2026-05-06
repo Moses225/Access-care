@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Morava — Submit a Provider</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --teal:#00BCD4;--teal-dark:#00838F;--navy:#0A1628;
+    --text:#1E293B;--text-2:#64748B;--border:#E2E8F0;
+    --bg:#F8FAFC;--white:#fff;--red:#EF4444;--green:#22C55E;
+    --amber:#F59E0B;--amber-bg:#FEF3C7;
+  }
+  body{font-family:'Nunito',sans-serif;background:var(--bg);
+    min-height:100vh;padding:40px 20px;}
+  .wrap{max-width:660px;margin:0 auto;}
+
+  .header{text-align:center;margin-bottom:32px;}
+  .logo{display:inline-flex;align-items:center;gap:10px;margin-bottom:16px;}
+  .logo-box{width:40px;height:40px;background:var(--teal);border-radius:10px;
+    display:flex;align-items:center;justify-content:center;}
+  .logo-name{font-size:22px;font-weight:800;color:var(--navy);}
+  h1{font-size:24px;font-weight:800;color:var(--navy);margin-bottom:6px;}
+  .subtitle{font-size:14px;color:var(--text-2);line-height:1.6;}
+
+  .notice{background:var(--amber-bg);border:1.5px solid var(--amber);
+    border-radius:12px;padding:14px 18px;margin-bottom:24px;
+    font-size:13px;color:#92400E;line-height:1.6;}
+  .notice strong{font-weight:800;}
+
+  .card{background:var(--white);border-radius:16px;padding:28px;
+    border:1.5px solid var(--border);margin-bottom:20px;}
+  .card-title{font-size:12px;font-weight:800;color:var(--teal);
+    text-transform:uppercase;letter-spacing:.5px;margin-bottom:18px;}
+
+  .field{margin-bottom:18px;}
+  .field:last-child{margin-bottom:0;}
+  label{display:block;font-size:13px;font-weight:700;
+    color:var(--text);margin-bottom:6px;}
+  .required{color:var(--red);}
+  .hint{font-size:11px;color:var(--text-2);margin-top:4px;line-height:1.5;}
+  input[type=text],input[type=email],input[type=tel],
+  select,textarea{
+    width:100%;padding:12px 14px;border:2px solid var(--border);
+    border-radius:10px;font-size:14px;font-family:'Nunito',sans-serif;
+    color:var(--text);background:var(--white);outline:none;
+    transition:border-color .2s;}
+  input:focus,select:focus,textarea:focus{border-color:var(--teal);}
+  textarea{resize:vertical;min-height:80px;}
+  select{appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 14px center;}
+
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+
+  .check-group{display:flex;flex-direction:column;gap:8px;}
+  .check-item{display:flex;align-items:center;gap:10px;cursor:pointer;}
+  .check-item input[type=checkbox]{width:17px;height:17px;
+    accent-color:var(--teal);cursor:pointer;flex-shrink:0;}
+  .check-item span{font-size:13px;color:var(--text);}
+
+  .radio-group{display:flex;flex-direction:column;gap:8px;}
+  .radio-item{display:flex;align-items:center;gap:10px;cursor:pointer;}
+  .radio-item input[type=radio]{width:17px;height:17px;
+    accent-color:var(--teal);cursor:pointer;flex-shrink:0;}
+  .radio-item span{font-size:13px;color:var(--text);}
+
+  .ack{display:flex;align-items:flex-start;gap:10px;
+    padding:12px 14px;background:var(--bg);border-radius:10px;
+    border:1.5px solid var(--border);margin-bottom:10px;}
+  .ack input{width:17px;height:17px;accent-color:var(--teal);
+    flex-shrink:0;margin-top:2px;}
+  .ack span{font-size:13px;color:var(--text);line-height:1.5;}
+
+  .btn{width:100%;padding:15px;background:var(--teal);color:white;
+    border:none;border-radius:12px;font-size:16px;font-weight:800;
+    font-family:'Nunito',sans-serif;cursor:pointer;transition:background .2s;}
+  .btn:hover{background:var(--teal-dark);}
+  .btn:disabled{opacity:.6;cursor:not-allowed;}
+
+  .success{display:none;text-align:center;padding:40px 20px;}
+  .success-icon{font-size:56px;margin-bottom:16px;}
+  .success h2{font-size:22px;font-weight:800;color:var(--navy);margin-bottom:8px;}
+  .success p{font-size:14px;color:var(--text-2);line-height:1.6;}
+  .success .next-steps{background:var(--bg);border-radius:12px;
+    padding:16px;margin-top:20px;text-align:left;}
+  .success .next-steps h3{font-size:13px;font-weight:800;
+    color:var(--navy);margin-bottom:10px;}
+  .success .next-steps li{font-size:13px;color:var(--text-2);
+    margin-bottom:6px;list-style:none;padding-left:16px;position:relative;}
+  .success .next-steps li::before{content:"→";position:absolute;
+    left:0;color:var(--teal);}
+
+  .step-badge{display:inline-flex;align-items:center;gap:6px;
+    background:var(--teal);color:white;font-size:11px;font-weight:800;
+    padding:3px 10px;border-radius:50px;margin-bottom:8px;}
+
+  @media(max-width:520px){
+    .grid-2{grid-template-columns:1fr;}
+    .card{padding:18px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <div class="logo">
+      <div class="logo-box">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
+          <path d="M3 17 Q7 7 12 12 Q17 17 21 7"/>
+          <circle cx="21" cy="7" r="2" fill="white" stroke="none"/>
+        </svg>
+      </div>
+      <span class="logo-name">Morava</span>
+    </div>
+    <h1>Submit a Provider</h1>
+    <p class="subtitle">Fill out this form for every provider who agrees to list on Morava.<br/>
+    You'll receive commission once their profile is verified and live.</p>
+  </div>
+
+  <div class="notice">
+    <strong>💰 Commission reminder:</strong> You earn $15–$20 per provider once their profile goes live in the Morava app. Submit by the 25th to be paid on the 1st of the following month.
+  </div>
+
+  <form id="submitForm">
+
+    <!-- Rep Info -->
+    <div class="card">
+      <div class="step-badge">Step 1</div>
+      <div class="card-title">Your Information</div>
+      <div class="grid-2">
+        <div class="field">
+          <label>Your Full Name <span class="required">*</span></label>
+          <input type="text" name="repName" placeholder="Your name" required/>
+        </div>
+        <div class="field">
+          <label>Your Email <span class="required">*</span></label>
+          <input type="email" name="repEmail" placeholder="your@email.com" required/>
+        </div>
+      </div>
+      <div class="field">
+        <label>Your Payment Method & Handle</label>
+        <input type="text" name="repPayment" placeholder="e.g. Venmo: @yourname"/>
+        <div class="hint">So we can pay your commission quickly</div>
+      </div>
+    </div>
+
+    <!-- Provider Info -->
+    <div class="card">
+      <div class="step-badge">Step 2</div>
+      <div class="card-title">Provider Information</div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label>Provider Full Name <span class="required">*</span></label>
+          <input type="text" name="providerName" placeholder="Dr. Jane Smith, MD" required/>
+        </div>
+        <div class="field">
+          <label>Practice / Clinic Name <span class="required">*</span></label>
+          <input type="text" name="practiceName" placeholder="Smith Family Medicine" required/>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label>Specialty <span class="required">*</span></label>
+          <select name="specialty" required>
+            <option value="">Select specialty...</option>
+            <option>Family Medicine</option>
+            <option>Internal Medicine</option>
+            <option>Pediatrics</option>
+            <option>OB/GYN</option>
+            <option>Psychiatry / Mental Health</option>
+            <option>Cardiology</option>
+            <option>Dermatology</option>
+            <option>Orthopedics</option>
+            <option>Urgent Care</option>
+            <option>Dental / General Dentistry</option>
+            <option>Physical Therapy</option>
+            <option>Occupational Therapy</option>
+            <option>Chiropractic</option>
+            <option>Neurology</option>
+            <option>Oncology</option>
+            <option>Ophthalmology</option>
+            <option>Doula Services</option>
+            <option>Home Health</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>City / Location <span class="required">*</span></label>
+          <input type="text" name="city" placeholder="Oklahoma City, OK" required/>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label>Provider Phone <span class="required">*</span></label>
+          <input type="tel" name="providerPhone" placeholder="(405) 555-0123" required/>
+        </div>
+        <div class="field">
+          <label>Provider Email <span class="required">*</span></label>
+          <input type="email" name="providerEmail" placeholder="dr@clinic.com" required/>
+          <div class="hint">Used to send their dashboard login</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>NPI Number (if available)</label>
+        <input type="text" name="npi" placeholder="1234567890"/>
+        <div class="hint">Speeds up verification — find at nppes.cms.hhs.gov</div>
+      </div>
+    </div>
+
+    <!-- Practice Details -->
+    <div class="card">
+      <div class="step-badge">Step 3</div>
+      <div class="card-title">Practice Details</div>
+
+      <div class="field">
+        <label>Insurance Accepted (select all that apply)</label>
+        <div class="check-group" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <label class="check-item"><input type="checkbox" name="insurance" value="SoonerCare / Medicaid"/><span>SoonerCare / Medicaid</span></label>
+          <label class="check-item"><input type="checkbox" name="insurance" value="Medicare"/><span>Medicare</span></label>
+          <label class="check-item"><input type="checkbox" name="insurance" value="BlueCross BlueShield"/><span>BlueCross BlueShield</span></label>
+          <label class="check-item"><input type="checkbox" name="insurance" value="Aetna"/><span>Aetna</span></label>
+          <label class="check-item"><input type="checkbox" name="insurance" value="UnitedHealthcare"/><span>UnitedHealthcare</span></label>
+          <label class="check-item"><input type="checkbox" name="insurance" value="Cigna"/><span>Cigna</span></label>
+          <label class="check-item"><input type="checkbox" name="insurance" value="Tricare"/><span>Tricare</span></label>
+          <label class="check-item"><input type="checkbox" name="insurance" value="Self-Pay / Sliding Scale"/><span>Self-Pay / Sliding Scale</span></label>
+          <label class="check-item"><input type="checkbox" name="insurance" value="Most Major Insurance"/><span>Most Major Insurance</span></label>
+          <label class="check-item"><input type="checkbox" name="insurance" value="Unknown"/><span>Not sure / will confirm</span></label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Does this provider offer telehealth?</label>
+        <div class="radio-group" style="flex-direction:row;gap:16px;">
+          <label class="radio-item"><input type="radio" name="telehealth" value="Yes"/><span>Yes</span></label>
+          <label class="radio-item"><input type="radio" name="telehealth" value="No"/><span>No</span></label>
+          <label class="radio-item"><input type="radio" name="telehealth" value="Both"/><span>Both</span></label>
+          <label class="radio-item"><input type="radio" name="telehealth" value="Unknown"/><span>Not sure</span></label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Are they currently accepting new patients?</label>
+        <div class="radio-group" style="flex-direction:row;gap:16px;">
+          <label class="radio-item"><input type="radio" name="acceptingNewPatients" value="Yes"/><span>Yes</span></label>
+          <label class="radio-item"><input type="radio" name="acceptingNewPatients" value="No"/><span>No</span></label>
+          <label class="radio-item"><input type="radio" name="acceptingNewPatients" value="Limited"/><span>Limited</span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Verification -->
+    <div class="card">
+      <div class="step-badge">Step 4</div>
+      <div class="card-title">Verification & Notes</div>
+
+      <div class="field">
+        <label>How did you make contact? <span class="required">*</span></label>
+        <select name="contactMethod" required>
+          <option value="">Select...</option>
+          <option>Phone call</option>
+          <option>In-person visit</option>
+          <option>Facebook message</option>
+          <option>Email</option>
+          <option>LinkedIn</option>
+          <option>Text message</option>
+          <option>Referral / introduction</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Provider's level of interest <span class="required">*</span></label>
+        <div class="radio-group">
+          <label class="radio-item">
+            <input type="radio" name="interestLevel" value="Confirmed — ready to go live" required/>
+            <span>✅ Confirmed — they want to be listed right away</span>
+          </label>
+          <label class="radio-item">
+            <input type="radio" name="interestLevel" value="Interested — needs follow-up"/>
+            <span>🤔 Interested — wants more info or follow-up</span>
+          </label>
+          <label class="radio-item">
+            <input type="radio" name="interestLevel" value="Warm — considering it"/>
+            <span>🌡️ Warm — not a no, considering it</span>
+          </label>
+        </div>
+        <div class="hint">Commission is paid only for "Confirmed" providers once live</div>
+      </div>
+
+      <div class="field">
+        <label>Additional notes</label>
+        <textarea name="notes" placeholder="Best time to contact them, any special instructions, what they care about most..."></textarea>
+      </div>
+    </div>
+
+    <!-- Acknowledgment -->
+    <div class="card">
+      <div class="card-title">Confirm Before Submitting</div>
+      <label class="ack">
+        <input type="checkbox" name="ack1" required/>
+        <span>I have spoken directly with this provider and they have agreed to be listed on Morava.</span>
+      </label>
+      <label class="ack">
+        <input type="checkbox" name="ack2" required/>
+        <span>The information above is accurate to the best of my knowledge.</span>
+      </label>
+      <label class="ack">
+        <input type="checkbox" name="ack3" required/>
+        <span>I understand commission is paid once the provider's profile is verified and live — not on submission.</span>
+      </label>
+    </div>
+
+    <button type="submit" class="btn" id="submitBtn">Submit Provider →</button>
+    <p style="text-align:center;font-size:12px;color:var(--text-2);margin-top:14px;">
+      Questions? Text or call Moise at <a href="tel:+14328030136" style="color:var(--teal);">(432) 803-0136</a>
+      or email <a href="mailto:moise@moravacare.com" style="color:var(--teal);">moise@moravacare.com</a>
+    </p>
+  </form>
+
+  <div class="success" id="successState">
+    <div class="success-icon">🎉</div>
+    <h2>Provider submitted!</h2>
+    <p>We'll verify this provider within 24 hours and let you know when their profile goes live.</p>
+    <div class="next-steps">
+      <h3>What happens next:</h3>
+      <ul>
+        <li>Moise verifies the provider on the NPI Registry</li>
+        <li>Their profile is added to the Morava app</li>
+        <li>Provider receives their dashboard login</li>
+        <li>You get a confirmation — commission logged</li>
+        <li>Commission paid on the 1st of next month</li>
+      </ul>
+    </div>
+    <button onclick="location.reload()" style="margin-top:20px;background:var(--teal);color:white;border:none;border-radius:10px;padding:12px 28px;font-size:14px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer;">
+      Submit Another Provider
+    </button>
+  </div>
+
+</div>
+
+<script>
+document.getElementById('submitForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Submitting...';
+
+  const fd = new FormData(e.target);
+
+  // Collect checkboxes
+  const insurance = [];
+  document.querySelectorAll('input[name=insurance]:checked').forEach(cb => insurance.push(cb.value));
+
+  const data = {
+    // Rep info
+    repName: fd.get('repName'),
+    repEmail: fd.get('repEmail'),
+    repPayment: fd.get('repPayment'),
+    // Provider info
+    providerName: fd.get('providerName'),
+    practiceName: fd.get('practiceName'),
+    specialty: fd.get('specialty'),
+    city: fd.get('city'),
+    providerPhone: fd.get('providerPhone'),
+    providerEmail: fd.get('providerEmail'),
+    npi: fd.get('npi'),
+    // Practice details
+    insuranceAccepted: insurance.join(', '),
+    telehealth: fd.get('telehealth'),
+    acceptingNewPatients: fd.get('acceptingNewPatients'),
+    // Verification
+    contactMethod: fd.get('contactMethod'),
+    interestLevel: fd.get('interestLevel'),
+    notes: fd.get('notes'),
+    submittedAt: new Date().toLocaleString(),
+  };
+
+  // Send to your email via mailto
+  const body = Object.entries(data)
+    .map(([k, v]) => `${k}: ${v}`)
+    .join('\n');
+
+  window.location.href = `mailto:moise@moravacare.com?subject=New Provider Submission — ${data.providerName} (submitted by ${data.repName})&body=${encodeURIComponent(body)}`;
+
+  document.getElementById('submitForm').style.display = 'none';
+  document.getElementById('successState').style.display = 'block';
+});
+</script>
+</body>
+</html>
