@@ -549,6 +549,7 @@ export const createSetupIntent = onCall(
   {
     region: "us-central1",
     secrets: [stripeSecretKey],
+    enforceAppCheck: true,
   },
   async (request) => {
     // Require authenticated user
