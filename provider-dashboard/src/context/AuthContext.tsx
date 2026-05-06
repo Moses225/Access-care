@@ -86,9 +86,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               name: prov.name || "",
               specialty: prov.specialty || "",
               email: u.email || "",
-              stripeCustomerId: prov.stripeCustomerId || "",
-              stripePaymentMethodId: prov.stripePaymentMethodId || "",
-              manualBilling: prov.manualBilling || false,
+              stripeCustomerId:
+                d.stripeCustomerId || prov.stripeCustomerId || "",
+              stripePaymentMethodId:
+                d.stripePaymentMethodId || prov.stripePaymentMethodId || "",
+              manualBilling: d.manualBilling || prov.manualBilling || false,
             });
           } else {
             setProviderProfile(null);
