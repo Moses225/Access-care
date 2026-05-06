@@ -1,9 +1,10 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
-import Landing from './pages/Landing';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import MFAChallenge from './pages/MFAChallenge';
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import Dashboard from "./pages/Dashboard";
+import Landing from "./pages/Landing";
+import Login from "./pages/Login";
+import MFAChallenge from "./pages/MFAChallenge";
+import Profile from "./pages/Profile";
 
 // ── Protected route — requires auth + no pending MFA challenge ────────────
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -36,10 +37,32 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/"          element={<Landing />} />
-          <Route path="/login"     element={<PublicRoute><Login /></PublicRoute>} />
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="*"          element={<Navigate to="/" replace />} />
+          <Route path="/" element={<Landing />} />
+          <Route
+            path="/login"
+            element={
+              <PublicRoute>
+                <Login />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

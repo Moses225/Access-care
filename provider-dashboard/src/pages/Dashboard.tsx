@@ -511,6 +511,12 @@ export default function Dashboard() {
                 </div>
               </div>
             )}
+            <a
+              href="/profile"
+              className="text-sm text-slate-500 hover:text-slate-700 border border-slate-200 hover:border-slate-300 px-3 py-1.5 rounded-lg transition-colors"
+            >
+              Edit Profile
+            </a>
             <button
               onClick={() => {
                 logout();

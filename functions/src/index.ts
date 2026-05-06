@@ -748,3 +748,141 @@ export const onManualBillingRequest = onDocumentUpdated(
     });
   },
 );
+// ================================================================
+// ONBOARD PROVIDER — called from admin panel Mark Live
+// Creates Firebase Auth account, sets custom claims,
+// sends welcome email with password-setup link
+// SECURITY:
+//   - Only callable by admin (checked via custom claim)
+//   - Idempotent: reuses existing account if email already exists
+//   - Never logs passwords or tokens
+// ================================================================
+export const onboardProvider = onCall(
+  {
+    region: "us-central1",
+    secrets: [resendApiKey],
+  },
+  async (request) => {
+    // Require admin caller
+    if (!request.auth?.token?.admin) {
+      throw new HttpsError("permission-denied", "Admin access required.");
+    }
+
+    const { providerId, providerName, email } = request.data as {
+      providerId: string;
+      providerName: string;
+      email: string;
+    };
+
+    if (!providerId || !email || !providerName) {
+      throw new HttpsError(
+        "invalid-argument",
+        "providerId, email, and providerName are required.",
+      );
+    }
+
+    // Validate email format
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new HttpsError("invalid-argument", "Invalid email address.");
+    }
+
+    let uid: string;
+    let isNewAccount = false;
+
+    try {
+      // Try to get existing account first — idempotent
+      const existing = await admin.auth().getUserByEmail(email);
+      uid = existing.uid;
+      console.log(
+        `onboardProvider: existing account found for ${email} (${uid})`,
+      );
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code;
+      if (code === "auth/user-not-found") {
+        // Create new account — provider will set their own password via the link
+        const newUser = await admin.auth().createUser({
+          email,
+          emailVerified: true, // Required for MFA enrollment
+          displayName: providerName,
+          disabled: false,
+        });
+        uid = newUser.uid;
+        isNewAccount = true;
+        console.log(
+          `onboardProvider: created new account for ${email} (${uid})`,
+        );
+      } else {
+        throw err;
+      }
+    }
+
+    // Set custom claims — provider: true + providerId
+    await admin.auth().setCustomUserClaims(uid, {
+      provider: true,
+      providerId,
+    });
+
+    // Create providerUsers document if it doesn't exist
+    const puRef = db.collection("providerUsers").doc(uid);
+    const puSnap = await puRef.get();
+    if (!puSnap.exists) {
+      await puRef.set({
+        uid,
+        providerId,
+        email,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+
+    // Generate password setup link — works as first-time password set
+    const setupLink = await admin.auth().generatePasswordResetLink(email, {
+      url: "https://dashboard.moravacare.com/login",
+    });
+
+    // Send welcome email with setup link
+    const resend = new Resend(resendApiKey.value());
+    await resend.emails.send({
+      from: "Moise at Morava <noreply@moravacare.com>",
+      to: email,
+      subject: `Welcome to Morava — set up your provider account`,
+      html: wrapEmail(
+        "Welcome to Morava",
+        `
+        <h2 style="color:#0F172A;margin:0 0 16px">Welcome to Morava, ${esc(providerName)}!</h2>
+        <p style="color:#475569;line-height:1.7">Your provider profile has been verified and activated on Morava. Patients can now discover and book appointments with you.</p>
+        <div style="background:#F0FDFB;border:1px solid #CCFBF1;border-radius:12px;padding:20px;margin:20px 0">
+          <p style="color:#0F172A;font-weight:bold;margin:0 0 8px">Next steps:</p>
+          <ol style="color:#475569;line-height:1.9;margin:0;padding-left:20px">
+            <li>Click the button below to set your password</li>
+            <li>Log into your dashboard at dashboard.moravacare.com</li>
+            <li>Complete your provider profile (bio, photo, hours, insurance)</li>
+            <li>Set up two-factor authentication for account security</li>
+            <li>Add your billing card (you only pay $6 when a patient shows up)</li>
+          </ol>
+        </div>
+        <a href="${setupLink}" style="display:block;background:#14B8A6;color:#fff;padding:14px 24px;border-radius:10px;text-decoration:none;font-weight:bold;text-align:center;font-size:16px;margin:20px 0">
+          Set Up My Account &rarr;
+        </a>
+        <p style="color:#94A3B8;font-size:12px;text-align:center">This link expires in 24 hours. If you need a new link, go to dashboard.moravacare.com and click "Forgot password?"</p>
+        <p style="color:#475569;margin-top:16px">Questions? Reply to this email or contact us at <a href="mailto:support@moravacare.com" style="color:#14B8A6">support@moravacare.com</a> or (855) 812-6996.</p>
+        <p style="color:#475569">Welcome to Morava,<br/><strong>Moise Kouassi</strong><br/>Founder, Morava Care LLC</p>
+      `,
+      ),
+    });
+
+    console.log(
+      `onboardProvider: welcome email sent to ${email}. New account: ${isNewAccount}`,
+    );
+
+    return {
+      success: true,
+      uid,
+      isNewAccount,
+    };
+  },
+);
+// ================================================================
+// ONBOARD PROVIDER — called from admin panel Mark Live
+// Creates Firebase Auth account, sets custom claims,
+// sends welcome email with password-setup link
+// SECURITY:
