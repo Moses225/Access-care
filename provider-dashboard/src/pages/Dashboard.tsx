@@ -357,8 +357,11 @@ export default function Dashboard() {
   }, [providerProfile?.providerId]);
 
   const today = new Date().toISOString().split("T")[0];
-  const hasStripe = !!(providerProfile as unknown as Record<string, unknown>)
-    ?.stripeCustomerId;
+  const hasStripe = !!(
+    providerProfile?.stripeCustomerId ||
+    providerProfile?.stripePaymentMethodId ||
+    providerProfile?.manualBilling
+  );
 
   const filtered = bookings.filter((b) => {
     if (filter === "upcoming")
