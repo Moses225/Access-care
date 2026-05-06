@@ -683,6 +683,17 @@ export const stripeWebhook = onRequest(
             stripePaymentMethodId: paymentMethodId,
             billingSetupAt: admin.firestore.FieldValue.serverTimestamp(),
           });
+          // Sync to providerUsers for App Check timing fix on dashboard
+          const puSnap = await db
+            .collection("providerUsers")
+            .where("providerId", "==", providerId)
+            .limit(1)
+            .get();
+          if (puSnap.empty === false) {
+            await puSnap.docs[0].ref.update({
+              stripePaymentMethodId: paymentMethodId,
+            });
+          }
           console.log(
             `stripeWebhook: saved payment method ${paymentMethodId} for provider ${providerId}`,
           );
