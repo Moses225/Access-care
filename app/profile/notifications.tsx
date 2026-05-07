@@ -1,11 +1,11 @@
-import { Stack, useRouter } from 'expo-router';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
-import { useTheme } from '../../context/ThemeContext';
-import { useAuth } from '../../context/AuthContext';
-import { GuestUpgradePrompt } from '../../components/GuestUpgradePrompt';
-import { auth, db } from '../../firebase';
+import { Stack, useRouter } from "expo-router";
+import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
+import { StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
+import { GuestUpgradePrompt } from "../../components/GuestUpgradePrompt";
+import { useAuth } from "../../context/AuthContext";
+import { useTheme } from "../../context/ThemeContext";
+import { auth, db } from "../../firebase";
 
 export default function NotificationsScreen() {
   const router = useRouter();
@@ -24,14 +24,14 @@ export default function NotificationsScreen() {
     try {
       const user = auth.currentUser;
       if (!user) return;
-      const notifDoc = await getDoc(doc(db, 'notifications', user.uid));
+      const notifDoc = await getDoc(doc(db, "notifications", user.uid));
       if (notifDoc.exists()) {
         const data = notifDoc.data();
         setAppointmentReminders(data.appointmentReminders ?? true);
         setGeneralUpdates(data.generalUpdates ?? false);
       }
     } catch (error) {
-      if (__DEV__) console.error('Error loading notifications:', error);
+      if (__DEV__) console.error("Error loading notifications:", error);
     }
   };
 
@@ -39,15 +39,24 @@ export default function NotificationsScreen() {
     try {
       const user = auth.currentUser;
       if (!user) return;
-      await setDoc(doc(db, 'notifications', user.uid), { ...settings, updatedAt: serverTimestamp() });
+      await setDoc(doc(db, "notifications", user.uid), {
+        ...settings,
+        updatedAt: serverTimestamp(),
+      });
     } catch (error) {
-      if (__DEV__) console.error('Error saving notification settings:', error);
+      if (__DEV__) console.error("Error saving notification settings:", error);
     }
   };
 
   const handleToggleReminders = async (value: boolean) => {
     setAppointmentReminders(value);
     await saveSettings({ appointmentReminders: value, generalUpdates });
+    if (!value) {
+      // Cancel all scheduled reminders when user turns off
+      const { cancelAllScheduledNotificationsAsync } =
+        await import("expo-notifications");
+      await cancelAllScheduledNotificationsAsync();
+    }
   };
 
   const handleToggleUpdates = async (value: boolean) => {
@@ -60,27 +69,46 @@ export default function NotificationsScreen() {
     return (
       <>
         <Stack.Screen options={{ headerShown: false }} />
-        <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View
+          style={[styles.container, { backgroundColor: colors.background }]}
+        >
           <View style={[styles.header, { backgroundColor: colors.card }]}>
-            <TouchableOpacity onPress={() => router.back()} accessibilityRole="button">
-              <Text style={[styles.backText, { color: colors.primary }]}>← Back</Text>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              accessibilityRole="button"
+            >
+              <Text style={[styles.backText, { color: colors.primary }]}>
+                ← Back
+              </Text>
             </TouchableOpacity>
           </View>
           <View style={styles.guestWall}>
             <Text style={styles.lockIcon}>🔒</Text>
-            <Text style={[styles.guestWallTitle, { color: colors.text }]}>Account Required</Text>
+            <Text style={[styles.guestWallTitle, { color: colors.text }]}>
+              Account Required
+            </Text>
             <Text style={[styles.guestWallText, { color: colors.subtext }]}>
               Create a free account to manage your notification preferences.
             </Text>
             <TouchableOpacity
-              style={[styles.createAccountButton, { backgroundColor: colors.primary }]}
+              style={[
+                styles.createAccountButton,
+                { backgroundColor: colors.primary },
+              ]}
               onPress={() => setShowUpgradePrompt(true)}
               accessibilityRole="button"
             >
-              <Text style={styles.createAccountButtonText}>Create Free Account</Text>
+              <Text style={styles.createAccountButtonText}>
+                Create Free Account
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.back()} accessibilityRole="button">
-              <Text style={[styles.backToText, { color: colors.subtext }]}>Go back</Text>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              accessibilityRole="button"
+            >
+              <Text style={[styles.backToText, { color: colors.subtext }]}>
+                Go back
+              </Text>
             </TouchableOpacity>
           </View>
           <GuestUpgradePrompt
@@ -99,37 +127,56 @@ export default function NotificationsScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={[styles.header, { backgroundColor: colors.card }]}>
-          <TouchableOpacity onPress={() => router.back()} accessibilityRole="button">
-            <Text style={[styles.backText, { color: colors.primary }]}>← Back</Text>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            accessibilityRole="button"
+          >
+            <Text style={[styles.backText, { color: colors.primary }]}>
+              ← Back
+            </Text>
           </TouchableOpacity>
         </View>
         <View style={styles.content}>
-          <Text style={[styles.title, { color: colors.text }]}>Notifications</Text>
-          <Text style={[styles.subtitle, { color: colors.subtext }]}>Manage how you receive updates</Text>
+          <Text style={[styles.title, { color: colors.text }]}>
+            Notifications
+          </Text>
+          <Text style={[styles.subtitle, { color: colors.subtext }]}>
+            Manage how you receive updates
+          </Text>
 
           <View style={[styles.settingRow, { backgroundColor: colors.card }]}>
             <View style={styles.settingInfo}>
-              <Text style={[styles.settingTitle, { color: colors.text }]}>Appointment Reminders</Text>
-              <Text style={[styles.settingDescription, { color: colors.subtext }]}>
-                Get notified before your appointments
+              <Text style={[styles.settingTitle, { color: colors.text }]}>
+                Appointment Reminders
+              </Text>
+              <Text
+                style={[styles.settingDescription, { color: colors.subtext }]}
+              >
+                24-hour reminders before scheduled appointments
               </Text>
             </View>
             <Switch
               value={appointmentReminders}
               onValueChange={handleToggleReminders}
-              trackColor={{ false: '#ccc', true: colors.primary }}
+              trackColor={{ false: "#ccc", true: colors.primary }}
             />
           </View>
 
           <View style={[styles.settingRow, { backgroundColor: colors.card }]}>
             <View style={styles.settingInfo}>
-              <Text style={[styles.settingTitle, { color: colors.text }]}>General Updates</Text>
-              <Text style={[styles.settingDescription, { color: colors.subtext }]}>News, features, and tips</Text>
+              <Text style={[styles.settingTitle, { color: colors.text }]}>
+                General Updates
+              </Text>
+              <Text
+                style={[styles.settingDescription, { color: colors.subtext }]}
+              >
+                News, features, and tips
+              </Text>
             </View>
             <Switch
               value={generalUpdates}
               onValueChange={handleToggleUpdates}
-              trackColor={{ false: '#ccc', true: colors.primary }}
+              trackColor={{ false: "#ccc", true: colors.primary }}
             />
           </View>
         </View>
@@ -141,20 +188,49 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { paddingTop: 60, paddingBottom: 16, paddingHorizontal: 20 },
-  backText: { fontSize: 16, fontWeight: '600' },
+  backText: { fontSize: 16, fontWeight: "600" },
   content: { flex: 1, padding: 20 },
-  title: { fontSize: 28, fontWeight: 'bold', marginBottom: 8 },
+  title: { fontSize: 28, fontWeight: "bold", marginBottom: 8 },
   subtitle: { fontSize: 14, marginBottom: 32 },
-  settingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, borderRadius: 12, marginBottom: 12 },
+  settingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 20,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
   settingInfo: { flex: 1 },
-  settingTitle: { fontSize: 16, fontWeight: '600', marginBottom: 4 },
+  settingTitle: { fontSize: 16, fontWeight: "600", marginBottom: 4 },
   settingDescription: { fontSize: 13 },
   // Guest wall
-  guestWall: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
+  guestWall: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 32,
+  },
   lockIcon: { fontSize: 64, marginBottom: 20 },
-  guestWallTitle: { fontSize: 22, fontWeight: 'bold', marginBottom: 12, textAlign: 'center' },
-  guestWallText: { fontSize: 15, lineHeight: 22, textAlign: 'center', marginBottom: 32 },
-  createAccountButton: { paddingVertical: 16, paddingHorizontal: 40, borderRadius: 12, marginBottom: 16, width: '100%', alignItems: 'center' },
-  createAccountButtonText: { color: '#fff', fontSize: 17, fontWeight: 'bold' },
+  guestWallTitle: {
+    fontSize: 22,
+    fontWeight: "bold",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  guestWallText: {
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: "center",
+    marginBottom: 32,
+  },
+  createAccountButton: {
+    paddingVertical: 16,
+    paddingHorizontal: 40,
+    borderRadius: 12,
+    marginBottom: 16,
+    width: "100%",
+    alignItems: "center",
+  },
+  createAccountButtonText: { color: "#fff", fontSize: 17, fontWeight: "bold" },
   backToText: { fontSize: 15, paddingVertical: 12 },
 });
