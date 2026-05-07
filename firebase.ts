@@ -1,4 +1,5 @@
 import { getApp, getApps, initializeApp } from "firebase/app";
+import { CustomProvider, initializeAppCheck } from "firebase/app-check";
 import { getAuth, initializeAuth } from "firebase/auth";
 // @ts-ignore
 import { getReactNativePersistence } from "@firebase/auth/dist/rn/index.js";
@@ -30,6 +31,27 @@ export const auth = appAlreadyExists
   : initializeAuth(app, {
       persistence: getReactNativePersistence(AsyncStorage),
     });
+
+// App Check — uses debug token in dev, custom attestation in production
+// Full Play Integrity / DeviceCheck requires native module (Month 2)
+if (typeof __DEV__ !== "undefined") {
+  // In dev: use debug token so local testing works
+  // In production: sends empty token — keep Firestore in Monitor mode
+  // until native App Check module is implemented
+  try {
+    initializeAppCheck(app, {
+      provider: new CustomProvider({
+        getToken: async () => ({
+          token: __DEV__ ? "debug-token-morava-2026" : "",
+          expireTimeMillis: Date.now() + 3600000,
+        }),
+      }),
+      isTokenAutoRefreshEnabled: true,
+    });
+  } catch {
+    // App Check already initialized — safe to ignore
+  }
+}
 
 export const db = getFirestore(app);
 export const storage = getStorage(app);
