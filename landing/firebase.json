@@ -8,7 +8,10 @@
       {
         "source": "**/*.html",
         "headers": [
-          { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          },
           { "key": "Pragma", "value": "no-cache" }
         ]
       },
@@ -42,6 +45,46 @@
       { "source": "/reps", "destination": "/reps.html" },
       { "source": "/admin", "destination": "/admin.html" },
       { "source": "/provider-submit", "destination": "/provider-submit.html" },
+      {
+        "source": "/soonercare-mental-health-oklahoma-city",
+        "destination": "/soonercare-mental-health-oklahoma-city.html"
+      },
+      {
+        "source": "/soonercare-primary-care-oklahoma-city",
+        "destination": "/soonercare-primary-care-oklahoma-city.html"
+      },
+      {
+        "source": "/soonercare-obgyn-oklahoma-city",
+        "destination": "/soonercare-obgyn-oklahoma-city.html"
+      },
+      {
+        "source": "/soonercare-dental-oklahoma-city",
+        "destination": "/soonercare-dental-oklahoma-city.html"
+      },
+      {
+        "source": "/soonercare-doula-oklahoma",
+        "destination": "/soonercare-doula-oklahoma.html"
+      },
+      {
+        "source": "/soonercare-vision-oklahoma-city",
+        "destination": "/soonercare-vision-oklahoma-city.html"
+      },
+      {
+        "source": "/soonercare-addiction-counseling-oklahoma",
+        "destination": "/soonercare-addiction-counseling-oklahoma.html"
+      },
+      {
+        "source": "/soonercare-pediatrics-oklahoma-city",
+        "destination": "/soonercare-pediatrics-oklahoma-city.html"
+      },
+      {
+        "source": "/soonercare-chiropractor-oklahoma-city",
+        "destination": "/soonercare-chiropractor-oklahoma-city.html"
+      },
+      {
+        "source": "/soonercare-physical-therapy-oklahoma-city",
+        "destination": "/soonercare-physical-therapy-oklahoma-city.html"
+      },
       { "source": "**", "destination": "/index.html" }
     ]
   }
