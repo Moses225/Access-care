@@ -9,6 +9,8 @@ import {
 } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import NavBar from "../components/NavBar";
+import PlanStatusCard from "../components/PlanStatusCard";
 import { useAuth } from "../context/AuthContext";
 import { db } from "../firebase";
 import BillingSetup from "./BillingSetup";
@@ -482,6 +484,11 @@ export default function Dashboard() {
     (b) => b.status === "cancelled" || b.status === "no_show",
   ).length;
 
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const visitsThisMonth = bookings.filter(
+    (b) => b.status === "completed" && b.date?.startsWith(currentMonth),
+  ).length;
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
       {/* ── Top nav ─────────────────────────────────────────────────────── */}
@@ -529,6 +536,8 @@ export default function Dashboard() {
           </div>
         </div>
       </nav>
+
+      <NavBar />
 
       <div className="max-w-5xl mx-auto px-6 py-8">
         {/* ── 2FA setup banner ────────────────────────────────────────────── */}
@@ -665,7 +674,10 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* ── Filter tabs ─────────────────────────────────────────────────── */}
+        {/* ── Plan status card ────────────────────────────────────────── */}
+        <PlanStatusCard visitsThisMonth={visitsThisMonth} />
+
+        {/* ── Filter tabs ─────────────────────────────────────────────── */}
         <div className="flex gap-2 mb-6">
           {(["upcoming", "all", "past"] as const).map((tab) => (
             <button
@@ -1099,7 +1111,10 @@ export default function Dashboard() {
         <BillingSetup
           providerId={providerProfile.providerId}
           providerName={providerProfile.name}
-          isFoundingProvider={true}
+          isFoundingProvider={
+            providerProfile?.plan !== "standard" &&
+            providerProfile?.plan !== "pro"
+          }
           onClose={() => setShowBillingModal(false)}
           onSuccess={() => {
             setShowBillingModal(false);
