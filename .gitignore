@@ -1,13 +1,11 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
-
-# dependencies
+# Dependencies
 node_modules/
 
 # Expo
 .expo/
-dist/
-web-build/
+.expo-shared/
 expo-env.d.ts
+web-build/
 
 # Native
 .kotlin/
@@ -21,63 +19,19 @@ expo-env.d.ts
 # Metro
 .metro-health-check*
 
-# debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
-
-# macOS
-.DS_Store
-*.pem
-
-# local env files
-.env*.local
-
-# typescript
-*.tsbuildinfo
-
-app-example
-
-# generated native folders
+# Generated native folders
 /ios
 /android
-
-# Firebase credentials (NEVER COMMIT!)
-scripts/serviceAccountKey.json
-**/serviceAccountKey.json
-
-# Provider data CSV files (contains real provider info)
-data/*.csv
-*.csv
-
-# Environment files
-.env
-.env.local
-
-# Firebase config (optional - yours is already in code, but good practice)
-# firebase-config.json
-
-# Expo
-.expo/
-.expo-shared/
-
-# Dependencies
-node_modules/
-
-# Build outputs
-dist/
-build/
-.next/
-out/
 
 # Debug
 npm-debug.*
 yarn-debug.*
 yarn-error.*
 
-# OS
+# macOS / OS
 .DS_Store
 Thumbs.db
+*.pem
 
 # IDE
 .vscode/
@@ -86,11 +40,35 @@ Thumbs.db
 *.swo
 *~
 
+# TypeScript
+*.tsbuildinfo
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Environment files — NEVER COMMIT
 .env
 .env.local
 .env.staging
 .env.production
+.env*.local
+
+# Firebase cache and credentials
+.firebase/
+provider-dashboard/.firebase/
+scripts/serviceAccountKey.json
 scripts/serviceAccountKey.staging.json
 scripts/serviceAccountKey.production.json
 scripts/*.json
 serviceAccountKey.json
+**/serviceAccountKey.json
+
+# Provider data CSV — contains real provider info
+data/*.csv
+*.csv
+
+# Misc
+app-example
