@@ -1,0 +1,8 @@
+{
+  "hosting": {
+    "site": "morava-dashboard-staging",
+    "public": "provider-dashboard/dist",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [{ "source": "**", "destination": "/index.html" }]
+  }
+}

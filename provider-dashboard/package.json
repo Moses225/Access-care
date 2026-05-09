@@ -11,7 +11,8 @@
     "shell": "npm run build && firebase functions:shell",
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
-    "logs": "firebase functions:log"
+    "logs": "firebase functions:log",
+    "dev": "vite"
   },
   "dependencies": {
     "@stripe/react-stripe-js": "^6.3.0",

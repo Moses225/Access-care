@@ -24,6 +24,8 @@ interface ProviderProfile {
   stripeCustomerId?: string;
   stripePaymentMethodId?: string;
   manualBilling?: boolean;
+  plan?: "founding" | "standard" | "pro";
+  foundingExpiresAt?: string | null;
 }
 
 interface AuthContextType {
@@ -91,6 +93,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               stripePaymentMethodId:
                 d.stripePaymentMethodId || prov.stripePaymentMethodId || "",
               manualBilling: d.manualBilling || prov.manualBilling || false,
+              plan: d.plan || prov.plan || "founding",
+              foundingExpiresAt: (() => {
+                const raw = d.foundingExpiresAt || prov.foundingExpiresAt;
+                if (!raw) return null;
+                if (typeof raw === "string") return raw;
+                if (typeof raw?.toDate === "function")
+                  return raw.toDate().toISOString();
+                return null;
+              })(),
             });
           } else {
             setProviderProfile(null);
