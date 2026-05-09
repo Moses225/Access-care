@@ -56,9 +56,22 @@ service cloud.firestore {
     // ================================================================
     // PROVIDERS
     // ================================================================
+    // isProviderSafeUpdate — blocks providers from self-upgrading plan/billing fields
+    function isProviderSafeUpdate() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'plan', 'foundingExpiresAt', 'stripeCustomerId',
+        'stripePaymentMethodId', 'stripeSubscriptionId',
+        'manualBilling', 'isFoundingProvider', 'planActivatedAt',
+        'providerNumber', 'commissionRate', 'billable'
+      ]);
+    }
+
     match /providers/{providerId} {
       allow read: if true;
-      allow write: if isAdmin() || isProviderOwner(providerId);
+      allow create: if isAdmin();
+      allow delete: if isAdmin();
+      allow update: if isAdmin()
+        || (isProviderOwner(providerId) && isProviderSafeUpdate());
     }
 
     // ================================================================
