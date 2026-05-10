@@ -245,7 +245,7 @@ const WaitTimeCard = ({
   return (
     <View style={[styles.section, { backgroundColor: colors.card }]}>
       <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        Pricing & Co-pay
+        Wait Time & Visit Length
       </Text>
       <View style={styles.waitTimeGrid}>
         <View
