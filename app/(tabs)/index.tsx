@@ -584,7 +584,7 @@ export default function HomeScreen() {
   const loadProviders = useCallback(async () => {
     try {
       setLoading(true);
-      const snapshot = await getDocs(query(collection(db, "providers"), where("status", "==", "active")));
+      const snapshot = await getDocs(query(collection(db, "providers")));
 
       const providersList: Provider[] = [];
       const specialtiesSet = new Set<string>();

@@ -801,6 +801,14 @@ export default function ProviderDetailScreen() {
   };
 
   const handleBooking = () => {
+    if (!provider?.verified) {
+      Alert.alert(
+        "Provider Not Yet Active",
+        "This provider hasn't joined Morava yet. You can contact them directly using the phone number on their profile.",
+        [{ text: "OK" }]
+      );
+      return;
+    }
     if (id) router.push(`/booking/${id}` as any);
   };
 
