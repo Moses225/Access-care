@@ -321,6 +321,7 @@ export default function Dashboard() {
   // Decline
   const [declineId, setDeclineId] = useState<string | null>(null);
   const [declineReason, setDeclineReason] = useState("");
+  const [declineNote, setDeclineNote] = useState("");
 
   // Reschedule
   const [rescheduleId, setRescheduleId] = useState<string | null>(null);
@@ -411,10 +412,13 @@ export default function Dashboard() {
         status: "cancelled",
         cancelledAt: serverTimestamp(),
         cancelledBy: user?.uid,
-        declineReason,
+        declineReason: declineReason === "Other — please call our office" && declineNote.trim()
+          ? `Other — please call our office: ${declineNote.trim()}`
+          : declineReason,
       });
       setDeclineId(null);
       setDeclineReason("");
+      setDeclineNote("");
     } catch (e) {
       console.error(e);
     } finally {
@@ -995,11 +999,14 @@ export default function Dashboard() {
             <p className="text-slate-500 text-sm mb-6">
               Select a reason. The patient will be notified immediately.
             </p>
-            <div className="space-y-2 mb-6">
+            <div className="space-y-2 mb-4">
               {DECLINE_REASONS.map((reason) => (
                 <button
                   key={reason}
-                  onClick={() => setDeclineReason(reason)}
+                  onClick={() => {
+                    setDeclineReason(reason);
+                    if (reason !== "Other — please call our office") setDeclineNote("");
+                  }}
                   className={`w-full text-left px-4 py-3 rounded-xl text-sm border transition-colors ${
                     declineReason === reason
                       ? "border-teal-500 bg-teal-50 text-teal-700 font-medium"
@@ -1011,11 +1018,28 @@ export default function Dashboard() {
                 </button>
               ))}
             </div>
+            {declineReason === "Other — please call our office" && (
+              <div className="mb-6">
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+                  Additional details <span className="text-slate-400 font-normal normal-case">(optional — visible to patient)</span>
+                </label>
+                <textarea
+                  value={declineNote}
+                  onChange={(e) => setDeclineNote(e.target.value)}
+                  maxLength={200}
+                  rows={3}
+                  placeholder="e.g. Please call our office at (405) 555-0100 to reschedule..."
+                  className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none"
+                />
+                <div className="text-xs text-slate-400 mt-1 text-right">{declineNote.length}/200</div>
+              </div>
+            )}
             <div className="flex gap-3">
               <button
                 onClick={() => {
                   setDeclineId(null);
                   setDeclineReason("");
+                  setDeclineNote("");
                 }}
                 className="flex-1 border border-slate-200 text-slate-600 font-semibold py-3 rounded-xl text-sm hover:border-slate-300 transition-colors"
               >
@@ -1077,6 +1101,22 @@ export default function Dashboard() {
                 </select>
               </div>
             </div>
+            {declineReason === "Other — please call our office" && (
+              <div className="mb-6">
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+                  Additional details <span className="text-slate-400 font-normal normal-case">(optional — visible to patient)</span>
+                </label>
+                <textarea
+                  value={declineNote}
+                  onChange={(e) => setDeclineNote(e.target.value)}
+                  maxLength={200}
+                  rows={3}
+                  placeholder="e.g. Please call our office at (405) 555-0100 to reschedule..."
+                  className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none"
+                />
+                <div className="text-xs text-slate-400 mt-1 text-right">{declineNote.length}/200</div>
+              </div>
+            )}
             <div className="flex gap-3">
               <button
                 onClick={() => {
