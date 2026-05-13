@@ -2008,13 +2008,10 @@ export default function BookingScreen() {
       });
 
       if (__DEV__) console.log("✅ Booking created:", bookingRef.id);
-      await sendBookingConfirmationSMS(
-        sanitizedData.patientPhone,
-        provider.name,
-        formatDate(sanitizedData.date),
-        sanitizedData.time,
-        bookingRef.id,
-      );
+      // SMS temporarily disabled — moving to Cloud Function (Month 2)
+      // sendBookingConfirmationSMS called here once TWILIO credentials
+      // are migrated out of EXPO_PUBLIC_ and into Firebase Secrets
+      // Patients receive push notification + email confirmation instead
 
       Alert.alert(
         "Booking Requested!",

@@ -1,5 +1,8 @@
 // SMS utility — Twilio REST API
-// Credentials loaded from env vars (never hardcoded)
+// ⚠️  SECURITY NOTE: SMS sending with PHI must go through Cloud Functions.
+// This client-side utility sends PHI-FREE notification-only messages only.
+// Twilio credentials are loaded from env — must NEVER use EXPO_PUBLIC_ prefix
+// in production. Move to Cloud Functions before first real provider launch.
 
 const ACCOUNT_SID = process.env.EXPO_PUBLIC_TWILIO_ACCOUNT_SID ?? "";
 const AUTH_TOKEN = process.env.EXPO_PUBLIC_TWILIO_AUTH_TOKEN ?? "";
@@ -10,20 +13,15 @@ async function sendSMS(to: string, body: string): Promise<boolean> {
     if (__DEV__) console.warn("⚠️ Twilio credentials not configured");
     return false;
   }
-
-  // Sanitize phone — ensure E.164 format
   const sanitized = to.replace(/[^\d+]/g, "");
   const e164 = sanitized.startsWith("+") ? sanitized : `+1${sanitized}`;
-
   if (e164.length < 10) {
     if (__DEV__) console.warn("⚠️ Invalid phone number:", to);
     return false;
   }
-
   try {
     const credentials = btoa(`${ACCOUNT_SID}:${AUTH_TOKEN}`);
     const url = `https://api.twilio.com/2010-04-01/Accounts/${ACCOUNT_SID}/Messages.json`;
-
     const response = await fetch(url, {
       method: "POST",
       headers: {
@@ -36,9 +34,7 @@ async function sendSMS(to: string, body: string): Promise<boolean> {
         Body: body,
       }).toString(),
     });
-
     const data = await response.json();
-
     if (response.ok) {
       if (__DEV__) console.log("✅ SMS sent:", data.sid, "→", e164);
       return true;
@@ -52,45 +48,45 @@ async function sendSMS(to: string, body: string): Promise<boolean> {
   }
 }
 
+// PHI-FREE: No provider name, date, or time in any SMS body.
+// All details are behind the authenticated app.
+
 export async function sendBookingConfirmationSMS(
   phoneNumber: string,
-  providerName: string,
-  date: string,
-  time: string,
-  bookingId: string,
+  providerName: string, // kept in signature for compatibility — NOT used in body
+  date: string,         // kept in signature for compatibility — NOT used in body
+  time: string,         // kept in signature for compatibility — NOT used in body
+  bookingId: string,    // kept in signature for compatibility — NOT used in body
 ): Promise<boolean> {
   const body =
-    `Morava: Your appointment request with ${providerName} on ${date} at ${time} has been submitted. ` +
-    `Booking ID: ${bookingId}. We'll text you when confirmed. Reply STOP to unsubscribe.`;
-
+    `Morava: Your appointment request has been submitted and is pending confirmation. ` +
+    `Open the app to view details. Reply STOP to unsubscribe.`;
   if (__DEV__) console.log("📱 Sending confirmation SMS to:", phoneNumber);
   return sendSMS(phoneNumber, body);
 }
 
 export async function sendBookingConfirmedSMS(
   phoneNumber: string,
-  providerName: string,
-  date: string,
-  time: string,
+  providerName: string, // kept in signature for compatibility — NOT used in body
+  date: string,         // kept in signature for compatibility — NOT used in body
+  time: string,         // kept in signature for compatibility — NOT used in body
 ): Promise<boolean> {
   const body =
-    `Morava: ✅ Confirmed! Your appointment with ${providerName} is set for ${date} at ${time}. ` +
-    `Bring your ID and insurance card. Reply STOP to unsubscribe.`;
-
+    `Morava: ✅ Your appointment has been confirmed. ` +
+    `Open the Morava app to view the details. Bring your ID and insurance card. Reply STOP to unsubscribe.`;
   if (__DEV__) console.log("📱 Sending confirmed SMS to:", phoneNumber);
   return sendSMS(phoneNumber, body);
 }
 
 export async function sendBookingReminderSMS(
   phoneNumber: string,
-  providerName: string,
-  date: string,
-  time: string,
+  providerName: string, // kept in signature for compatibility — NOT used in body
+  date: string,         // kept in signature for compatibility — NOT used in body
+  time: string,         // kept in signature for compatibility — NOT used in body
 ): Promise<boolean> {
   const body =
-    `Morava: ⏰ Reminder — appointment with ${providerName} tomorrow at ${time}. ` +
-    `Arrive 10 min early. Bring ID and insurance. Reply STOP to unsubscribe.`;
-
+    `Morava: ⏰ You have an upcoming appointment tomorrow. ` +
+    `Open the Morava app to view the time and location. Arrive 10 min early with your ID and insurance. Reply STOP to unsubscribe.`;
   if (__DEV__) console.log("📱 Sending reminder SMS to:", phoneNumber);
   return sendSMS(phoneNumber, body);
 }

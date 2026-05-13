@@ -177,21 +177,16 @@ export const onBookingCreated = onDocumentCreated(
       await resend.emails.send({
         from: "Morava <noreply@moravacare.com>",
         to: providerEmail,
-        subject: `New booking request — ${esc(data.patientName)}`,
+        subject: `You have a new Morava booking request`,
         html: wrapEmail(
           "New Appointment Request",
           `
-          <h2 style="color:#0F172A;margin:0 0 16px">New booking request</h2>
-          <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:16px">
-            <p style="margin:0 0 8px;color:#475569"><strong>Patient:</strong> ${esc(data.patientName)}</p>
-            <p style="margin:0 0 8px;color:#475569"><strong>Date:</strong> ${esc(data.date)}</p>
-            <p style="margin:0 0 8px;color:#475569"><strong>Time:</strong> ${esc(data.time)}</p>
-            <p style="margin:0;color:#475569"><strong>Visit Type:</strong> ${esc(data.visitTypeLabel) || "Not specified"}</p>
-          </div>
-          <p style="color:#64748B;font-size:13px;margin-bottom:20px">Log in to view the complete patient health summary and confirm or decline.</p>
+          <h2 style="color:#0F172A;margin:0 0 16px">You have a new booking request</h2>
+          <p style="color:#475569;margin-bottom:20px">A patient has requested an appointment. Log in to your Morava dashboard to review the patient health summary and confirm or decline.</p>
           <a href="https://dashboard.moravacare.com" style="display:block;background:#14B8A6;color:#fff;padding:14px 24px;border-radius:10px;text-decoration:none;font-weight:bold;text-align:center;font-size:16px">
-            Review &amp; Confirm &rarr;
+            Review &amp; Confirm in Dashboard &rarr;
           </a>
+          <p style="color:#94A3B8;font-size:12px;margin-top:16px;text-align:center">Appointment details are only visible after logging in.</p>
         `,
         ),
       });
@@ -211,7 +206,7 @@ export const onBookingCreated = onDocumentCreated(
             body: JSON.stringify({
               to: pushToken,
               title: "📋 Booking Request Sent",
-              body: `Your request to see ${esc(data.providerName || "your provider")} on ${esc(data.date)} is pending confirmation.`,
+              body: `Your appointment request has been submitted and is pending confirmation. Open Morava to view details.`,
               data: {
                 bookingId: event.params.bookingId,
                 type: "booking_pending",
@@ -259,46 +254,38 @@ export const onBookingStatusChanged = onDocumentUpdated(
       return;
     }
     if (!patientEmail) return;
-    const providerName = esc(after.providerName || "Your provider");
-    const date = esc(after.date || "");
-    const time = esc(after.time || "");
     let subject = "",
       bodyHtml = "";
     if (after.status === "confirmed") {
-      subject = `Appointment confirmed — ${date} at ${time}`;
+      subject = `Your Morava appointment has been confirmed`;
       bodyHtml = `
         <div style="background:#F0FDF4;border-left:4px solid #22C55E;border-radius:8px;padding:14px;margin-bottom:14px">
           <strong style="color:#166534">Your appointment is confirmed!</strong>
         </div>
-        <p style="color:#475569"><strong>${providerName}</strong> confirmed your appointment for ${date} at ${time}.</p>
+        <p style="color:#475569">Your upcoming appointment has been confirmed. Open the Morava app to view the full appointment details including date, time, and provider information.</p>
         <p style="color:#475569">Please arrive 10 minutes early with your ID and insurance card.</p>
-        <a href="https://moravacare.com" style="display:block;background:#14B8A6;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:bold;text-align:center;margin-top:16px">View in Morava App &rarr;</a>
+        <a href="https://moravacare.com" style="display:block;background:#14B8A6;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:bold;text-align:center;margin-top:16px">View Details in Morava App &rarr;</a>
+        <p style="color:#94A3B8;font-size:12px;margin-top:12px;text-align:center">For security, appointment details are only visible in the app after logging in.</p>
       `;
     } else if (after.status === "cancelled") {
-      const reason =
-        after.cancelledBy !== "patient"
-          ? esc(after.declineReason || "")
-          : esc(after.patientCancelReason || "");
-      subject = `Appointment update — ${date}`;
+      subject = `Your Morava appointment has been updated`;
       bodyHtml = `
         <div style="background:#FEF2F2;border-left:4px solid #EF4444;border-radius:8px;padding:14px;margin-bottom:14px">
-          <strong style="color:#991B1B">Appointment cancelled</strong>
+          <strong style="color:#991B1B">Appointment update</strong>
         </div>
-        <p style="color:#475569">Your appointment with <strong>${providerName}</strong> on ${date} at ${time} has been cancelled.</p>
-        ${reason ? `<p style="color:#475569"><strong>Reason:</strong> ${reason}</p>` : ""}
-        <a href="https://moravacare.com" style="display:block;background:#14B8A6;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:bold;text-align:center;margin-top:16px">Find Another Provider &rarr;</a>
+        <p style="color:#475569">An upcoming appointment has been cancelled or declined. Open the Morava app to view details and find another available provider.</p>
+        <a href="https://moravacare.com" style="display:block;background:#14B8A6;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:bold;text-align:center;margin-top:16px">Open Morava App &rarr;</a>
+        <p style="color:#94A3B8;font-size:12px;margin-top:12px;text-align:center">For security, appointment details are only visible in the app after logging in.</p>
       `;
     } else {
-      const pd = esc(after.proposedDate || ""),
-        pt = esc(after.proposedTime || "");
-      subject = `Reschedule proposed — ${providerName}`;
+      subject = `Your provider has proposed a new appointment time`;
       bodyHtml = `
         <div style="background:#FAF5FF;border-left:4px solid #A855F7;border-radius:8px;padding:14px;margin-bottom:14px">
           <strong style="color:#7E22CE">New time proposed</strong>
         </div>
-        <p style="color:#475569"><strong>${providerName}</strong> has proposed rescheduling.</p>
-        <p style="color:#475569"><strong>Original:</strong> ${date} at ${time}<br/><strong>Proposed:</strong> ${pd} at ${pt}</p>
+        <p style="color:#475569">Your provider has proposed a new time for your upcoming appointment. Open the Morava app to view the proposed time and accept or decline.</p>
         <a href="https://moravacare.com" style="display:block;background:#14B8A6;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:bold;text-align:center;margin-top:16px">Respond in Morava App &rarr;</a>
+        <p style="color:#94A3B8;font-size:12px;margin-top:12px;text-align:center">For security, appointment details are only visible in the app after logging in.</p>
       `;
     }
     try {
@@ -323,13 +310,13 @@ export const onBookingStatusChanged = onDocumentUpdated(
           let pushBody = "";
           if (after.status === "confirmed") {
             pushTitle = "✅ Appointment Confirmed!";
-            pushBody = `${esc(after.providerName || "Your provider")} confirmed your appointment on ${esc(after.date)} at ${esc(after.time)}.`;
+            pushBody = `Your appointment has been confirmed. Open Morava to view the details.`;
           } else if (after.status === "cancelled") {
             pushTitle = "❌ Appointment Cancelled";
-            pushBody = `Your appointment with ${esc(after.providerName || "your provider")} on ${esc(after.date)} was cancelled.`;
+            pushBody = `An appointment has been cancelled. Open Morava for details.`;
           } else if (after.status === "reschedule_pending") {
             pushTitle = "📅 Reschedule Proposed";
-            pushBody = `${esc(after.providerName || "Your provider")} proposed a new time for your appointment.`;
+            pushBody = `Your provider has proposed a new appointment time. Open Morava to respond.`;
           }
           if (pushTitle) {
             await fetch("https://exp.host/--/api/v2/push/send", {
@@ -458,17 +445,22 @@ export const monthlyBilling = onSchedule(
           continue;
         }
         // Founding providers pay $6 for 2 years from foundingProviderSince, then $10
-        let rate = 10; // standard rate
-        if (pd.foundingProvider === true && pd.foundingProviderSince) {
+        let rate = 10; // standard rate default
+        // New field format (plan + foundingExpiresAt)
+        if (pd.plan === "founding" && pd.foundingExpiresAt) {
+          const expiry =
+            typeof pd.foundingExpiresAt === "string"
+              ? new Date(pd.foundingExpiresAt)
+              : (pd.foundingExpiresAt.toDate?.() ?? new Date(0));
+          if (new Date() < expiry) rate = 6;
+        }
+        // Legacy field format — kept for backward compatibility
+        else if (pd.foundingProvider === true && pd.foundingProviderSince) {
           const since = pd.foundingProviderSince.toDate
             ? pd.foundingProviderSince.toDate()
             : new Date(pd.foundingProviderSince);
           const twoYearsMs = 2 * 365 * 24 * 60 * 60 * 1000;
-          if (Date.now() - since.getTime() < twoYearsMs) {
-            rate = 6; // still in founding period
-          }
-        } else if (!pd.foundingProvider) {
-          rate = 10; // standard
+          if (Date.now() - since.getTime() < twoYearsMs) rate = 6;
         }
         const amount = info.count * rate * 100;
         const pi = await stripe.paymentIntents.create(
