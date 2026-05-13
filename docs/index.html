@@ -428,8 +428,8 @@
       <h1>Privacy Policy</h1>
       <p>How we collect, use, and protect your information</p>
       <div class="meta-row">
-        <span class="pill">Effective: March 22, 2026</span>
-        <span class="pill">Version 2.0</span>
+        <span class="pill">Effective: May 13, 2026</span>
+        <span class="pill">Version 2.1</span>
       </div>
     </header>
 
@@ -583,7 +583,7 @@
           </li>
           <li>Process and track appointment requests</li>
           <li>
-            Send appointment confirmations and status updates via SMS (Twilio)
+            Send appointment confirmation and status update notifications (push notifications via Firebase; SMS notifications via Twilio are currently paused pending execution of a Business Associate Agreement and will be re-enabled once complete)
           </li>
           <li>Show you providers near your location during a search session</li>
           <li>
@@ -677,8 +677,8 @@
             PII-scrubbed error reports only.
           </li>
           <li>
-            <strong>Twilio:</strong> SMS delivery for appointment confirmations.
-            Receives only your phone number and the message text.
+            <strong>Twilio:</strong> SMS delivery for appointment notifications.
+            SMS notifications are currently paused pending execution of a HIPAA Business Associate Agreement with Twilio. No PHI is transmitted to Twilio until the BAA is executed.
           </li>
           <li>
             <strong>Expo / EAS:</strong> App delivery and over-the-air updates.
@@ -763,6 +763,13 @@
             <strong>Analytics:</strong> Our analytics are internal only and not
             shared with any ad network or data broker. There is nothing to opt
             out of.
+          </li>
+        </ul>
+          <li>
+            <strong>Request an accounting of disclosures:</strong> You may request a list of instances where we have disclosed your health information to third parties, other than for treatment, payment, or healthcare operations purposes.
+          </li>
+          <li>
+            <strong>File a complaint:</strong> If you believe your privacy rights have been violated, you have the right to file a complaint with the U.S. Department of Health and Human Services Office for Civil Rights (OCR) at <strong>hhs.gov/ocr</strong> or by calling 1-800-368-1019. We will not retaliate against you for filing a complaint.
           </li>
         </ul>
         <p>
@@ -864,12 +871,12 @@
             <tr>
               <td><strong>Sentry</strong></td>
               <td>Crash monitoring</td>
-              <td>PII-scrubbed error reports</td>
+              <td>PII-scrubbed error reports only (BAA signed May 2026)</td>
             </tr>
             <tr>
               <td><strong>Twilio</strong></td>
-              <td>SMS appointment notifications</td>
-              <td>Phone number + message text</td>
+              <td>SMS appointment notifications (paused pending BAA)</td>
+              <td>No PHI transmitted until BAA is executed</td>
             </tr>
             <tr>
               <td><strong>Expo / EAS</strong></td>
@@ -881,7 +888,20 @@
       </div>
 
       <div class="section">
-        <h2><span class="num">11</span> Changes to This Policy</h2>
+        <h2><span class="num">11</span> Security Incident &amp; Breach Notification</h2>
+        <p>Morava maintains safeguards to protect your information. In the event of a data security incident involving your Protected Health Information (PHI), we will:</p>
+        <ul>
+          <li><strong>Investigate promptly</strong> and determine the scope of any unauthorized access or disclosure</li>
+          <li><strong>Notify affected individuals within 60 days</strong> of discovering a breach, as required by HIPAA's Breach Notification Rule</li>
+          <li>Notify the U.S. Department of Health and Human Services (HHS) as required by law</li>
+          <li>Provide notification by email (if you have an account) or prominent notice on moravacare.com</li>
+          <li>Include: what occurred, types of information involved, steps to protect yourself, and what we are doing to investigate and prevent recurrence</li>
+        </ul>
+        <p>To report a suspected security incident, contact us immediately at <strong>support@moravacare.com</strong>.</p>
+      </div>
+
+      <div class="section">
+        <h2><span class="num">12</span> Changes to This Policy</h2>
         <p>
           We may update this Privacy Policy as Morava grows and adds new
           features. The Effective Date at the top of this page reflects the most
@@ -899,7 +919,7 @@
       </div>
 
       <div class="section">
-        <h2><span class="num">12</span> Contact Us</h2>
+        <h2><span class="num">13</span> Contact Us</h2>
         <div class="contact">
           <h3>Get in Touch</h3>
           <div class="contact-row">📍 <span>Oklahoma, United States</span></div>
@@ -924,7 +944,7 @@
         <a href="https://moravacare.com">moravacare.com</a>
       </p>
       <p style="margin-top: 6px">
-        Privacy Policy v2.0 — Last updated March 22, 2026
+        Privacy Policy v2.1 — Last updated May 13, 2026
       </p>
     </footer>
   </body>
