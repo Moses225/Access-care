@@ -199,7 +199,7 @@ const PricingCard = ({ colors }: { colors: any }) => (
       />
       <Text style={[styles.pricingInfoText, { color: colors.text }]}>
         Pricing and co-pay information will be available once insurance
-        verification is live. Contact the provider`&apos;`s office directly for
+        verification is live. Contact the provider's office directly for
         cost estimates.
       </Text>
     </View>

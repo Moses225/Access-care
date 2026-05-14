@@ -476,22 +476,24 @@ export default function SignupScreen() {
           <View style={[styles.checkbox, nppConsent && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
             {nppConsent && <Text style={styles.checkmark}>✓</Text>}
           </View>
-          <Text style={[styles.consentText, { color: colors.text }]}>
-            I have read and agree to the{" "}
+          <Text style={[styles.consentText, { color: colors.text }]}
+            onPress={() => setNppConsent((v) => !v)}
+          >
+            {"I have read and agree to the "}
             <Text
               style={{ color: colors.primary, textDecorationLine: "underline" }}
-              onPress={() => Linking.openURL("https://moses225.github.io/Access-care/")}
+              onPress={(e) => { e.stopPropagation?.(); Linking.openURL("https://moses225.github.io/Access-care/"); }}
             >
-              Privacy Policy
+              {"Privacy Policy"}
             </Text>
-            {" "}and{" "}
+            {" and "}
             <Text
               style={{ color: colors.primary, textDecorationLine: "underline" }}
-              onPress={() => Linking.openURL("https://moses225.github.io/Access-care/")}
+              onPress={(e) => { e.stopPropagation?.(); Linking.openURL("https://moses225.github.io/Access-care/"); }}
             >
-              Notice of Privacy Practices
+              {"Notice of Privacy Practices"}
             </Text>
-            . I consent to the collection and use of my health information as described therein.
+            {". I consent to the collection and use of my health information as described therein."}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity

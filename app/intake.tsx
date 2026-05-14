@@ -1779,15 +1779,17 @@ export default function IntakeScreen() {
             <View style={[s.consentBox, intakeConsent && { backgroundColor: "#00838F", borderColor: "#00838F" }]}>
               {intakeConsent && <Text style={s.consentCheck}>✓</Text>}
             </View>
-            <Text style={[s.consentText, { color: colors.text }]}>
-              I consent to the collection and use of my health information as described in the{" "}
+            <Text style={[s.consentText, { color: colors.text }]}
+              onPress={() => setIntakeConsent((v) => !v)}
+            >
+              {"I consent to the collection and use of my health information as described in the "}
               <Text
                 style={{ color: "#00838F", textDecorationLine: "underline" }}
-                onPress={() => Linking.openURL("https://moses225.github.io/Access-care/")}
+                onPress={(e) => { e.stopPropagation?.(); Linking.openURL("https://moses225.github.io/Access-care/"); }}
               >
-                Notice of Privacy Practices
+                {"Notice of Privacy Practices"}
               </Text>
-              . This information will only be shared with providers I choose to book.
+              {". This information will only be shared with providers I choose to book."}
             </Text>
           </TouchableOpacity>
         )}
