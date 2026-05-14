@@ -72,3 +72,31 @@ data/*.csv
 
 # Misc
 app-example
+
+
+# ── HIPAA Security Hardening — added per audit ───────────────────────────────
+# Service account keys — NEVER commit these
+serviceAccountKey*.json
+*.serviceAccount.json
+*.credentials.json
+*-adminsdk-*.json
+secrets/
+.secrets/
+credentials/
+
+# Additional env file protection
+.env.*.local
+*.env.backup
+
+# Test scripts with credentials
+test-sms.js
+test-*.js
+
+# Python audit scripts (not app code)
+fix_*.py
+strip_*.py
+migrate_*.js
+
+# Firebase private config
+firebase-debug.log
+firestore-debug.log

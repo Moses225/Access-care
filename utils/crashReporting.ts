@@ -4,21 +4,26 @@ import * as Sentry from "@sentry/react-native";
 // These field names may appear in Firestore error metadata or in data
 // accidentally attached to errors. We strip them before any logging.
 const PII_FIELDS = [
-  "email",
-  "phone",
-  "patientName",
-  "patientPhone",
-  "guardianName",
-  "guardianPhone",
-  "address",
-  "dateOfBirth",
-  "policyNumber",
-  "policy",
-  "name",
-  "firstName",
-  "lastName",
-  "uid",
-  "userId",
+  // Identity
+  "email", "phone", "name", "firstName", "lastName", "displayName",
+  "patientName", "patientPhone", "guardianName", "guardianPhone",
+  "address", "dateOfBirth", "birthYear", "uid", "userId", "providerId",
+  // Insurance / Admin
+  "policyNumber", "policy", "memberId", "groupNumber", "insuranceId",
+  "medicaidId", "insuranceProvider", "insurancePlan",
+  // Clinical — added per HIPAA audit
+  "bloodType", "weight", "height", "medications", "allergies",
+  "conditions", "surgeries", "vaccinations", "pregnancyStatus",
+  "primaryCareProvider", "emergencyContact", "familyHistory",
+  "mentalHealthHistory", "reasonForVisit", "notes", "intakeSummary",
+  "chiefComplaint", "currentMedications", "pastMedications",
+  "chronicConditions", "recentSurgeries", "immunizations",
+  "socialHistory", "reviewOfSystems",
+  // Scheduling PHI
+  "bookingId", "appointmentDate", "appointmentTime", "providerName",
+  "practiceName", "visitType", "visitTypeLabel",
+  // Auth tokens
+  "token", "accessToken", "refreshToken", "idToken", "sessionToken",
 ];
 
 // Recursively scrub known PII fields from an object before logging
@@ -33,7 +38,10 @@ export function scrubPII(obj: any, depth = 0): any {
       .replace(
         /(\+?1?\s?)?(\(?\d{3}\)?[\s.\-]?)(\d{3}[\s.\-]?\d{4})/g,
         "[phone]",
-      );
+      )
+      .replace(/\b\d{3}[\-]?\d{2}[\-]?\d{4}\b/g, "[ssn]")
+      .replace(/\bMR[\-#]?\d{5,10}\b/gi, "[mrn]")
+      .replace(/\b[A-Z]{1,3}\d{6,12}\b/g, "[insurance-id]");
   }
   if (typeof obj !== "object") return obj;
   if (Array.isArray(obj)) return obj.map((item) => scrubPII(item, depth + 1));

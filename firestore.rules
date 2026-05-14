@@ -49,8 +49,21 @@ service cloud.firestore {
     }
 
     function noScript(field) {
-      return !(request.resource.data[field].matches('.*<script.*')) &&
-             !(request.resource.data[field].matches('.*javascript:.*'));
+      let v = request.resource.data[field];
+      return !(v.matches('.*<script.*'))
+          && !(v.matches('.*javascript:.*'))
+          && !(v.matches('.*vbscript:.*'))
+          && !(v.matches('.*<iframe.*'))
+          && !(v.matches('.*<img.*'))
+          && !(v.matches('.*<svg.*'))
+          && !(v.matches('.*<object.*'))
+          && !(v.matches('.*onerror =.*'))
+          && !(v.matches('.*onerror=.*'))
+          && !(v.matches('.*onload =.*'))
+          && !(v.matches('.*onload=.*'))
+          && !(v.matches('.*onclick=.*'))
+          && !(v.matches('.*data:text/html.*'))
+          && !(v.matches('.*%3[cC].*'));
     }
 
     // ================================================================
@@ -79,7 +92,9 @@ service cloud.firestore {
     // ================================================================
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
-      allow write: if isOwner(userId);
+      allow write: if isOwner(userId)
+                  && (!('firstName' in request.resource.data) || noScript('firstName'))
+                  && (!('lastName' in request.resource.data) || noScript('lastName'));
 
       match /dependents/{dependentId} {
         allow read:   if isOwner(userId) && isFullAccount();
@@ -113,15 +128,21 @@ service cloud.firestore {
                  && validOptionalString('notes', 1000)
                  && validOptionalString('reasonForVisit', 500);
 
-      allow update: if isAdmin()
-                 || isBookingProvider()
+      allow update: if (isAdmin()
+                 || (isBookingProvider()
+                     && request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['status','confirmedAt','confirmedBy','declineReason',
+                                  'declineNote','completedAt','completedBy','billable',
+                                  'invoiced','invoicedAt','stripePaymentIntentId',
+                                  'noShowAt','noShowBy','proposedDate','proposedTime',
+                                  'updatedAt']))
                  || (isBookingPatient()
                      && isFullAccount()
                      && request.resource.data.status == 'cancelled'
                      && request.resource.data.userId == resource.data.userId
                      && request.resource.data.providerId == resource.data.providerId
                      && request.resource.data.date == resource.data.date
-                     && request.resource.data.time == resource.data.time);
+                     && request.resource.data.time == resource.data.time));
       allow delete: if isAdmin();
     }
 
@@ -132,7 +153,7 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       match /slots/{date} {
         allow read: if isAuthenticated();
-        allow create, update: if isFullAccount() || isAdmin() || isProviderOwner(providerId);
+        allow create, update: if isAdmin() || isProviderOwner(providerId);
         allow delete: if isAdmin() || isProviderOwner(providerId);
       }
     }
@@ -141,7 +162,7 @@ service cloud.firestore {
     // QUESTIONS
     // ================================================================
     match /questions/{questionId} {
-      allow read: if isAuthenticated();
+      allow read: if isOwner(resource.data.userId) || isAdmin();
       allow create: if isFullAccount()
                  && request.resource.data.userId == request.auth.uid
                  && validString(request.resource.data.content, 2000)
@@ -163,7 +184,9 @@ service cloud.firestore {
     // ================================================================
     match /notifications/{userId} {
       allow read:  if isOwner(userId);
-      allow write: if isOwner(userId);
+      allow write: if isOwner(userId)
+                  && (!('firstName' in request.resource.data) || noScript('firstName'))
+                  && (!('lastName' in request.resource.data) || noScript('lastName'));
     }
 
     // ================================================================
@@ -171,7 +194,9 @@ service cloud.firestore {
     // ================================================================
     match /privacy/{userId} {
       allow read:  if isOwner(userId);
-      allow write: if isOwner(userId);
+      allow write: if isOwner(userId)
+                  && (!('firstName' in request.resource.data) || noScript('firstName'))
+                  && (!('lastName' in request.resource.data) || noScript('lastName'));
     }
 
     // ================================================================
@@ -360,8 +385,8 @@ service cloud.firestore {
         && request.resource.data.status == 'new'
         && noScript('email');
 
-      // Public read — email + status only, no PII or payment data
-      allow read: if true;
+      // Read restricted to admin only — email is PII in healthcare context
+      allow read: if isAdmin();
 
       // Only admin updates status (approved/rejected)
       allow update: if isAdmin();
@@ -403,9 +428,7 @@ service cloud.firestore {
         && validOptionalString('claimedBy', 200);
 
       // Reps can read their own submissions for the status tracker
-      allow read: if isAdmin()
-        || (request.auth == null &&
-            resource.data.repEmail is string);
+      allow read: if isAdmin();
 
       // Only admin can update status, commission, notes
       allow update: if isAdmin();
