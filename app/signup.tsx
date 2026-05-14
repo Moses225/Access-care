@@ -16,6 +16,7 @@ import {
   Alert,
   Image,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -76,6 +77,7 @@ export default function SignupScreen() {
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [nppConsent, setNppConsent] = useState(false);
   const [birthYear, setBirthYear] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -86,6 +88,14 @@ export default function SignupScreen() {
   const [verificationSent, setVerificationSent] = useState(false);
 
   const handleSignup = async () => {
+    if (!nppConsent) {
+      Alert.alert(
+        "Consent Required",
+        "Please read and accept the Privacy Policy and Notice of Privacy Practices to create your account.",
+        [{ text: "OK" }]
+      );
+      return;
+    }
     // ── Age validation ───────────────────────────────────────────────────────
     const yearNum = parseInt(birthYear, 10);
     const currentYear = new Date().getFullYear();
@@ -456,6 +466,34 @@ export default function SignupScreen() {
           />
         </TouchableOpacity>
 
+        {/* NPP Consent — required by HIPAA §164.520 */}
+        <TouchableOpacity
+          style={styles.consentRow}
+          onPress={() => setNppConsent((v) => !v)}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: nppConsent }}
+        >
+          <View style={[styles.checkbox, nppConsent && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
+            {nppConsent && <Text style={styles.checkmark}>✓</Text>}
+          </View>
+          <Text style={[styles.consentText, { color: colors.text }]}>
+            I have read and agree to the{" "}
+            <Text
+              style={{ color: colors.primary, textDecorationLine: "underline" }}
+              onPress={() => Linking.openURL("https://moses225.github.io/Access-care/")}
+            >
+              Privacy Policy
+            </Text>
+            {" "}and{" "}
+            <Text
+              style={{ color: colors.primary, textDecorationLine: "underline" }}
+              onPress={() => Linking.openURL("https://moses225.github.io/Access-care/")}
+            >
+              Notice of Privacy Practices
+            </Text>
+            . I consent to the collection and use of my health information as described therein.
+          </Text>
+        </TouchableOpacity>
         <TouchableOpacity
           style={[
             styles.signupButton,
@@ -564,4 +602,24 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   resendButtonText: { fontSize: 15 },
+  consentRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    marginBottom: 16,
+    marginTop: 4,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 5,
+    borderWidth: 2,
+    borderColor: "#CBD5E1",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    marginTop: 2,
+  },
+  checkmark: { color: "#fff", fontSize: 13, fontWeight: "bold" },
+  consentText: { flex: 1, fontSize: 13, lineHeight: 20 },
 });

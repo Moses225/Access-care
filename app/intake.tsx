@@ -1,12 +1,13 @@
 // DateTimePicker removed — using custom month/year picker for stability
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { doc, getDoc, serverTimestamp, setDoc, collection, addDoc } from "firebase/firestore";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   FlatList,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   ScrollView,
@@ -1070,6 +1071,7 @@ export default function IntakeScreen() {
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
+  const [intakeConsent, setIntakeConsent] = useState(false);
 
   // ── Step 1: Basic health info ───────────────────────────────────────────
   const [bloodType, setBloodType] = useState<string[]>([]);
@@ -1220,8 +1222,20 @@ export default function IntakeScreen() {
           : heightFeet
             ? `${heightFeet}'`
             : "";
+      // Log HIPAA consent — required by §164.520
+      await addDoc(collection(db, "auditLog"), {
+        action: "intake_form_submitted",
+        userId: user.uid,
+        patientId: docId,
+        consentVersion: "NPP-2026-001",
+        consentTimestamp: serverTimestamp(),
+        timestamp: serverTimestamp(),
+      });
+
       await setDoc(doc(db, "intakeForms", docId), {
         userId: user.uid,
+        nppConsentVersion: "NPP-2026-001",
+        nppConsentAt: serverTimestamp(),
         patientId: docId,
         bloodType: bloodType[0] ? sanitizeField(bloodType[0], 10) : "",
         heightFeet: sanitizeField(heightFeet, 5),
@@ -1755,12 +1769,40 @@ export default function IntakeScreen() {
             <Text style={[s.backBtnText, { color: colors.text }]}>← Back</Text>
           </TouchableOpacity>
         )}
+        {step === STEPS.length - 1 && (
+          <TouchableOpacity
+            style={s.consentRow}
+            onPress={() => setIntakeConsent((v) => !v)}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: intakeConsent }}
+          >
+            <View style={[s.consentBox, intakeConsent && { backgroundColor: "#00838F", borderColor: "#00838F" }]}>
+              {intakeConsent && <Text style={s.consentCheck}>✓</Text>}
+            </View>
+            <Text style={[s.consentText, { color: colors.text }]}>
+              I consent to the collection and use of my health information as described in the{" "}
+              <Text
+                style={{ color: "#00838F", textDecorationLine: "underline" }}
+                onPress={() => Linking.openURL("https://moses225.github.io/Access-care/")}
+              >
+                Notice of Privacy Practices
+              </Text>
+              . This information will only be shared with providers I choose to book.
+            </Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={[
             s.nextBtn,
-            { backgroundColor: colors.primary, flex: step > 0 ? 1 : undefined },
+            { backgroundColor: step === STEPS.length - 1 && !intakeConsent ? "#94A3B8" : colors.primary, flex: step > 0 ? 1 : undefined },
           ]}
-          onPress={handleNext}
+          onPress={() => {
+            if (step === STEPS.length - 1 && !intakeConsent) {
+              Alert.alert("Consent Required", "Please check the box to consent to the Notice of Privacy Practices before saving your health profile.");
+              return;
+            }
+            handleNext();
+          }}
           disabled={saving}
         >
           {saving ? (
@@ -1782,6 +1824,10 @@ export default function IntakeScreen() {
 
 const s = StyleSheet.create({
   container: { flex: 1 },
+  consentRow: { flexDirection: "row", alignItems: "flex-start", gap: 10, marginBottom: 12, paddingHorizontal: 4 },
+  consentBox: { width: 22, height: 22, borderRadius: 5, borderWidth: 2, borderColor: "#CBD5E1", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 },
+  consentCheck: { color: "#fff", fontSize: 13, fontWeight: "bold" },
+  consentText: { flex: 1, fontSize: 13, lineHeight: 20 },
   header: {
     paddingTop: 56,
     paddingHorizontal: 20,
