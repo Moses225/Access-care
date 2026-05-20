@@ -21,7 +21,7 @@ export type ProviderSpecialty =
   | 'Internal Medicine'
   | 'Dermatology'
   | 'General Surgery'
-  
+
   // Extended Services
   | 'Maternal-Fetal Medicine'
   | 'Lactation Consultant'
@@ -34,7 +34,7 @@ export type ProviderSpecialty =
   | 'Psychiatry'
   | 'Licensed Alcohol and Drug Counselor'
   | 'Diagnostic Radiology'
-  
+
   // Rare & Specialized
   | 'Reproductive Endocrinologist'
   | 'Neonatologist'
@@ -43,12 +43,39 @@ export type ProviderSpecialty =
   | 'Rheumatologist'
   | 'Infectious Disease'
   | 'Palliative Care'
-  | 'Rare Disease Center';
+  | 'Rare Disease Center'
+
+  // New Markets — added May 2026
+  | 'Direct Primary Care'        // DPC membership model
+  | 'Concierge Medicine'         // Premium membership model
+  | 'Telehealth'                 // Telehealth-only providers
+  | 'FQHC'                       // Federally Qualified Health Centers
+  | 'Tribal Health'              // IHS and tribal health systems
+  | 'Occupational Health'        // Workers comp, DOT physicals
+  | 'School-Based Health'        // School clinic providers
+  | 'Recovery Housing'           // Sober living / transitional housing
+  | 'Addiction Medicine'         // Addiction medicine specialists
+  | 'Chronic Disease Management' // Diabetes, hypertension management
+  | 'Postpartum Care'            // Postpartum and maternal mental health
+  | 'Oral Surgery'               // Oral and maxillofacial surgery
+  | 'Hematology & Oncology'      // Blood disorders and cancer
+  | 'Pulmonary Critical Care Medicine' // Pulmonary and critical care
+  | 'Occupational Therapist';    // OT for rehab and pediatrics
+
+export type PracticeType =
+  | 'standard'         // Regular fee-for-service
+  | 'dpc'              // Direct Primary Care membership
+  | 'concierge'        // Concierge/premium membership
+  | 'fqhc'             // Federally Qualified Health Center
+  | 'tribal'           // IHS or tribal health system
+  | 'telehealth_only'  // Telehealth-only practice
+  | 'recovery_housing' // Sober living / recovery housing
+  | 'school_based';    // School-based health center
 
 export interface Provider {
   id: string;
   name: string;
-  specialty: ProviderSpecialty | string; // Allow any specialty from Firebase
+  specialty: ProviderSpecialty | string;
   category: ProviderCategory;
   distance: number;
   rating: number;
@@ -58,6 +85,22 @@ export interface Provider {
   latitude: number;
   longitude: number;
   services?: string[];
+
+  // New fields — May 2026 market expansion
+  practiceType?: PracticeType;        // Practice model type
+  dpcMonthlyFee?: number;             // DPC monthly membership fee
+  dpcDescription?: string;            // DPC what's included text
+  telehealthAvailable?: boolean;      // Offers telehealth visits
+  telehealthOnly?: boolean;           // Telehealth visits only, no in-person
+  acceptsSelfPay?: boolean;           // Accepts self-pay / uninsured
+  acceptsMedicaid?: boolean;          // Explicitly accepts Medicaid/SoonerCare
+  fqhc?: boolean;                     // Is an FQHC
+  tribal?: boolean;                   // Is a tribal health facility
+  slidingScale?: boolean;             // Offers sliding scale fees
+  verified?: boolean;                 // Morava-verified provider
+  npi?: string;                       // NPI number
+  city?: string;                      // City
+  state?: string;                     // State
 }
 
 export const providerCategories: Record<ProviderCategory, ProviderSpecialty[]> = {
@@ -78,6 +121,19 @@ export const providerCategories: Record<ProviderCategory, ProviderSpecialty[]> =
     'Nutritionist',
     'Mental Health Provider',
     'Physical Therapist',
+    'Direct Primary Care',
+    'Concierge Medicine',
+    'Telehealth',
+    'FQHC',
+    'Tribal Health',
+    'Occupational Health',
+    'School-Based Health',
+    'Addiction Medicine',
+    'Chronic Disease Management',
+    'Postpartum Care',
+    'Hematology & Oncology',
+    'Pulmonary Critical Care Medicine',
+    'Occupational Therapist',
     'Social Worker',
     'Doula Services',
     'Home Health Agency',

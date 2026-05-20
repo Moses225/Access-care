@@ -273,6 +273,15 @@ service cloud.firestore {
                  && noScript('email')
                  && validOptionalString('phone', 20)
                  && validOptionalString('specialty', 100)
+                 && (!('practiceType' in request.resource.data) || validString(request.resource.data.practiceType, 30))
+                 && (!('dpcDescription' in request.resource.data) || validOptionalString(request.resource.data.dpcDescription, 500))
+                 && (!('telehealthAvailable' in request.resource.data) || request.resource.data.telehealthAvailable is bool)
+                 && (!('telehealthOnly' in request.resource.data) || request.resource.data.telehealthOnly is bool)
+                 && (!('acceptsSelfPay' in request.resource.data) || request.resource.data.acceptsSelfPay is bool)
+                 && (!('acceptsMedicaid' in request.resource.data) || request.resource.data.acceptsMedicaid is bool)
+                 && (!('fqhc' in request.resource.data) || request.resource.data.fqhc is bool)
+                 && (!('tribal' in request.resource.data) || request.resource.data.tribal is bool)
+                 && (!('slidingScale' in request.resource.data) || request.resource.data.slidingScale is bool)
                  && validOptionalString('message', 2000);
       allow read, update, delete: if isAdmin();
     }
@@ -437,6 +446,22 @@ service cloud.firestore {
     }
 
     // ================================================================
+    // ================================================================
+    // RECOVERY HOUSING — May 2026
+    // ================================================================
+    match /recoveryHousing/{facilityId} {
+      allow read: if resource.data.active == true || isAdmin();
+      allow create, update: if isAdmin()
+        && validString(request.resource.data.facilityName, 200)
+        && request.resource.data.totalBeds is int
+        && validString(request.resource.data.phone, 20);
+      allow delete: if false;
+      match /availability/{docId} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+    }
+
     // CATCH-ALL — deny everything not explicitly allowed
     // ================================================================
     match /{document=**} {

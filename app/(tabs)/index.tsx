@@ -99,6 +99,77 @@ const CATEGORY_CONFIG: Record<
     color: "#3F51B5",
     searchTerms: ["orthopedic", "orthopedics", "bone", "joint"],
   },
+
+  // ── New market categories — May 2026 ─────────────────────────
+  "Direct Primary Care": {
+    icon: "🏥",
+    color: "#00838F",
+    searchTerms: ["direct primary care", "dpc", "concierge medicine", "membership"],
+  },
+  "Behavioral Health": {
+    icon: "🧩",
+    color: "#7C3AED",
+    searchTerms: [
+      "mental health", "psychiatry", "psychology", "therapist",
+      "counselor", "behavioral", "ladc", "alcohol", "drug",
+      "addiction", "recovery", "substance",
+    ],
+  },
+  "Telehealth": {
+    icon: "📱",
+    color: "#0EA5E9",
+    searchTerms: ["telehealth", "telemedicine", "virtual", "remote visit"],
+  },
+  "FQHC & Community": {
+    icon: "🏘️",
+    color: "#059669",
+    searchTerms: [
+      "fqhc", "community health", "federally qualified",
+      "community clinic", "variety care", "chci",
+    ],
+  },
+  "Tribal Health": {
+    icon: "🪶",
+    color: "#92400E",
+    searchTerms: [
+      "tribal", "ihs", "indian health", "cherokee", "choctaw",
+      "chickasaw", "creek", "seminole", "osage", "pawnee",
+    ],
+  },
+  "Occupational Health": {
+    icon: "🦺",
+    color: "#D97706",
+    searchTerms: [
+      "occupational health", "workers comp", "dot physical",
+      "work injury", "occupational medicine",
+    ],
+  },
+  "Maternal Health": {
+    icon: "👶",
+    color: "#EC4899",
+    searchTerms: [
+      "obgyn", "ob/gyn", "obstetrics", "gynecology", "midwife",
+      "doula", "maternal", "postpartum", "lactation",
+      "maternal-fetal", "perinatal",
+    ],
+  },
+  "Chronic Disease": {
+    icon: "💊",
+    color: "#DC2626",
+    searchTerms: [
+      "diabetes", "endocrinology", "chronic disease",
+      "hypertension", "dietitian", "nutrition",
+    ],
+  },
+  "Recovery & Sobriety": {
+    icon: "🌱",
+    color: "#16A34A",
+    searchTerms: [
+      "recovery", "sober living", "recovery housing",
+      "addiction", "substance use", "ladc", "alcohol",
+      "drug counselor",
+    ],
+  },
 };
 const OKLAHOMA_FACILITIES = [
   { name: "OU Medical Center", city: "Oklahoma City", region: "okc" },
@@ -165,6 +236,17 @@ interface Provider {
   state?: string;
   verified?: boolean;
   hospitalAffiliation?: string;
+  // New fields — May 2026
+  practiceType?: string;
+  dpcMonthlyFee?: number;
+  dpcDescription?: string;
+  telehealthAvailable?: boolean;
+  telehealthOnly?: boolean;
+  acceptsSelfPay?: boolean;
+  acceptsMedicaid?: boolean;
+  fqhc?: boolean;
+  tribal?: boolean;
+  slidingScale?: boolean;
 }
 
 interface CategoryData {
@@ -645,6 +727,17 @@ export default function HomeScreen() {
             typeof data.hospitalAffiliation === "string"
               ? data.hospitalAffiliation
               : "",
+          // New fields — May 2026
+          practiceType: data.practiceType || "standard",
+          dpcMonthlyFee: typeof data.dpcMonthlyFee === "number" ? data.dpcMonthlyFee : undefined,
+          dpcDescription: typeof data.dpcDescription === "string" ? data.dpcDescription : undefined,
+          telehealthAvailable: data.telehealthAvailable ?? data.telehealthOnly ?? false,
+          telehealthOnly: data.telehealthOnly ?? false,
+          acceptsSelfPay: data.acceptsSelfPay ?? false,
+          acceptsMedicaid: data.acceptsMedicaid ?? false,
+          fqhc: data.fqhc ?? false,
+          tribal: data.tribal ?? false,
+          slidingScale: data.slidingScale ?? false,
         });
 
         if (data.specialty) specialtiesSet.add(data.specialty);
