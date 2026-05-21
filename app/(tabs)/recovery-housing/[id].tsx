@@ -122,7 +122,7 @@ export default function RecoveryHousingDetailScreen() {
     >
       {/* Back button */}
       <View style={[s.backBar, { backgroundColor: colors.card }]}>
-        <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+        <TouchableOpacity onPress={() => router.push('/(tabs)/recovery-housing' as never)} style={s.backBtn}>
           <Ionicons name="arrow-back" size={22} color={colors.text} />
           <Text style={[s.backText, { color: colors.text }]}>Recovery Housing</Text>
         </TouchableOpacity>
