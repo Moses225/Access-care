@@ -261,7 +261,7 @@ export default function RecoveryHousingScreen() {
               <TouchableOpacity
                 onPress={(e) => {
                   e.stopPropagation?.();
-                  router.push(`/recovery-housing/${facility.id}?action=interview` as never);
+                  setInterviewFacility(facility);
                 }}
                 style={s.interviewButton}
               >
