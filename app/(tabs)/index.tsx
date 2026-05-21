@@ -1184,10 +1184,9 @@ export default function HomeScreen() {
                 </Text>
               )}
             </View>
-
-              <Text style={{ fontSize: 13 }}>💚</Text>
-                     </TouchableOpacity>
+          </TouchableOpacity>
         </ScrollView>
+
 
           {/* ── Additional filter chips row — May 2026 ─────────────── */}
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10, paddingHorizontal: 4 }}>
@@ -1240,7 +1239,6 @@ export default function HomeScreen() {
           {insuranceFilter === "uninsured" && (
               <Text style={styles.insuranceChipCheck}>✓</Text>
             )}
-        </View>
 
         {hasSavedInsurance && !hasSavedSoonerCare && (
           <View
