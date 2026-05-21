@@ -18,6 +18,7 @@ import {
   Alert,
   FlatList,
   Linking,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -53,6 +54,7 @@ export default function RecoveryHousingScreen() {
   const [matFilter, setMatFilter] = useState(false); // MAT = Medication Assisted Treatment
   const [dhsFilter, setDhsFilter] = useState(false);
   const [childrenFilter, setChildrenFilter] = useState(false);
+  const [interviewFacility, setInterviewFacility] = useState<RecoveryHousingFacility | null>(null);
 
   // ── Load facilities from Firestore ─────────────────────────────────────────
   const loadFacilities = useCallback(async () => {
