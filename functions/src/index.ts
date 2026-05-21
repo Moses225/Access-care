@@ -13,7 +13,10 @@ admin.initializeApp();
 const db = admin.firestore();
 
 const resendApiKey = defineSecret("RESEND_API_KEY");
-const stripeSecretKey = defineSecret("STRIPE_SECRET_KEY");
+const stripeSecretKey    = defineSecret("STRIPE_SECRET_KEY");
+const twilioAccountSid   = defineSecret("TWILIO_ACCOUNT_SID");
+const twilioAuthToken    = defineSecret("TWILIO_AUTH_TOKEN");
+const twilioFromNumber   = defineSecret("TWILIO_FROM_NUMBER");
 
 function esc(str: unknown): string {
   if (str === null || str === undefined) return "";
@@ -945,3 +948,127 @@ export const onboardProvider = onCall(
 // Creates Firebase Auth account, sets custom claims,
 // sends welcome email with password-setup link
 // SECURITY:
+
+
+// ================================================================
+// SMS — CLOUD FUNCTION (credentials never in app bundle)
+// Called from utils/sms.ts via httpsCallable
+// PHI-FREE: validates body length, never logs phone or body content
+// ================================================================
+export const sendSMSNotification = onCall(
+  { secrets: [twilioAccountSid, twilioAuthToken, twilioFromNumber] },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Must be signed in to send SMS");
+    }
+    const { to, body } = request.data as { to: string; body: string };
+    if (!to || !body) throw new HttpsError("invalid-argument", "Missing to or body");
+    if (body.length > 320) throw new HttpsError("invalid-argument", "Message too long");
+
+    const sid   = twilioAccountSid.value();
+    const token = twilioAuthToken.value();
+    const from  = twilioFromNumber.value();
+
+    const sanitized = to.replace(/[^\d+]/g, "");
+    const e164 = sanitized.startsWith("+") ? sanitized : `+1${sanitized}`;
+    if (e164.length < 12) throw new HttpsError("invalid-argument", "Invalid phone number");
+
+    const credentials = Buffer.from(`${sid}:${token}`).toString("base64");
+    const response = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${credentials}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({ From: from, To: e164, Body: body }).toString(),
+      }
+    );
+
+    const data = await response.json() as { sid?: string; message?: string };
+    if (!response.ok) throw new HttpsError("internal", `Twilio: ${data.message}`);
+    console.log(`✅ SMS sent sid=${data.sid}`); // never logs phone or body
+    return { success: true, sid: data.sid };
+  }
+);
+
+// ================================================================
+// SCHEDULED REMINDERS — runs every 60 min
+// Sends 24h and 2h SMS reminders for confirmed appointments.
+// Marks reminder sent on the appointment doc to prevent duplicates.
+// PHI-FREE: body contains no provider name, date, time, or patient ID.
+// ================================================================
+export const sendAppointmentReminders = onSchedule(
+  { schedule: "every 60 minutes",
+    secrets: [twilioAccountSid, twilioAuthToken, twilioFromNumber] },
+  async () => {
+    const nowMs = Date.now();
+    const WINDOW_MS = 15 * 60 * 1000; // ±15 min window
+
+    const windows = [
+      { label: "24h", targetMs: nowMs + 24 * 60 * 60 * 1000, field: "reminder24hSent" },
+      { label: "2h",  targetMs: nowMs +  2 * 60 * 60 * 1000, field: "reminder2hSent"  },
+    ];
+
+    const sid   = twilioAccountSid.value();
+    const token = twilioAuthToken.value();
+    const from  = twilioFromNumber.value();
+    const credentials = Buffer.from(`${sid}:${token}`).toString("base64");
+
+    for (const w of windows) {
+      const start = admin.firestore.Timestamp.fromMillis(w.targetMs - WINDOW_MS);
+      const end   = admin.firestore.Timestamp.fromMillis(w.targetMs + WINDOW_MS);
+
+      // ⚠️ Verify field name matches your appointments collection schema
+      const snap = await db.collection("appointments")
+        .where("status", "==", "confirmed")
+        .where("date", ">=", start)
+        .where("date", "<=", end)
+        .get();
+
+      for (const apptDoc of snap.docs) {
+        const appt = apptDoc.data();
+        if (appt[w.field]) continue; // already sent — skip
+
+        // Get patient phone from users collection
+        const userSnap = await db.collection("users").doc(appt.patientUid).get();
+        const phone = userSnap.data()?.phone as string | undefined;
+        if (!phone) continue;
+
+        const body = w.label === "24h"
+          ? "Morava: ⏰ Reminder — you have an appointment tomorrow. " +
+            "Open the Morava app to view details. " +
+            "Arrive 10 min early with your ID and insurance card. Reply STOP to unsubscribe."
+          : "Morava: ⏰ Your appointment is in 2 hours. " +
+            "Open the Morava app to view details. Reply STOP to unsubscribe.";
+
+        const sanitized = phone.replace(/[^\d+]/g, "");
+        const e164 = sanitized.startsWith("+") ? sanitized : `+1${sanitized}`;
+
+        try {
+          const resp = await fetch(
+            `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Basic ${credentials}`,
+                "Content-Type": "application/x-www-form-urlencoded",
+              },
+              body: new URLSearchParams({ From: from, To: e164, Body: body }).toString(),
+            }
+          );
+          if (resp.ok) {
+            await apptDoc.ref.update({ [w.field]: true });
+            console.log(`✅ ${w.label} reminder → appt ${apptDoc.id}`);
+          } else {
+            const err = await resp.json() as { message?: string };
+            console.error(`❌ Twilio error for ${apptDoc.id}: ${err.message}`);
+          }
+        } catch (err) {
+          console.error(`❌ SMS failed for ${apptDoc.id}:`, err);
+        }
+      }
+    }
+  }
+);
