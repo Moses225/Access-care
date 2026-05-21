@@ -20,8 +20,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useTheme } from "../../context/ThemeContext";
-import { db } from "../../firebase";
+import { useTheme } from "../../../context/ThemeContext";
+import { db } from "../../../firebase";
 import {
   RecoveryHousingFacility,
   mapFirestoreToFacility,
@@ -29,7 +29,7 @@ import {
   getAvailabilityColor,
   getGenderLabel,
   getFundingLabel,
-} from "../../data/recoveryHousing";
+} from "../../../data/recoveryHousing";
 
 export default function RecoveryHousingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -138,7 +138,7 @@ export default function RecoveryHousingDetailScreen() {
           />
           {facility.photos.length > 1 && (
             <View style={s.photoDots}>
-              {facility.photos.map((_, i) => (
+              {facility.photos.map((_: string, i: number) => (
                 <TouchableOpacity key={i} onPress={() => setPhotoIndex(i)}>
                   <View style={[
                     s.dot,

@@ -25,8 +25,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useTheme } from "../../context/ThemeContext";
-import { db } from "../../firebase";
+import { useTheme } from "../../../context/ThemeContext";
+import { db } from "../../../firebase";
 import {
   RecoveryHousingFacility,
   mapFirestoreToFacility,
@@ -34,7 +34,7 @@ import {
   getAvailabilityColor,
   getGenderLabel,
   getFundingLabel,
-} from "../../data/recoveryHousing";
+} from "../../../data/recoveryHousing";
 
 type GenderFilter = "all" | "men" | "women" | "co-ed" | "lgbtq_affirming";
 type FundingFilter = "all" | "medicaid" | "voucher" | "sliding_scale" | "private";
@@ -201,7 +201,7 @@ export default function RecoveryHousingScreen() {
         {/* Funding tags */}
         {fundingLabels.length > 0 && (
           <View style={s.tagsRow}>
-            {fundingLabels.slice(0, 3).map((label, i) => (
+            {fundingLabels.slice(0, 3).map((label: string, i: number) => (
               <View key={i} style={[s.tag, { backgroundColor: "#059669" + "20" }]}>
                 <Text style={[s.tagText, { color: "#059669" }]}>{label}</Text>
               </View>
