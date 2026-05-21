@@ -443,6 +443,11 @@ export default function HomeScreen() {
   const [selectedFacility, setSelectedFacility] = useState("");
   const [searchLocation, setSearchLocation] = useState<LatLng | null>(null);
   const [radiusFilter, setRadiusFilter] = useState<number>(0);
+
+  // ── New market filter states — May 2026 ──────────────────────
+  const [dpcFilter, setDpcFilter] = useState<boolean>(false);
+  const [telehealthFilter, setTelehealthFilter] = useState<boolean>(false);
+  const [selfPayFilter, setSelfPayFilter] = useState<boolean>(false);
   const [locationLoading, setLocationLoading] = useState(false);
   const [sortByDistance, setSortByDistance] = useState(false);
 
@@ -556,17 +561,56 @@ export default function HomeScreen() {
     }
 
     // Insurance filter
+    // DPC providers bypass insurance filter — they don't bill insurance by design
     if (insuranceFilter === "soonercare") {
       filtered = filtered.filter(
         (p) =>
-          p.insuranceAccepted &&
-          (p.insuranceAccepted.includes("SoonerCare") ||
-            p.insuranceAccepted.includes("Medicaid") ||
-            p.insuranceAccepted.some(
-              (i) =>
-                i.toLowerCase().includes("soonercare") ||
-                i.toLowerCase().includes("medicaid"),
-            )),
+          p.practiceType === "dpc" ||  // DPC always passes — no insurance needed
+          p.practiceType === "concierge" ||
+          (p.insuranceAccepted &&
+            (p.insuranceAccepted.includes("SoonerCare") ||
+              p.insuranceAccepted.includes("Medicaid") ||
+              p.insuranceAccepted.some(
+                (i) =>
+                  i.toLowerCase().includes("soonercare") ||
+                  i.toLowerCase().includes("medicaid"),
+              ))),
+      );
+    }
+
+    // DPC filter — bypass insurance filter for DPC providers when dpcFilter is ON
+    if (dpcFilter) {
+      filtered = filtered.filter(
+        (p) =>
+          p.practiceType === "dpc" ||
+          p.practiceType === "concierge" ||
+          p.specialty?.toLowerCase().includes("direct primary care") ||
+          p.specialty?.toLowerCase().includes("concierge"),
+      );
+    }
+
+    // Telehealth filter
+    if (telehealthFilter) {
+      filtered = filtered.filter(
+        (p) => p.telehealthOnly === true || p.telehealthAvailable === true,
+      );
+    }
+
+    // Self-pay / sliding scale filter
+    if (selfPayFilter) {
+      filtered = filtered.filter(
+        (p) =>
+          p.acceptsSelfPay === true ||
+          p.slidingScale === true ||
+          p.fqhc === true ||
+          p.tribal === true ||
+          p.insuranceAccepted?.some(
+            (i) =>
+              i.toLowerCase().includes("uninsured") ||
+              i.toLowerCase().includes("self") ||
+              i.toLowerCase().includes("sliding") ||
+              i.toLowerCase().includes("no insurance"),
+          ),
       );
     }
 
@@ -612,6 +656,9 @@ export default function HomeScreen() {
     radiusFilter,
     sortByDistance,
     selectedFacility,
+    dpcFilter,
+    telehealthFilter,
+    selfPayFilter,
   ]);
 
   const loadDisclaimerPreference = async () => {
@@ -1133,10 +1180,61 @@ export default function HomeScreen() {
                 </Text>
               )}
             </View>
-            {insuranceFilter === "uninsured" && (
+
+              <Text style={{ fontSize: 13 }}>💚</Text>
+                     </TouchableOpacity>
+
+          {/* ── Additional filter chips row — May 2026 ─────────────── */}
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10, paddingHorizontal: 4 }}>
+            <TouchableOpacity
+              style={[{
+                paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20,
+                borderWidth: 1.5, flexDirection: "row", alignItems: "center", gap: 6,
+                backgroundColor: dpcFilter ? "#00838F" : colors.card,
+                borderColor: dpcFilter ? "#00838F" : colors.border,
+              }]}
+              onPress={() => setDpcFilter((v) => !v)}
+            >
+              <Text style={{ fontSize: 13 }}>🏥</Text>
+              <Text style={{ fontSize: 13, color: dpcFilter ? "#fff" : colors.text, fontWeight: dpcFilter ? "700" : "500" }}>
+                Direct Primary Care
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[{
+                paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20,
+                borderWidth: 1.5, flexDirection: "row", alignItems: "center", gap: 6,
+                backgroundColor: telehealthFilter ? "#0EA5E9" : colors.card,
+                borderColor: telehealthFilter ? "#0EA5E9" : colors.border,
+              }]}
+              onPress={() => setTelehealthFilter((v) => !v)}
+            >
+              <Text style={{ fontSize: 13 }}>📱</Text>
+              <Text style={{ fontSize: 13, color: telehealthFilter ? "#fff" : colors.text, fontWeight: telehealthFilter ? "700" : "500" }}>
+                Telehealth
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[{
+                paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20,
+                borderWidth: 1.5, flexDirection: "row", alignItems: "center", gap: 6,
+                backgroundColor: selfPayFilter ? "#059669" : colors.card,
+                borderColor: selfPayFilter ? "#059669" : colors.border,
+              }]}
+              onPress={() => setSelfPayFilter((v) => !v)}
+            >
+              <Text style={{ fontSize: 13 }}>💚</Text>
+              <Text style={{ fontSize: 13, color: selfPayFilter ? "#fff" : colors.text, fontWeight: selfPayFilter ? "700" : "500" }}>
+                Self-Pay / Sliding Scale
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {insuranceFilter === "uninsured" && (
               <Text style={styles.insuranceChipCheck}>✓</Text>
             )}
-          </TouchableOpacity>
         </View>
 
         {hasSavedInsurance && !hasSavedSoonerCare && (

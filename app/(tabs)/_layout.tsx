@@ -68,6 +68,12 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <FontAwesome size={22} name="user" color={color} />,
         }}
       />
+      <Tabs.Screen
+        name="recovery-housing/[id]"
+        options={{
+          href: null, // hidden from tab bar — navigated to programmatically
+        }}
+      />
     </Tabs>
   );
 }
