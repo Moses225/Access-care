@@ -1083,7 +1083,11 @@ export default function HomeScreen() {
         <Text style={[styles.insuranceSectionTitle, { color: colors.text }]}>
           Filter by coverage
         </Text>
-        <View style={styles.insuranceChips}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={[styles.insuranceChips, { paddingRight: 8 }]}
+        >
           <TouchableOpacity
             style={[
               styles.insuranceChip,
@@ -1183,6 +1187,7 @@ export default function HomeScreen() {
 
               <Text style={{ fontSize: 13 }}>💚</Text>
                      </TouchableOpacity>
+        </ScrollView>
 
           {/* ── Additional filter chips row — May 2026 ─────────────── */}
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10, paddingHorizontal: 4 }}>
@@ -2059,9 +2064,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   insuranceSectionTitle: { fontSize: 13, fontWeight: "700", marginBottom: 10 },
-  insuranceChips: { flexDirection: "row", gap: 10, marginBottom: 4 },
+  insuranceChips: { flexDirection: "row", gap: 8, marginBottom: 4 },
   insuranceChip: {
     flex: 1,
+    minWidth: 140,
     flexDirection: "row",
     alignItems: "center",
     gap: 6,

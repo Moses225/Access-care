@@ -40,7 +40,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="recovery-housing"
+        name="recovery-housing/index"
         options={{
           title: 'Recovery',
           tabBarIcon: ({ color, focused }) => (
