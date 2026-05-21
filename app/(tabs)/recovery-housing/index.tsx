@@ -51,6 +51,8 @@ export default function RecoveryHousingScreen() {
   const [fundingFilter, setFundingFilter] = useState<FundingFilter>("all");
   const [availableOnly, setAvailableOnly] = useState(false);
   const [matFilter, setMatFilter] = useState(false); // MAT = Medication Assisted Treatment
+  const [dhsFilter, setDhsFilter] = useState(false);
+  const [childrenFilter, setChildrenFilter] = useState(false);
 
   // ── Load facilities from Firestore ─────────────────────────────────────────
   const loadFacilities = useCallback(async () => {
@@ -125,8 +127,16 @@ export default function RecoveryHousingScreen() {
       result = result.filter((f) => f.medicationAssistedTreatment === true);
     }
 
+    if (dhsFilter) {
+      result = result.filter((f) => f.acceptsDHS === true);
+    }
+
+    if (childrenFilter) {
+      result = result.filter((f) => f.childrenAllowed === true);
+    }
+
     setFiltered(result);
-  }, [facilities, searchQuery, genderFilter, fundingFilter, availableOnly, matFilter]);
+  }, [facilities, searchQuery, genderFilter, fundingFilter, availableOnly, matFilter, dhsFilter, childrenFilter]);
 
   // ── Filter chip component ─────────────────────────────────────────────────
   function Chip({
@@ -223,20 +233,57 @@ export default function RecoveryHousingScreen() {
           </Text>
         )}
 
+        {/* Children welcome badge */}
+        {facility.childrenAllowed && (
+          <View style={[s.tag, { backgroundColor: "#DB277720", alignSelf: "flex-start", marginTop: 6 }]}>
+            <Text style={[s.tagText, { color: "#DB2777" }]}>Children Welcome</Text>
+          </View>
+        )}
+
+        {/* Intake interview notice */}
+        {facility.requiresInterview && (
+          <View style={[s.interviewNotice, { backgroundColor: "#7C3AED15", borderColor: "#7C3AED40" }]}>
+            <Ionicons name="information-circle-outline" size={14} color="#7C3AED" />
+            <Text style={[s.interviewNoticeText, { color: "#7C3AED" }]}>
+              Intake interview required
+            </Text>
+          </View>
+        )}
+
         <View style={s.cardFooter}>
           <Text style={[s.viewDetails, { color: colors.primary }]}>
             View details →
           </Text>
-          <TouchableOpacity
-            onPress={(e) => {
-              e.stopPropagation?.();
-              if (facility.phone) Linking.openURL(`tel:${facility.phone}`);
-            }}
-            style={[s.callButton, { borderColor: colors.primary }]}
-          >
-            <Ionicons name="call-outline" size={14} color={colors.primary} />
-            <Text style={[s.callText, { color: colors.primary }]}>Call</Text>
-          </TouchableOpacity>
+          <View style={s.footerActions}>
+            {facility.requiresInterview && (
+              <TouchableOpacity
+                onPress={(e) => {
+                  e.stopPropagation?.();
+                  router.push(`/recovery-housing/${facility.id}?action=interview` as never);
+                }}
+                style={s.interviewButton}
+              >
+                <Ionicons name="calendar-outline" size={14} color="#fff" />
+                <Text style={[s.callText, { color: "#fff" }]}>Request Interview</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              onPress={(e) => {
+                e.stopPropagation?.();
+                if (facility.phone) Linking.openURL(`tel:${facility.phone}`);
+              }}
+              style={[s.callButton, { borderColor: facility.requiresInterview ? colors.border : colors.primary }]}
+            >
+              <Ionicons
+                name="call-outline"
+                size={14}
+                color={facility.requiresInterview ? colors.subtext : colors.primary}
+              />
+              <Text style={[s.callText, {
+                color: facility.requiresInterview ? colors.subtext : colors.primary
+              }]}>Call</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -264,6 +311,8 @@ export default function RecoveryHousingScreen() {
               setFundingFilter("all");
               setAvailableOnly(false);
               setMatFilter(false);
+              setDhsFilter(false);
+              setChildrenFilter(false);
               setSearchQuery("");
             }}
             style={[s.clearButton, { borderColor: colors.primary }]}
@@ -322,6 +371,8 @@ export default function RecoveryHousingScreen() {
         <Chip label="Voucher" active={fundingFilter === "voucher"} onPress={() => setFundingFilter(fundingFilter === "voucher" ? "all" : "voucher")} color="#059669" />
         <Chip label="Sliding Scale" active={fundingFilter === "sliding_scale"} onPress={() => setFundingFilter(fundingFilter === "sliding_scale" ? "all" : "sliding_scale")} color="#059669" />
         <Chip label="MAT Friendly" active={matFilter} onPress={() => setMatFilter((v) => !v)} color="#7C3AED" />
+        <Chip label="DHS Families" active={dhsFilter} onPress={() => setDhsFilter((v) => !v)} color="#1D4ED8" />
+        <Chip label="Children Welcome" active={childrenFilter} onPress={() => setChildrenFilter((v) => !v)} color="#DB2777" />
       </ScrollView>
 
       {/* List */}
@@ -451,6 +502,35 @@ const s = StyleSheet.create({
   emptyTitle: { fontSize: 18, fontWeight: "700", textAlign: "center", marginBottom: 8 },
   emptyBody: { fontSize: 14, textAlign: "center", lineHeight: 20, marginBottom: 20 },
   clearButton: { borderWidth: 1.5, borderRadius: 10, paddingHorizontal: 20, paddingVertical: 10 },
+  footerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  interviewButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#7C3AED",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  interviewNotice: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    borderWidth: 1,
+    borderRadius: 7,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    marginTop: 8,
+    alignSelf: "flex-start",
+  },
+  interviewNoticeText: {
+    fontSize: 11,
+    fontWeight: "600",
+  },
   crisisFooter: {
     padding: 12,
     borderTopWidth: 1,
