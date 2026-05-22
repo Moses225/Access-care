@@ -18,7 +18,6 @@ import {
   Alert,
   FlatList,
   Linking,
-  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -54,7 +53,7 @@ export default function RecoveryHousingScreen() {
   const [matFilter, setMatFilter] = useState(false); // MAT = Medication Assisted Treatment
   const [dhsFilter, setDhsFilter] = useState(false);
   const [childrenFilter, setChildrenFilter] = useState(false);
-  const [interviewFacility, setInterviewFacility] = useState<RecoveryHousingFacility | null>(null);
+  // (interview modal removed — intake flows through detail screen for Standard+ facilities)
 
   // ── Load facilities from Firestore ─────────────────────────────────────────
   const loadFacilities = useCallback(async () => {
@@ -257,16 +256,17 @@ export default function RecoveryHousingScreen() {
             View details →
           </Text>
           <View style={s.footerActions}>
-            {facility.requiresInterview && (
+            {(facility.listingPlan === "standard" || facility.listingPlan === "growth") && (
               <TouchableOpacity
                 onPress={(e) => {
                   e.stopPropagation?.();
-                  setInterviewFacility(facility);
+                  // Route to detail screen — intake modal lives there
+                  router.push(`/recovery-housing/${facility.id}?intake=1`);
                 }}
                 style={s.interviewButton}
               >
-                <Ionicons name="calendar-outline" size={14} color="#fff" />
-                <Text style={[s.callText, { color: "#fff" }]}>Request Interview</Text>
+                <Ionicons name="document-text-outline" size={14} color="#fff" />
+                <Text style={[s.callText, { color: "#fff" }]}>Request Admission</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity
@@ -274,15 +274,23 @@ export default function RecoveryHousingScreen() {
                 e.stopPropagation?.();
                 if (facility.phone) Linking.openURL(`tel:${facility.phone}`);
               }}
-              style={[s.callButton, { borderColor: facility.requiresInterview ? colors.border : colors.primary }]}
+              style={[s.callButton, {
+                borderColor: (facility.listingPlan === "standard" || facility.listingPlan === "growth")
+                  ? colors.border
+                  : colors.primary,
+              }]}
             >
               <Ionicons
                 name="call-outline"
                 size={14}
-                color={facility.requiresInterview ? colors.subtext : colors.primary}
+                color={(facility.listingPlan === "standard" || facility.listingPlan === "growth")
+                  ? colors.subtext
+                  : colors.primary}
               />
               <Text style={[s.callText, {
-                color: facility.requiresInterview ? colors.subtext : colors.primary
+                color: (facility.listingPlan === "standard" || facility.listingPlan === "growth")
+                  ? colors.subtext
+                  : colors.primary,
               }]}>Call</Text>
             </TouchableOpacity>
           </View>
@@ -328,103 +336,9 @@ export default function RecoveryHousingScreen() {
     );
   }
 
-  // ── Interview Request Modal ───────────────────────────────────────────────────
-  function InterviewModal() {
-    if (!interviewFacility) return null;
-    return (
-      <Modal
-        visible={true}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setInterviewFacility(null)}
-      >
-        <TouchableOpacity
-          style={s.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setInterviewFacility(null)}
-        >
-          <TouchableOpacity
-            activeOpacity={1}
-            style={[s.modalCard, { backgroundColor: colors.card }]}
-            onPress={() => {}}
-          >
-            <View style={[s.modalHandle, { backgroundColor: colors.border }]} />
-            <View style={s.modalHeader}>
-              <View style={[s.modalIconBadge, { backgroundColor: "#7C3AED20" }]}>
-                <Ionicons name="calendar-outline" size={22} color="#7C3AED" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[s.modalTitle, { color: colors.text }]}>
-                  Request Intake Interview
-                </Text>
-                <Text style={[s.modalFacilityName, { color: colors.subtext }]}>
-                  {interviewFacility.facilityName}
-                </Text>
-              </View>
-              <TouchableOpacity onPress={() => setInterviewFacility(null)} style={s.modalClose}>
-                <Ionicons name="close" size={20} color={colors.subtext} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={[s.modalNotice, { backgroundColor: "#7C3AED10", borderColor: "#7C3AED30" }]}>
-              <Ionicons name="information-circle-outline" size={16} color="#7C3AED" />
-              <Text style={[s.modalNoticeText, { color: colors.text }]}>
-                {interviewFacility.intakeNotes ||
-                  `${interviewFacility.facilityName} conducts intake interviews to ensure program fit before accepting residents.`}
-              </Text>
-            </View>
-
-            <Text style={[s.modalSectionLabel, { color: colors.subtext }]}>WHAT TO EXPECT</Text>
-            {[
-              "A brief phone or in-person conversation",
-              "Questions about your recovery goals",
-              "Review of house rules and expectations",
-              "Decision typically within 24–48 hours",
-            ].map((item, i) => (
-              <View key={i} style={s.modalBulletRow}>
-                <View style={[s.modalBulletDot, { backgroundColor: "#7C3AED" }]} />
-                <Text style={[s.modalBulletText, { color: colors.text }]}>{item}</Text>
-              </View>
-            ))}
-
-            <View style={s.modalActions}>
-              <TouchableOpacity
-                style={s.modalCallBtn}
-                onPress={() => {
-                  setInterviewFacility(null);
-                  if (interviewFacility.phone) Linking.openURL(`tel:${interviewFacility.phone}`);
-                }}
-              >
-                <Ionicons name="call" size={18} color="#fff" />
-                <Text style={s.modalCallBtnText}>
-                  Call to Schedule{interviewFacility.ownerName ? ` · ${interviewFacility.ownerName}` : ""}
-                </Text>
-              </TouchableOpacity>
-
-              {interviewFacility.email && (
-                <TouchableOpacity
-                  style={[s.modalEmailBtn, { borderColor: "#7C3AED" }]}
-                  onPress={() => {
-                    setInterviewFacility(null);
-                    Linking.openURL(
-                      `mailto:${interviewFacility.email}?subject=Intake Interview Request — ${interviewFacility.facilityName}&body=Hi, I am interested in scheduling an intake interview at ${interviewFacility.facilityName}. Please let me know your availability. Thank you.`
-                    );
-                  }}
-                >
-                  <Ionicons name="mail-outline" size={18} color="#7C3AED" />
-                  <Text style={[s.modalEmailBtnText, { color: "#7C3AED" }]}>Send Email Instead</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            <Text style={[s.modalDisclaimer, { color: colors.subtext }]}>
-              Morava connects you with facilities. Admission decisions are made by the facility directly.
-            </Text>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
-    );
-  }
+  // InterviewModal removed — all intake requests are handled by the detail screen's
+  // full intake form (Standard+ facilities only). Tapping "Request Admission" on a
+  // list card routes directly to /recovery-housing/[id]?intake=1.
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -493,8 +407,6 @@ export default function RecoveryHousingScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
-
-      <InterviewModal />
 
       {/* Crisis resources footer */}
       <View style={[s.crisisFooter, { backgroundColor: "#FEF2F2", borderTopColor: "#FCA5A5" }]}>
@@ -633,92 +545,6 @@ const s = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
-    justifyContent: "flex-end",
-  },
-  modalCard: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    paddingBottom: 36,
-  },
-  modalHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: "center",
-    marginBottom: 18,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 16,
-  },
-  modalIconBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modalTitle: { fontSize: 16, fontWeight: "700" },
-  modalFacilityName: { fontSize: 13, marginTop: 2 },
-  modalClose: { padding: 4 },
-  modalNotice: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 16,
-  },
-  modalNoticeText: { fontSize: 13, lineHeight: 19, flex: 1 },
-  modalSectionLabel: {
-    fontSize: 10,
-    fontWeight: "600",
-    letterSpacing: 0.8,
-    marginBottom: 10,
-  },
-  modalBulletRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-    marginBottom: 8,
-  },
-  modalBulletDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginTop: 6,
-    flexShrink: 0,
-  },
-  modalBulletText: { fontSize: 13, lineHeight: 20, flex: 1 },
-  modalActions: { gap: 10, marginTop: 20, marginBottom: 12 },
-  modalCallBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: "#7C3AED",
-    borderRadius: 12,
-    paddingVertical: 14,
-  },
-  modalCallBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
-  modalEmailBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    borderWidth: 1.5,
-    borderRadius: 12,
-    paddingVertical: 13,
-  },
-  modalEmailBtnText: { fontSize: 14, fontWeight: "600" },
-  modalDisclaimer: { fontSize: 11, textAlign: "center", lineHeight: 16, marginTop: 4 },
   crisisFooter: {
     padding: 12,
     borderTopWidth: 1,

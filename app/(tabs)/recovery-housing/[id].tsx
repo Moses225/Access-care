@@ -46,7 +46,7 @@ import {
 } from "../../../data/recoveryHousing";
 
 export default function RecoveryHousingDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, intake } = useLocalSearchParams<{ id: string; intake?: string }>();
   const router = useRouter();
   const { colors } = useTheme();
   const { user } = useAuth();
@@ -73,8 +73,15 @@ export default function RecoveryHousingDetailScreen() {
       try {
         const snap = await getDoc(doc(db, "recoveryHousing", id));
         if (snap.exists()) {
+          const plan = (snap.data().listingPlan as "free" | "standard" | "growth") || "free";
           setFacility(mapFirestoreToFacility(snap.id, snap.data()));
-          setListingPlan((snap.data().listingPlan as "free" | "standard" | "growth") || "free");
+          setListingPlan(plan);
+
+          // ── Auto-open intake modal when arriving from list card "Request Admission" ──
+          if (intake === "1" && (plan === "standard" || plan === "growth")) {
+            // Small delay so the screen finishes rendering before modal appears
+            setTimeout(() => setShowIntake(true), 350);
+          }
 
           // ── View count tracking ────────────────────────────────────────────
           // Increment once per screen visit. viewCounted ref prevents double-fire
@@ -92,7 +99,7 @@ export default function RecoveryHousingDetailScreen() {
         setLoading(false);
       }
     })();
-  }, [id]);
+  }, [id, intake]);
 
   // ── Intake form submission ───────────────────────────────────────────────────
   const handleIntakeSubmit = async () => {

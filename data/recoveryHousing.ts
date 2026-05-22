@@ -106,6 +106,9 @@ export interface RecoveryHousingFacility {
   notes?: string;
   createdAt?: Date;
   updatedAt?: Date;
+
+  // Listing tier (mirrors providerUsers.listingPlan)
+  listingPlan?: "free" | "standard" | "growth";
 }
 
 // ── Firestore field mapping ───────────────────────────────────────
@@ -173,6 +176,7 @@ export function mapFirestoreToFacility(
     petsAllowed: (data.petsAllowed as boolean) ?? false,
     smokingAllowed: (data.smokingAllowed as boolean) ?? false,
     photos: (data.photos as string[]) ?? [],
+    listingPlan: (data.listingPlan as "free" | "standard" | "growth") ?? "free",
     verified: (data.verified as boolean) ?? false,
     active: (data.active as boolean) ?? true,
     featured: (data.featured as boolean) ?? false,
