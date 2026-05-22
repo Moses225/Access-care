@@ -305,6 +305,15 @@ export default function Profile() {
 
   const handleSave = async () => {
     if (!providerProfile?.providerId) return;
+
+    // Client-side XSS guard — Firestore rules also enforce noScript server-side
+    // on bookings but provider profiles are free-text; catch obvious injection here.
+    const scriptPattern = /<script|javascript:|<iframe|<img|onerror\s*=/i;
+    if (scriptPattern.test(data.bio || "") || scriptPattern.test(data.officeNotes || "")) {
+      setError("Profile content contains invalid characters. Please remove any HTML or script tags.");
+      return;
+    }
+
     setSaving(true);
     setError("");
     setSaved(false);

@@ -328,6 +328,16 @@ export default function Dashboard() {
   const [rescheduleDate, setRescheduleDate] = useState("");
   const [rescheduleTime, setRescheduleTime] = useState("");
 
+  // No-show confirmation modal
+  const [noShowBooking, setNoShowBooking] = useState<Booking | null>(null);
+
+  // Toast notifications
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const showToast = (message: string, type: "success" | "error" = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  };
+
   // Billing
   const [showBillingBanner, setShowBillingBanner] = useState(true);
   const [showBillingModal, setShowBillingModal] = useState(false);
@@ -394,8 +404,10 @@ export default function Dashboard() {
         confirmedAt: serverTimestamp(),
         confirmedBy: user?.uid,
       });
+      showToast(`✅ Confirmed — ${booking.patientName} has been notified`);
     } catch (e) {
       console.error(e);
+      showToast("Failed to confirm booking. Please try again.", "error");
     } finally {
       setActionLoading(null);
     }
@@ -419,8 +431,10 @@ export default function Dashboard() {
       setDeclineId(null);
       setDeclineReason("");
       setDeclineNote("");
+      showToast("Booking declined — patient has been notified");
     } catch (e) {
       console.error(e);
+      showToast("Failed to decline. Please try again.", "error");
     } finally {
       setActionLoading(null);
     }
@@ -428,12 +442,8 @@ export default function Dashboard() {
 
   // ── No-show ────────────────────────────────────────────────────────────────
   const handleNoShow = async (booking: Booking) => {
-    if (
-      !window.confirm(
-        `Mark ${booking.patientName} as a no-show? This appointment will not be billed.`,
-      )
-    )
-      return;
+    setNoShowBooking(null);
+    if (booking.providerId !== providerProfile?.providerId) return;
     setActionLoading(booking.id);
     try {
       await updateDoc(doc(db, "bookings", booking.id), {
@@ -443,8 +453,10 @@ export default function Dashboard() {
         noShowAt: serverTimestamp(),
         noShowBy: user?.uid,
       });
+      showToast(`${booking.patientName} marked as no-show — not billed`);
     } catch (e) {
       console.error(e);
+      showToast("Failed to mark no-show. Please try again.", "error");
     } finally {
       setActionLoading(null);
     }
@@ -467,8 +479,10 @@ export default function Dashboard() {
       setRescheduleId(null);
       setRescheduleDate("");
       setRescheduleTime("");
+      showToast("📅 Reschedule proposed — patient will be notified to accept or decline");
     } catch (e) {
       console.error(e);
+      showToast("Failed to propose reschedule. Please try again.", "error");
     } finally {
       setActionLoading(null);
     }
@@ -495,6 +509,53 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
+
+      {/* ── Toast notification ───────────────────────────────────────────── */}
+      {toast && (
+        <div className={`fixed top-5 right-5 z-[100] flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-semibold transition-all ${
+          toast.type === "error"
+            ? "bg-red-600 text-white"
+            : "bg-slate-900 text-white"
+        }`}>
+          {toast.message}
+        </div>
+      )}
+
+      {/* ── No-show confirmation modal ───────────────────────────────────── */}
+      {noShowBooking && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl p-8 w-full max-w-sm shadow-2xl">
+            <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center mx-auto mb-4">
+              <span className="text-2xl">🚫</span>
+            </div>
+            <h3 className="font-display text-lg text-slate-900 text-center mb-2">
+              Mark as no-show?
+            </h3>
+            <p className="text-slate-500 text-sm text-center mb-1">
+              <span className="font-semibold text-slate-700">{noShowBooking.patientName}</span> — {noShowBooking.date} at {noShowBooking.time}
+            </p>
+            <p className="text-slate-400 text-xs text-center mb-6">
+              This visit will not be billed. This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setNoShowBooking(null)}
+                className="flex-1 border border-slate-200 text-slate-600 font-semibold py-3 rounded-xl text-sm hover:border-slate-300 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleNoShow(noShowBooking)}
+                disabled={actionLoading === noShowBooking.id}
+                className="flex-1 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-semibold py-3 rounded-xl text-sm transition-colors"
+              >
+                {actionLoading === noShowBooking.id ? "Saving…" : "Confirm no-show"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Top nav ─────────────────────────────────────────────────────── */}
       <nav className="bg-white border-b border-slate-200 sticky top-0 z-40">
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -926,7 +987,7 @@ export default function Dashboard() {
                         )}
                         {canNoShow && (
                           <button
-                            onClick={() => handleNoShow(booking)}
+                            onClick={() => setNoShowBooking(booking)}
                             disabled={actionLoading === booking.id}
                             className="border border-slate-200 hover:border-orange-300 hover:text-orange-600 text-slate-400 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
                           >
@@ -1101,22 +1162,6 @@ export default function Dashboard() {
                 </select>
               </div>
             </div>
-            {declineReason === "Other — please call our office" && (
-              <div className="mb-6">
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
-                  Additional details <span className="text-slate-400 font-normal normal-case">(optional — visible to patient)</span>
-                </label>
-                <textarea
-                  value={declineNote}
-                  onChange={(e) => setDeclineNote(e.target.value)}
-                  maxLength={200}
-                  rows={3}
-                  placeholder="e.g. Please call our office at (405) 555-0100 to reschedule..."
-                  className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none"
-                />
-                <div className="text-xs text-slate-400 mt-1 text-right">{declineNote.length}/200</div>
-              </div>
-            )}
             <div className="flex gap-3">
               <button
                 onClick={() => {

@@ -705,14 +705,20 @@ function IntakeRequestsCard({
 }) {
   const isLocked = plan === "free";
   const pending  = requests.filter((r) => r.status === "pending").length;
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [updating, setUpdating]     = useState<string | null>(null);
+  const [expandedId, setExpandedId]       = useState<string | null>(null);
+  const [updating, setUpdating]           = useState<string | null>(null);
+  const [confirmAdmit, setConfirmAdmit]   = useState<string | null>(null); // requestId pending admit confirm
 
   const handleStatus = async (id: string, newStatus: RequestStatus) => {
+    // Admitted is irreversible (decrements bed count) — require explicit confirmation
+    if (newStatus === "admitted" && confirmAdmit !== id) {
+      setConfirmAdmit(id);
+      return;
+    }
+    setConfirmAdmit(null);
     setUpdating(id);
     await onStatusChange(id, newStatus);
     setUpdating(null);
-    // Collapse after a terminal action
     if (newStatus === "admitted" || newStatus === "declined") {
       setExpandedId(null);
     }
@@ -840,6 +846,36 @@ function IntakeRequestsCard({
                       </div>
                     )}
 
+                    {/* ── Admit confirmation inline prompt ── */}
+                    {confirmAdmit === r.id && (
+                      <div className="mb-3 bg-green-50 border border-green-200 rounded-xl p-3">
+                        <p className="text-xs font-semibold text-green-800 mb-0.5">
+                          Confirm admission?
+                        </p>
+                        <p className="text-xs text-green-700 mb-3">
+                          This will mark the patient as admitted and automatically decrease your available bed count by 1. This action cannot be undone.
+                        </p>
+                        <div className="flex gap-2">
+                          <button
+                            disabled={isBusy}
+                            onClick={() => handleStatus(r.id, "admitted")}
+                            className="flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
+                          >
+                            {isBusy ? (
+                              <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            ) : "✅"} Yes, admit
+                          </button>
+                          <button
+                            disabled={isBusy}
+                            onClick={() => setConfirmAdmit(null)}
+                            className="text-xs font-semibold px-3 py-2 rounded-lg bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors disabled:opacity-50"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     {/* ── Status action buttons ── */}
                     <div className="flex flex-wrap gap-2">
                       {r.status !== "contacted" && (
@@ -851,7 +887,7 @@ function IntakeRequestsCard({
                           📞 Mark Contacted
                         </button>
                       )}
-                      {r.status !== "admitted" && (
+                      {r.status !== "admitted" && confirmAdmit !== r.id && (
                         <button
                           disabled={isBusy}
                           onClick={() => handleStatus(r.id, "admitted")}
@@ -869,7 +905,7 @@ function IntakeRequestsCard({
                           ✗ Decline
                         </button>
                       )}
-                      {isBusy && (
+                      {isBusy && confirmAdmit !== r.id && (
                         <span className="text-xs text-slate-400 self-center">Saving…</span>
                       )}
                     </div>

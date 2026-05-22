@@ -32,6 +32,7 @@ export default function Billing() {
   const navigate = useNavigate();
   const { providerProfile } = useAuth();
   const [showBillingSetup, setShowBillingSetup] = useState(false);
+  const [showProInfo, setShowProInfo] = useState(false);
 
   const plan = providerProfile?.plan ?? "founding";
   const hasPaymentMethod = !!(
@@ -175,16 +176,23 @@ export default function Billing() {
                       </div>
                     </div>
                     <button
-                      onClick={() =>
-                        alert(
-                          "Pro upgrade coming soon — contact support@moravacare.com to upgrade early.",
-                        )
-                      }
+                      onClick={() => setShowProInfo((v) => !v)}
                       className="bg-teal-500 hover:bg-teal-600 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap flex-shrink-0"
                     >
-                      Upgrade to Pro
+                      {showProInfo ? "Close" : "Upgrade to Pro"}
                     </button>
                   </div>
+                  {showProInfo && (
+                    <div className="mt-3 bg-white border border-teal-200 rounded-xl p-4 text-sm text-slate-700 space-y-2">
+                      <p className="font-semibold text-teal-700">Pro is coming soon — here's how to get early access:</p>
+                      <ol className="list-decimal list-inside space-y-1 text-slate-600 text-xs leading-relaxed">
+                        <li>Email <a href="mailto:support@moravacare.com?subject=Pro upgrade request" className="text-teal-600 underline font-medium">support@moravacare.com</a> with subject "Pro upgrade request"</li>
+                        <li>We'll confirm your visit history and activate Pro within 1 business day</li>
+                        <li>Your flat $99/month billing starts at the next billing cycle</li>
+                      </ol>
+                      <p className="text-xs text-slate-400 pt-1">No commitment — you can revert to per-visit billing at any time.</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
