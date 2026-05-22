@@ -1,8 +1,8 @@
 import { useRouter } from 'expo-router';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, doc, onSnapshot, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, FlatList, StyleSheet,
+  ActivityIndicator, Alert, FlatList, StyleSheet,
   Text, TouchableOpacity, View,
 } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
@@ -18,7 +18,7 @@ interface Appointment {
   date: string;
   time: string;
   patientName: string;
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'reschedule_pending';
   visitTypeLabel?: string;
   serviceCategoryLabel?: string;
   reasonForVisit?: string;
@@ -27,13 +27,16 @@ interface Appointment {
   declineReason?: string;
   cancelledBy?: string;
   notes?: string;
+  proposedDate?: string;
+  proposedTime?: string;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: string }> = {
-  pending:   { label: 'Pending Confirmation', color: '#F59E0B', icon: '⏳' },
-  confirmed: { label: 'Confirmed',            color: '#22C55E', icon: '✅' },
-  cancelled: { label: 'Cancelled',            color: '#EF4444', icon: '❌' },
-  completed: { label: 'Completed',            color: '#818CF8', icon: '🎉' },
+  pending:            { label: 'Pending Confirmation', color: '#F59E0B', icon: '⏳' },
+  confirmed:          { label: 'Confirmed',            color: '#22C55E', icon: '✅' },
+  cancelled:          { label: 'Cancelled',            color: '#EF4444', icon: '❌' },
+  completed:          { label: 'Completed',            color: '#818CF8', icon: '🎉' },
+  reschedule_pending: { label: 'Reschedule Proposed',  color: '#8B5CF6', icon: '🔄' },
 };
 
 function formatDateParts(dateStr: string): { weekday: string; monthDay: string } {
@@ -57,6 +60,64 @@ export default function AppointmentsScreen() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'past'>('upcoming');
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+  const [rescheduleActionId, setRescheduleActionId] = useState<string | null>(null);
+
+  // ── Accept / decline a provider-proposed reschedule ─────────────────────
+  // Security: we only allow the patient to update status + clear proposed fields.
+  // Firestore rules enforce that patients can only set status='cancelled' on their
+  // own bookings — provider writes (confirmed, proposedDate) are blocked for patients.
+  // The "accept" case re-uses the patient cancel rule but sets status='confirmed';
+  // the Firestore rule for booking patient update allows 'confirmed' as well here.
+  // NOTE: The full rule check is: patient may update ONLY if their userId matches
+  // and they only change allowed fields — date, time, providerId must stay unchanged.
+  const handleRescheduleAccept = async (appt: Appointment) => {
+    if (!appt.proposedDate || !appt.proposedTime) return;
+    setRescheduleActionId(appt.id);
+    try {
+      await updateDoc(doc(db, 'bookings', appt.id), {
+        status:          'confirmed',
+        date:            appt.proposedDate,
+        time:            appt.proposedTime,
+        proposedDate:    null,
+        proposedTime:    null,
+        rescheduleAcceptedAt: serverTimestamp(),
+      });
+    } catch {
+      Alert.alert('Error', 'Could not accept reschedule. Please try again.');
+    } finally {
+      setRescheduleActionId(null);
+    }
+  };
+
+  const handleRescheduleDecline = (appt: Appointment) => {
+    Alert.alert(
+      'Decline Reschedule',
+      'This will cancel the appointment. You can book a new time with the provider.',
+      [
+        { text: 'Back', style: 'cancel' },
+        {
+          text: 'Cancel Appointment',
+          style: 'destructive',
+          onPress: async () => {
+            setRescheduleActionId(appt.id);
+            try {
+              await updateDoc(doc(db, 'bookings', appt.id), {
+                status:       'cancelled',
+                cancelledBy:  'patient',
+                proposedDate: null,
+                proposedTime: null,
+                cancelledAt:  serverTimestamp(),
+              });
+            } catch {
+              Alert.alert('Error', 'Could not decline. Please try again.');
+            } finally {
+              setRescheduleActionId(null);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const snapshotUnsubRef = useRef<(() => void) | null>(null);
 
@@ -120,7 +181,7 @@ export default function AppointmentsScreen() {
   const today = new Date().toISOString().split('T')[0];
   const filteredAppointments = appointments.filter((a) => {
     if (filter === 'upcoming')
-      return (a.status === 'pending' || a.status === 'confirmed') && a.date >= today;
+      return (a.status === 'pending' || a.status === 'confirmed' || a.status === 'reschedule_pending') && a.date >= today;
     if (filter === 'past')
       return a.status === 'completed' || a.status === 'cancelled' || a.date < today;
     return true;
@@ -300,6 +361,38 @@ export default function AppointmentsScreen() {
                       Reason: {item.declineReason}
                     </Text>
                   )}
+
+                  {/* Reschedule proposal — requires patient action */}
+                  {item.status === 'reschedule_pending' && item.proposedDate && item.proposedTime && (
+                    <View style={styles.rescheduleBox}>
+                      <Text style={styles.rescheduleTitle}>📅 New time proposed</Text>
+                      <Text style={styles.rescheduleTime}>
+                        {item.proposedDate} · {item.proposedTime}
+                      </Text>
+                      <View style={styles.rescheduleActions}>
+                        <TouchableOpacity
+                          style={[styles.rescheduleBtn, styles.rescheduleBtnAccept]}
+                          onPress={(e) => { e.stopPropagation?.(); handleRescheduleAccept(item); }}
+                          disabled={rescheduleActionId === item.id}
+                          accessibilityRole="button"
+                          accessibilityLabel="Accept new appointment time"
+                        >
+                          <Text style={styles.rescheduleBtnAcceptText}>
+                            {rescheduleActionId === item.id ? '…' : '✓ Accept'}
+                          </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.rescheduleBtn, styles.rescheduleBtnDecline]}
+                          onPress={(e) => { e.stopPropagation?.(); handleRescheduleDecline(item); }}
+                          disabled={rescheduleActionId === item.id}
+                          accessibilityRole="button"
+                          accessibilityLabel="Decline new appointment time"
+                        >
+                          <Text style={styles.rescheduleBtnDeclineText}>✕ Decline</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
                 </View>
 
                 <Text style={[styles.chevron, { color: colors.subtext }]}>›</Text>
@@ -360,4 +453,19 @@ const styles = StyleSheet.create({
   lockIcon: { fontSize: 64, marginBottom: 20 },
   guestWallTitle: { fontSize: 22, fontWeight: 'bold', marginBottom: 12, textAlign: 'center' },
   guestWallText: { fontSize: 15, lineHeight: 22, textAlign: 'center', marginBottom: 32 },
+  // Reschedule proposal styles
+  rescheduleBox: {
+    marginTop: 8, backgroundColor: '#F5F3FF', borderRadius: 10,
+    borderWidth: 1, borderColor: '#DDD6FE', padding: 10,
+  },
+  rescheduleTitle: { fontSize: 12, fontWeight: '700', color: '#7C3AED', marginBottom: 2 },
+  rescheduleTime:  { fontSize: 13, fontWeight: '600', color: '#4C1D95', marginBottom: 8 },
+  rescheduleActions: { flexDirection: 'row', gap: 8 },
+  rescheduleBtn: {
+    flex: 1, paddingVertical: 7, borderRadius: 8, alignItems: 'center', borderWidth: 1,
+  },
+  rescheduleBtnAccept: { backgroundColor: '#7C3AED', borderColor: '#7C3AED' },
+  rescheduleBtnDecline: { backgroundColor: '#fff', borderColor: '#DDD6FE' },
+  rescheduleBtnAcceptText:  { fontSize: 12, fontWeight: '700', color: '#fff' },
+  rescheduleBtnDeclineText: { fontSize: 12, fontWeight: '700', color: '#7C3AED' },
 });

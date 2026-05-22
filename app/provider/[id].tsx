@@ -35,6 +35,15 @@ interface Provider {
   acceptsNewPatients?: boolean;
   acceptingNewPatients?: boolean;
   telehealth?: boolean;
+  practiceType?: string;
+  dpcMonthlyFee?: number;
+  dpcDescription?: string;
+  hsaEligible?: boolean;
+  acceptingNewMembers?: boolean;
+  fqhc?: boolean;
+  tribal?: boolean;
+  slidingScale?: boolean;
+  acceptsSelfPay?: boolean;
   inPerson?: boolean;
   telehealthOnly?: boolean;
   insuranceAccepted: string[];
@@ -565,6 +574,212 @@ const InterviewConsultCard = ({
 // ─── Unverified Disclaimer Banner ─────────────────────────────────────────────
 // Shows on profiles that haven't been claimed by the provider yet.
 // Protects Morava legally — data is from public sources, may be outdated.
+// ─── DPC Info Card ────────────────────────────────────────────────────────────
+// Shows when provider.practiceType === 'dpc' or 'concierge'
+// Explains the membership model so patients understand before booking
+const DPCInfoCard = ({
+  colors,
+  practiceType,
+  dpcMonthlyFee,
+  dpcDescription,
+  hsaEligible,
+  acceptingNewMembers,
+}: {
+  colors: any;
+  practiceType: string;
+  dpcMonthlyFee?: number;
+  dpcDescription?: string;
+  hsaEligible?: boolean;
+  acceptingNewMembers?: boolean;
+}) => {
+  const isDPC = practiceType === "dpc";
+  const isConcierge = practiceType === "concierge";
+  const accentColor = isDPC ? "#00838F" : "#7C3AED";
+  const bgColor = isDPC ? "#E0F7FA" : "#F5F3FF";
+  const label = isDPC ? "Direct Primary Care Practice" : "Concierge Medicine Practice";
+  const icon = isDPC ? "🏥" : "⭐";
+
+  return (
+    <View
+      style={[
+        styles.section,
+        {
+          backgroundColor: colors.card,
+          borderLeftWidth: 4,
+          borderLeftColor: accentColor,
+        },
+      ]}
+    >
+      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
+        <Text style={{ fontSize: 20, marginRight: 8 }}>{icon}</Text>
+        <Text style={{ fontSize: 15, fontWeight: "700", color: accentColor, flex: 1 }}>
+          {label}
+        </Text>
+      </View>
+
+      {dpcMonthlyFee && dpcMonthlyFee > 0 ? (
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            backgroundColor: accentColor + "18",
+            borderRadius: 8,
+            padding: 10,
+            marginBottom: 10,
+          }}
+        >
+          <Text style={{ fontSize: 22, fontWeight: "800", color: accentColor }}>
+            ${dpcMonthlyFee}
+          </Text>
+          <Text style={{ fontSize: 13, color: colors.textMuted, marginLeft: 6 }}>
+            / month membership
+          </Text>
+        </View>
+      ) : (
+        <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: accentColor + "12", borderRadius: 8, padding: 10, marginBottom: 10 }}>
+          <Text style={{ fontSize: 13, color: accentColor, fontWeight: "600" }}>💵 Contact provider for membership pricing</Text>
+        </View>
+      )}
+
+      {/* HSA + Accepting Members badges */}
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+        {hsaEligible && (
+          <View style={{ backgroundColor: "#ECFDF5", borderRadius: 10, paddingHorizontal: 9, paddingVertical: 4 }}>
+            <Text style={{ fontSize: 12, fontWeight: "700", color: "#059669" }}>💰 HSA Eligible</Text>
+          </View>
+        )}
+        {acceptingNewMembers !== false ? (
+          <View style={{ backgroundColor: "#EFF6FF", borderRadius: 10, paddingHorizontal: 9, paddingVertical: 4 }}>
+            <Text style={{ fontSize: 12, fontWeight: "700", color: "#2563EB" }}>✓ Accepting New Members</Text>
+          </View>
+        ) : (
+          <View style={{ backgroundColor: "#FEF2F2", borderRadius: 10, paddingHorizontal: 9, paddingVertical: 4 }}>
+            <Text style={{ fontSize: 12, fontWeight: "700", color: "#DC2626" }}>Panel Closed — Check Back Later</Text>
+          </View>
+        )}
+      </View>
+
+      {dpcDescription ? (
+        <Text style={{ fontSize: 14, color: colors.text, lineHeight: 20, marginBottom: 10 }}>
+          {dpcDescription}
+        </Text>
+      ) : (
+        <Text style={{ fontSize: 14, color: colors.text, lineHeight: 20, marginBottom: 10 }}>
+          {isDPC
+            ? "This practice operates on a monthly membership model. As a member you get unlimited primary care visits, direct access to your physician, and same-day appointments — without billing insurance for every visit."
+            : "This is a concierge medicine practice. Members pay a monthly fee for premium access including same-day appointments, direct physician communication, and comprehensive preventive care."}
+        </Text>
+      )}
+
+      <View style={{ gap: 6 }}>
+        {[
+          { icon: "✓", text: "No insurance required for primary care visits" },
+          { icon: "✓", text: "Unlimited visits included in membership" },
+          { icon: "✓", text: "Direct access to your physician" },
+          { icon: "ℹ", text: "Keep insurance for specialists and hospitalizations" },
+        ].map((item, i) => (
+          <View key={i} style={{ flexDirection: "row", alignItems: "flex-start", gap: 8 }}>
+            <Text style={{ color: i === 3 ? "#94A3B8" : accentColor, fontWeight: "700", fontSize: 13, marginTop: 1 }}>
+              {item.icon}
+            </Text>
+            <Text style={{ fontSize: 13, color: i === 3 ? "#94A3B8" : colors.text, flex: 1, lineHeight: 18 }}>
+              {item.text}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+};
+
+// ─── Telehealth Only Badge ─────────────────────────────────────────────────────
+// Shows a prominent banner when provider only does telehealth visits
+const TelehealthOnlyBanner = ({ colors }: { colors: any }) => (
+  <View
+    style={[
+      styles.section,
+      {
+        backgroundColor: "#EFF6FF",
+        borderLeftWidth: 4,
+        borderLeftColor: "#3B82F6",
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+      },
+    ]}
+  >
+    <Text style={{ fontSize: 24 }}>📱</Text>
+    <View style={{ flex: 1 }}>
+      <Text style={{ fontSize: 14, fontWeight: "700", color: "#1D4ED8", marginBottom: 2 }}>
+        Telehealth Only
+      </Text>
+      <Text style={{ fontSize: 13, color: "#3B82F6", lineHeight: 18 }}>
+        This provider conducts all visits virtually. You will receive a video
+        link after your appointment is confirmed. Available statewide — no
+        travel required.
+      </Text>
+    </View>
+  </View>
+);
+
+// ─── FQHC / Community Health Badge ────────────────────────────────────────────
+const FQHCBanner = ({ colors }: { colors: any }) => (
+  <View
+    style={[
+      styles.section,
+      {
+        backgroundColor: "#ECFDF5",
+        borderLeftWidth: 4,
+        borderLeftColor: "#059669",
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+      },
+    ]}
+  >
+    <Text style={{ fontSize: 24 }}>🏘️</Text>
+    <View style={{ flex: 1 }}>
+      <Text style={{ fontSize: 14, fontWeight: "700", color: "#065F46", marginBottom: 2 }}>
+        Federally Qualified Health Center
+      </Text>
+      <Text style={{ fontSize: 13, color: "#059669", lineHeight: 18 }}>
+        This is a FQHC — a federally funded community health center. Fees are
+        based on a sliding scale tied to income. No one is turned away for
+        inability to pay.
+      </Text>
+    </View>
+  </View>
+);
+
+// ─── Tribal Health Badge ───────────────────────────────────────────────────────
+const TribalHealthBanner = ({ colors }: { colors: any }) => (
+  <View
+    style={[
+      styles.section,
+      {
+        backgroundColor: "#FFFBEB",
+        borderLeftWidth: 4,
+        borderLeftColor: "#92400E",
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+      },
+    ]}
+  >
+    <Text style={{ fontSize: 24 }}>🪶</Text>
+    <View style={{ flex: 1 }}>
+      <Text style={{ fontSize: 14, fontWeight: "700", color: "#92400E", marginBottom: 2 }}>
+        Tribal Health Facility
+      </Text>
+      <Text style={{ fontSize: 13, color: "#B45309", lineHeight: 18 }}>
+        This facility serves Tribal Nation members and IHS-eligible patients.
+        Services may also be available to non-tribal patients — contact the
+        facility to confirm eligibility.
+      </Text>
+    </View>
+  </View>
+);
+
 const UnverifiedDisclaimer = ({ colors }: { colors: any }) => (
   <View
     style={[
@@ -655,6 +870,15 @@ export default function ProviderDetailScreen() {
         acceptsNewPatients:
           data.acceptingNewPatients ?? data.acceptsNewPatients ?? true,
         telehealth: data.telehealth === true,
+        practiceType: typeof data.practiceType === "string" ? data.practiceType : "standard",
+        dpcMonthlyFee: typeof data.dpcMonthlyFee === "number" ? data.dpcMonthlyFee : undefined,
+        dpcDescription: typeof data.dpcDescription === "string" ? data.dpcDescription : undefined,
+        hsaEligible: data.hsaEligible === true,
+        acceptingNewMembers: data.acceptingNewMembers !== false,
+        fqhc: data.fqhc === true,
+        tribal: data.tribal === true,
+        slidingScale: data.slidingScale === true,
+        acceptsSelfPay: data.acceptsSelfPay === true,
         inPerson: data.inPerson !== false,
         telehealthOnly: data.telehealthOnly === true,
         insuranceAccepted: safeInsurance,
@@ -936,6 +1160,25 @@ export default function ProviderDetailScreen() {
             <Text style={[styles.specialty, { color: colors.primary }]}>
               {provider.specialty}
             </Text>
+            {/* DPC header badges */}
+            {provider.practiceType === "dpc" && (
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, marginBottom: 4 }}>
+                <View style={{ backgroundColor: "#EDE9FE", borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2 }}>
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: "#6D28D9" }}>🏥 DPC</Text>
+                </View>
+                {typeof provider.dpcMonthlyFee === "number" && provider.dpcMonthlyFee > 0 && (
+                  <View style={{ backgroundColor: "#F5F3FF", borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2 }}>
+                    <Text style={{ fontSize: 11, fontWeight: "600", color: "#7C3AED" }}>${provider.dpcMonthlyFee}/mo</Text>
+                  </View>
+                )}
+                {provider.hsaEligible && (
+                  <View style={{ backgroundColor: "#ECFDF5", borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2 }}>
+                    <Text style={{ fontSize: 11, fontWeight: "600", color: "#059669" }}>💰 HSA</Text>
+                  </View>
+                )}
+              </View>
+            )}
+
             <View style={styles.badgeRow}>
               {isTelehealthOnly ? (
                 <View
@@ -1006,6 +1249,21 @@ export default function ProviderDetailScreen() {
 
       {/* Unverified disclaimer — shown below header for unclaimed profiles */}
       {!provider.verified && <UnverifiedDisclaimer colors={colors} />}
+
+      {/* Practice type banners — shown based on provider's practice model */}
+      {(provider.practiceType === "dpc" || provider.practiceType === "concierge") && (
+        <DPCInfoCard
+          colors={colors}
+          practiceType={provider.practiceType}
+          dpcMonthlyFee={provider.dpcMonthlyFee}
+          dpcDescription={provider.dpcDescription}
+          hsaEligible={provider.hsaEligible}
+          acceptingNewMembers={provider.acceptingNewMembers}
+        />
+      )}
+      {provider.telehealthOnly && <TelehealthOnlyBanner colors={colors} />}
+      {provider.fqhc && <FQHCBanner colors={colors} />}
+      {provider.tribal && <TribalHealthBanner colors={colors} />}
 
       {/* Virtual Care Only banner */}
       {isTelehealthOnly && (
@@ -1198,48 +1456,67 @@ export default function ProviderDetailScreen() {
             </Text>
           </View>
         )}
-        {!!provider.website && (
-          <TouchableOpacity
-            style={styles.infoRow}
-            onPress={() =>
-              Linking.openURL(
-                provider.website!.startsWith("http")
-                  ? provider.website!
-                  : `https://${provider.website!}`,
-              )
-            }
-          >
-            <Ionicons name="globe-outline" size={20} color={colors.primary} />
-            <Text
-              style={[styles.infoText, { color: colors.primary }]}
-              numberOfLines={1}
+        {!!provider.website && (() => {
+          // H-5: enforce https-only — reject javascript:, data:, http: and anything
+          // that doesn't begin with a valid web scheme before calling Linking.openURL.
+          const raw = provider.website!.trim();
+          const normalized = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+          const isSafe = /^https:\/\/.+/i.test(normalized);
+          return isSafe ? (
+            <TouchableOpacity
+              style={styles.infoRow}
+              onPress={() => Linking.openURL(normalized)}
             >
-              {provider.website}
-            </Text>
-          </TouchableOpacity>
-        )}
+              <Ionicons name="globe-outline" size={20} color={colors.primary} />
+              <Text
+                style={[styles.infoText, { color: colors.primary }]}
+                numberOfLines={1}
+              >
+                {raw}
+              </Text>
+            </TouchableOpacity>
+          ) : null;
+        })()}
       </View>
 
       <View style={[styles.section, { backgroundColor: colors.card }]}>
         <Text style={[styles.sectionTitle, { color: colors.text }]}>
           Insurance Accepted
         </Text>
-        {hasSoonerCare && (
-          <View
-            style={[
-              styles.soonerCareHighlight,
-              { backgroundColor: colors.success },
-            ]}
-          >
-            <Text style={styles.soonerCareText}>
-              ✓ Accepts SoonerCare / Medicaid
+        {provider.practiceType === "dpc" ? (
+          <View style={{ backgroundColor: "#F5F3FF", borderRadius: 10, padding: 12, gap: 6 }}>
+            <Text style={{ fontSize: 13, fontWeight: "700", color: "#6D28D9", marginBottom: 2 }}>
+              DPC practices do not bill insurance
             </Text>
+            <Text style={{ fontSize: 13, color: "#7C3AED", lineHeight: 18 }}>
+              Members pay a flat monthly fee for unlimited primary care. Keep your insurance for specialists, imaging, and hospitalizations.
+            </Text>
+            {hasSoonerCare && (
+              <Text style={{ fontSize: 12, color: "#94A3B8", marginTop: 4 }}>
+                ℹ️ SoonerCare / Medicaid patients: DPC operates outside the Medicaid billing system. The monthly fee is a cash-pay membership.
+              </Text>
+            )}
           </View>
-        )}
-        {provider.insuranceAccepted.length > 0 && (
-          <Text style={[styles.insuranceList, { color: colors.text }]}>
-            {provider.insuranceAccepted.join(", ")}
-          </Text>
+        ) : (
+          <>
+            {hasSoonerCare && (
+              <View
+                style={[
+                  styles.soonerCareHighlight,
+                  { backgroundColor: colors.success },
+                ]}
+              >
+                <Text style={styles.soonerCareText}>
+                  ✓ Accepts SoonerCare / Medicaid
+                </Text>
+              </View>
+            )}
+            {provider.insuranceAccepted.length > 0 && (
+              <Text style={[styles.insuranceList, { color: colors.text }]}>
+                {provider.insuranceAccepted.join(", ")}
+              </Text>
+            )}
+          </>
         )}
       </View>
 
@@ -1255,7 +1532,21 @@ export default function ProviderDetailScreen() {
         onBookVoucher={handleBooking}
       />
 
-      {acceptingPatients ? (
+      {provider.practiceType === "dpc" ? (
+        provider.acceptingNewMembers !== false ? (
+          <View style={[styles.section, { backgroundColor: "#EFF6FF" }]}>
+            <Text style={[styles.acceptingText, { color: "#2563EB" }]}>
+              ✓ Currently Accepting New Members
+            </Text>
+          </View>
+        ) : (
+          <View style={[styles.section, { backgroundColor: "#FEF2F2" }]}>
+            <Text style={[styles.acceptingText, { color: "#DC2626" }]}>
+              Panel Closed — Not accepting new members at this time
+            </Text>
+          </View>
+        )
+      ) : acceptingPatients ? (
         <View
           style={[styles.section, { backgroundColor: colors.success + "20" }]}
         >
@@ -1281,25 +1572,47 @@ export default function ProviderDetailScreen() {
       )}
 
       <View style={styles.bookContainer}>
-        <TouchableOpacity
-          style={[
-            styles.bookButton,
-            {
-              backgroundColor: acceptingPatients
-                ? colors.primary
-                : colors.border,
-            },
-          ]}
-          disabled={!acceptingPatients}
-          activeOpacity={0.7}
-          onPress={handleBooking}
-        >
-          <Text style={styles.bookButtonText}>
-            {acceptingPatients
-              ? "Book Appointment"
-              : "Not Accepting New Patients"}
-          </Text>
-        </TouchableOpacity>
+        {provider.practiceType === "dpc" ? (
+          <TouchableOpacity
+            style={[
+              styles.bookButton,
+              {
+                backgroundColor: provider.acceptingNewMembers !== false
+                  ? "#7C3AED"
+                  : colors.border,
+              },
+            ]}
+            disabled={provider.acceptingNewMembers === false}
+            activeOpacity={0.7}
+            onPress={handleBooking}
+          >
+            <Text style={styles.bookButtonText}>
+              {provider.acceptingNewMembers !== false
+                ? "Request Membership Consult"
+                : "Panel Closed"}
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[
+              styles.bookButton,
+              {
+                backgroundColor: acceptingPatients
+                  ? colors.primary
+                  : colors.border,
+              },
+            ]}
+            disabled={!acceptingPatients}
+            activeOpacity={0.7}
+            onPress={handleBooking}
+          >
+            <Text style={styles.bookButtonText}>
+              {acceptingPatients
+                ? "Book Appointment"
+                : "Not Accepting New Patients"}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <View style={{ height: 40 }} />

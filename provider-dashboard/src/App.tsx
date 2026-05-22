@@ -1,5 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import React from "react";
+import React, { useState } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import Analytics from "./pages/Analytics";
 import RecoveryDashboard from "./pages/RecoveryDashboard";
@@ -10,7 +10,43 @@ import Dashboard from "./pages/Dashboard";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import MFAChallenge from "./pages/MFAChallenge";
+import MFASetup from "./pages/MFASetup";
 import Profile from "./pages/Profile";
+
+// ── MFA enforcement gate — H-6 ────────────────────────────────────────────
+// Renders a full-screen mandatory MFASetup modal when a provider hasn't
+// enrolled in 2FA yet. Recovery facility accounts are exempt — they are
+// operations staff, not direct providers of clinical care.
+// The gate cannot be dismissed (required={true} hides "Set up later").
+function MFAEnforcementGate({ children }: { children: React.ReactNode }) {
+  const { user, isMFAEnrolled, providerProfile, loading, profileLoading } = useAuth();
+  const [enrolled, setEnrolled] = useState(false);
+
+  // Let parent spinners handle loading states
+  if (loading || profileLoading || !user) return <>{children}</>;
+
+  // Recovery facility operators are exempt from MFA enforcement
+  const isRecoveryFacility = providerProfile?.role === "recovery_facility";
+  if (isRecoveryFacility) return <>{children}</>;
+
+  // If already enrolled (or just completed enrollment), let them through
+  if (isMFAEnrolled || enrolled) return <>{children}</>;
+
+  // Block access until MFA is configured — no escape route
+  return (
+    <>
+      {/* Render children in background so state is preserved after enrollment */}
+      <div className="pointer-events-none select-none" aria-hidden="true">
+        {children}
+      </div>
+      <MFASetup
+        required
+        onEnrolled={() => setEnrolled(true)}
+        onClose={() => { /* required=true — no dismiss, but keep handler for type safety */ }}
+      />
+    </>
+  );
+}
 
 // ── Protected route — requires auth + full profile load ──────────────────
 // Checks BOTH loading (Firebase auth) and profileLoading (Firestore profile
@@ -22,7 +58,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (loading || profileLoading) return <Spinner />;
   // Mid-login MFA challenge — don't let them into dashboard yet
   if (mfaResolver) return <MFAChallenge />;
-  return user ? <>{children}</> : <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/login" replace />;
+  return <MFAEnforcementGate>{children}</MFAEnforcementGate>;
 }
 
 // ── Provider-only route — blocks recovery facility accounts ───────────────

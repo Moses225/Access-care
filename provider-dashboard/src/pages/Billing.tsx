@@ -28,6 +28,56 @@ const PLAN_FEATURES = {
   ],
 };
 
+// DPC tier definitions — maps to the existing plan field
+const DPC_TIERS = [
+  {
+    id: "founding",
+    label: "Founding",
+    price: "$25",
+    period: "/ month",
+    badge: "🏅 First 20 DPC providers",
+    color: "teal",
+    features: [
+      "🏥 'Direct Primary Care' badge on listing",
+      "💵 Monthly fee displayed on your provider card",
+      "🔍 Appears in DPC filter results on patient app",
+      "📋 EHR-ready patient summary with each booking request",
+      "📧 Instant email on every new membership inquiry",
+    ],
+  },
+  {
+    id: "standard",
+    label: "Growth",
+    price: "$49",
+    period: "/ month",
+    badge: null,
+    color: "purple",
+    features: [
+      "Everything in Founding, plus:",
+      "🔝 Priority placement in DPC filter results",
+      "✓ 'Accepting New Members' badge shown on listing",
+      "💰 'HSA Eligible' badge (if you qualify)",
+      "📱 Telehealth indicator on your listing",
+      "📊 Analytics — views, clicks, membership requests",
+    ],
+  },
+  {
+    id: "pro",
+    label: "Practice",
+    price: "$79",
+    period: "/ month",
+    badge: "Coming soon",
+    color: "slate",
+    features: [
+      "Everything in Growth, plus:",
+      "👥 Multiple provider listings under one practice",
+      "🏢 Employer & group inquiry form on your listing",
+      "⭐ Featured placement in 'Browse by Category'",
+      "🎧 Priority support",
+    ],
+  },
+];
+
 export default function Billing() {
   const navigate = useNavigate();
   const { providerProfile } = useAuth();
@@ -35,6 +85,7 @@ export default function Billing() {
   const [showProInfo, setShowProInfo] = useState(false);
 
   const plan = providerProfile?.plan ?? "founding";
+  const isDPC = providerProfile?.practiceType === "dpc";
   const hasPaymentMethod = !!(
     providerProfile?.stripeCustomerId ||
     providerProfile?.stripePaymentMethodId ||
@@ -44,6 +95,8 @@ export default function Billing() {
   const features =
     PLAN_FEATURES[plan as keyof typeof PLAN_FEATURES] ??
     PLAN_FEATURES.standard;
+
+  const currentDPCTier = DPC_TIERS.find((t) => t.id === plan) ?? DPC_TIERS[0];
 
   const expiryLabel = (() => {
     if (!providerProfile?.foundingExpiresAt) return null;
@@ -99,9 +152,86 @@ export default function Billing() {
             Billing & Plan
           </h1>
           <p className="text-slate-500">
-            Manage your Morava plan, payment method, and billing details.
+            {isDPC
+              ? "Manage your DPC listing tier, payment method, and billing details."
+              : "Manage your Morava plan, payment method, and billing details."}
           </p>
         </div>
+
+        {/* ── DPC Tier View ─────────────────────────────────────────────────── */}
+        {isDPC && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-5">
+              <span className="text-xl">🏥</span>
+              <h2 className="text-lg font-semibold text-slate-900">Direct Primary Care Listing Tier</h2>
+              <span className="bg-purple-100 text-purple-700 text-xs font-bold px-2.5 py-1 rounded-full">DPC Active</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              {DPC_TIERS.map((tier) => {
+                const isActive = tier.id === plan;
+                const colorMap: Record<string, string> = {
+                  teal: isActive ? "border-teal-500 bg-teal-50" : "border-slate-200 bg-white",
+                  purple: isActive ? "border-purple-500 bg-purple-50" : "border-slate-200 bg-white",
+                  slate: "border-slate-200 bg-slate-50 opacity-60",
+                };
+                const priceColor: Record<string, string> = {
+                  teal: "text-teal-700",
+                  purple: "text-purple-700",
+                  slate: "text-slate-500",
+                };
+                return (
+                  <div
+                    key={tier.id}
+                    className={`rounded-2xl border-2 p-5 transition-all ${colorMap[tier.color]}`}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="font-bold text-slate-900 text-base">{tier.label}</span>
+                      {isActive && (
+                        <span className="text-xs bg-white text-slate-700 border border-slate-200 font-semibold px-2 py-0.5 rounded-full">✓ Your plan</span>
+                      )}
+                      {tier.badge && !isActive && (
+                        <span className="text-xs bg-slate-100 text-slate-500 font-medium px-2 py-0.5 rounded-full">{tier.badge}</span>
+                      )}
+                    </div>
+                    <div className="mb-4">
+                      <span className={`text-2xl font-extrabold ${priceColor[tier.color]}`}>{tier.price}</span>
+                      <span className="text-slate-400 text-sm ml-1">{tier.period}</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      {tier.features.map((f) => (
+                        <div key={f} className="flex items-start gap-1.5 text-xs text-slate-600">
+                          <span className="flex-shrink-0 mt-0.5 text-slate-400">·</span>
+                          <span>{f}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {!isActive && tier.id !== "pro" && (
+                      <button
+                        onClick={() => {
+                          const subject = encodeURIComponent(`DPC tier upgrade — ${tier.label}`);
+                          window.open(`mailto:support@moravacare.com?subject=${subject}`, "_blank");
+                        }}
+                        className="mt-4 w-full bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 rounded-lg transition-colors"
+                      >
+                        Upgrade to {tier.label}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* DPC billing explainer */}
+            <div className="bg-purple-50 border border-purple-100 rounded-xl p-4 text-xs text-purple-700 space-y-1.5">
+              <p className="font-semibold text-purple-800 mb-1">How DPC billing works</p>
+              <p>• Your Morava listing tier is separate from the membership fees you charge patients.</p>
+              <p>• Morava does not collect or process patient membership payments — you set your own fee and bill patients directly.</p>
+              <p>• Morava charges you a flat monthly listing fee based on your tier above.</p>
+              <p>• To change tiers or discuss billing, email <a href="mailto:support@moravacare.com" className="underline">support@moravacare.com</a>.</p>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-5">
@@ -113,11 +243,13 @@ export default function Billing() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xl font-bold text-slate-900">
-                      {plan === "founding"
-                        ? "Founding Provider"
-                        : plan === "pro"
-                          ? "Pro"
-                          : "Standard"}
+                      {isDPC
+                        ? `DPC ${currentDPCTier.label}`
+                        : plan === "founding"
+                          ? "Founding Provider"
+                          : plan === "pro"
+                            ? "Pro"
+                            : "Standard"}
                     </span>
                     {plan === "founding" && (
                       <span className="bg-teal-50 text-teal-700 text-xs font-bold px-2 py-0.5 rounded-full">
@@ -138,10 +270,12 @@ export default function Billing() {
                 </div>
                 <div className="text-right">
                   <div className="text-2xl font-bold text-slate-900">
-                    {plan === "pro" ? "$99" : plan === "founding" ? "$6" : "$10"}
+                    {isDPC
+                      ? currentDPCTier.price
+                      : plan === "pro" ? "$99" : plan === "founding" ? "$6" : "$10"}
                   </div>
                   <div className="text-xs text-slate-400">
-                    {plan === "pro" ? "/ month" : "/ completed visit"}
+                    {isDPC ? "/ month" : plan === "pro" ? "/ month" : "/ completed visit"}
                   </div>
                 </div>
               </div>

@@ -823,6 +823,10 @@ export const onboardProvider = onCall(
   {
     region: "us-central1",
     secrets: [resendApiKey],
+    // H-7: App Check enforcement deferred — dashboard does not yet have App Check
+    // initialized (reCAPTCHA site key / secret key setup pending).
+    // Re-enable enforceAppCheck: true here once App Check is wired into the dashboard.
+    // This function already requires isAdmin() on the token, so abuse surface is low.
   },
   async (request) => {
     // Require admin caller
@@ -953,7 +957,19 @@ export const onboardProvider = onCall(
 // ================================================================
 // SMS — CLOUD FUNCTION (credentials never in app bundle)
 // Called from utils/sms.ts via httpsCallable
-// PHI-FREE: validates body length, never logs phone or body content
+// ================================================================
+// sendSMSNotification — provider-to-patient scheduling nudges only.
+//
+// SECURITY / HIPAA:
+//   M-1: PHI pattern guard — rejects bodies that match SSN, DOB, ICD-10,
+//        name+date combos, or other identifiable health data patterns.
+//        PHI belongs in Firestore (encrypted at rest, access-controlled),
+//        never in an SMS payload.
+//   M-2: Per-provider rate limit — max 20 SMS per calendar day, enforced
+//        server-side via a Firestore counter. Prevents a compromised provider
+//        account from spamming patients.
+//   Credentials: stored in Secret Manager, never in the client bundle.
+//   Logging: never logs phone number or message body — only the Twilio SID.
 // ================================================================
 export const sendSMSNotification = onCall(
   { secrets: [twilioAccountSid, twilioAuthToken, twilioFromNumber] },
@@ -961,10 +977,68 @@ export const sendSMSNotification = onCall(
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Must be signed in to send SMS");
     }
-    const { to, body } = request.data as { to: string; body: string };
+
+    const { to, body } = request.data as { to?: string; body?: string };
     if (!to || !body) throw new HttpsError("invalid-argument", "Missing to or body");
     if (body.length > 320) throw new HttpsError("invalid-argument", "Message too long");
 
+    // ── M-1: PHI pattern guard ─────────────────────────────────────────────
+    // Reject any body that matches common PHI patterns. These patterns catch
+    // accidental or intentional inclusion of health information in SMS.
+    // This is defense-in-depth — the real PHI store is Firestore.
+    const PHI_PATTERNS: RegExp[] = [
+      /\b\d{3}-\d{2}-\d{4}\b/,                          // SSN: 123-45-6789
+      /\b\d{9}\b/,                                       // SSN no-dash: 123456789
+      /\b(dob|date of birth|born)[:\s]+\d/i,             // "DOB: 01/01/1990"
+      /\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/,          // date: 01/01/1990
+      /\b[A-Z]\d{2}\.?\d{0,2}\b/,                        // ICD-10: E11.9, J45
+      /\b(diagnosis|dx|condition|medication|rx|allergy|prescription)[:\s]/i,
+      /\b(HIV|AIDS|cancer|diabetes|bipolar|schizophrenia|hepatitis)\b/i,
+      /\b(insurance|member\s?id|policy\s?#|group\s?#)[:\s]/i,
+      /\b\d{10,}\b/,                                     // long numeric ID (MRN, insurance)
+    ];
+    for (const pattern of PHI_PATTERNS) {
+      if (pattern.test(body)) {
+        console.warn(`sendSMSNotification: PHI pattern blocked for provider ${request.auth.uid}`);
+        throw new HttpsError(
+          "invalid-argument",
+          "Message body may contain protected health information and cannot be sent via SMS. " +
+          "Use the Morava dashboard to share clinical details securely."
+        );
+      }
+    }
+
+    // ── M-2: Per-provider daily rate limit (max 20 SMS / provider / day) ───
+    const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+    const rateLimitRef = db
+      .collection("smsRateLimits")
+      .doc(`${request.auth.uid}_${today}`);
+
+    const MAX_DAILY = 20;
+    const limitDoc = await rateLimitRef.get();
+    const currentCount = (limitDoc.data()?.count as number) ?? 0;
+    if (currentCount >= MAX_DAILY) {
+      console.warn(`sendSMSNotification: rate limit hit for provider ${request.auth.uid}`);
+      throw new HttpsError(
+        "resource-exhausted",
+        `Daily SMS limit of ${MAX_DAILY} reached. Resets at midnight.`
+      );
+    }
+    // Increment atomically — set with merge so first call creates the doc
+    await rateLimitRef.set(
+      {
+        count: admin.firestore.FieldValue.increment(1),
+        providerId: request.auth.uid,
+        date: today,
+        // TTL: keep for 7 days for audit purposes, then auto-expire
+        expiresAt: admin.firestore.Timestamp.fromMillis(
+          Date.now() + 7 * 24 * 60 * 60 * 1000
+        ),
+      },
+      { merge: true }
+    );
+
+    // ── Send via Twilio ────────────────────────────────────────────────────
     const sid   = twilioAccountSid.value();
     const token = twilioAuthToken.value();
     const from  = twilioFromNumber.value();
@@ -988,27 +1062,38 @@ export const sendSMSNotification = onCall(
 
     const data = await response.json() as { sid?: string; message?: string };
     if (!response.ok) throw new HttpsError("internal", `Twilio: ${data.message}`);
-    console.log(`✅ SMS sent sid=${data.sid}`); // never logs phone or body
+    console.log(`✅ SMS sent sid=${data.sid}`); // intentionally never logs phone or body
     return { success: true, sid: data.sid };
   }
 );
 
 // ================================================================
 // SCHEDULED REMINDERS — runs every 60 min
-// Sends 24h and 2h SMS reminders for confirmed appointments.
-// Marks reminder sent on the appointment doc to prevent duplicates.
-// PHI-FREE: body contains no provider name, date, time, or patient ID.
+// Sends 24h and 2h SMS reminders for confirmed bookings.
+// Marks reminder sent on the booking doc to prevent duplicates.
+// PHI-FREE: body contains no provider name, patient name, date, time, or diagnosis.
+// ================================================================
+// H-3 fixes applied:
+//   1. Collection was "appointments" — corrected to "bookings"
+//   2. Patient lookup used appt.patientUid — corrected to appt.userId
+//   3. Date query used Timestamp range — corrected to string equality
+//      ("date" field is stored as "YYYY-MM-DD" string, not a Timestamp)
 // ================================================================
 export const sendAppointmentReminders = onSchedule(
   { schedule: "every 60 minutes",
     secrets: [twilioAccountSid, twilioAuthToken, twilioFromNumber] },
   async () => {
-    const nowMs = Date.now();
-    const WINDOW_MS = 15 * 60 * 1000; // ±15 min window
+    const now = new Date();
+
+    // Helper: return "YYYY-MM-DD" for a date offset by `offsetHours` from now
+    const toDateStr = (offsetHours: number): string => {
+      const d = new Date(now.getTime() + offsetHours * 60 * 60 * 1000);
+      return d.toISOString().slice(0, 10); // "YYYY-MM-DD"
+    };
 
     const windows = [
-      { label: "24h", targetMs: nowMs + 24 * 60 * 60 * 1000, field: "reminder24hSent" },
-      { label: "2h",  targetMs: nowMs +  2 * 60 * 60 * 1000, field: "reminder2hSent"  },
+      { label: "24h", dateStr: toDateStr(24), field: "reminder24hSent" },
+      { label: "2h",  dateStr: toDateStr(2),  field: "reminder2hSent"  },
     ];
 
     const sid   = twilioAccountSid.value();
@@ -1017,30 +1102,29 @@ export const sendAppointmentReminders = onSchedule(
     const credentials = Buffer.from(`${sid}:${token}`).toString("base64");
 
     for (const w of windows) {
-      const start = admin.firestore.Timestamp.fromMillis(w.targetMs - WINDOW_MS);
-      const end   = admin.firestore.Timestamp.fromMillis(w.targetMs + WINDOW_MS);
-
-      // ⚠️ Verify field name matches your appointments collection schema
-      const snap = await db.collection("appointments")
+      // Query bookings collection (not "appointments") using string date equality
+      const snap = await db.collection("bookings")
         .where("status", "==", "confirmed")
-        .where("date", ">=", start)
-        .where("date", "<=", end)
+        .where("date", "==", w.dateStr)
         .get();
 
-      for (const apptDoc of snap.docs) {
-        const appt = apptDoc.data();
+      for (const bookingDoc of snap.docs) {
+        const appt = bookingDoc.data();
         if (appt[w.field]) continue; // already sent — skip
 
-        // Get patient phone from users collection
-        const userSnap = await db.collection("users").doc(appt.patientUid).get();
+        // Get patient phone via userId (not patientUid — field is userId on bookings)
+        const patientId = appt.userId as string | undefined;
+        if (!patientId) continue;
+        const userSnap = await db.collection("users").doc(patientId).get();
         const phone = userSnap.data()?.phone as string | undefined;
         if (!phone) continue;
 
+        // PHI-FREE body — no patient name, provider name, date, time, or clinical data
         const body = w.label === "24h"
           ? "Morava: ⏰ Reminder — you have an appointment tomorrow. " +
             "Open the Morava app to view details. " +
             "Arrive 10 min early with your ID and insurance card. Reply STOP to unsubscribe."
-          : "Morava: ⏰ Your appointment is in 2 hours. " +
+          : "Morava: ⏰ Your appointment is in approximately 2 hours. " +
             "Open the Morava app to view details. Reply STOP to unsubscribe.";
 
         const sanitized = phone.replace(/[^\d+]/g, "");
@@ -1059,14 +1143,14 @@ export const sendAppointmentReminders = onSchedule(
             }
           );
           if (resp.ok) {
-            await apptDoc.ref.update({ [w.field]: true });
-            console.log(`✅ ${w.label} reminder → appt ${apptDoc.id}`);
+            await bookingDoc.ref.update({ [w.field]: true });
+            console.log(`✅ ${w.label} reminder sent → booking ${bookingDoc.id}`);
           } else {
             const err = await resp.json() as { message?: string };
-            console.error(`❌ Twilio error for ${apptDoc.id}: ${err.message}`);
+            console.error(`❌ Twilio error for booking ${bookingDoc.id}: ${err.message}`);
           }
         } catch (err) {
-          console.error(`❌ SMS failed for ${apptDoc.id}:`, err);
+          console.error(`❌ SMS failed for booking ${bookingDoc.id}:`, err);
         }
       }
     }

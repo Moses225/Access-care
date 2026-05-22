@@ -166,8 +166,14 @@ export default function BookingScreen() {
           },
         ],
       );
-    } catch {
-      Alert.alert("Error", "Failed to create booking. Please try again.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (__DEV__) {
+        console.error("❌ Booking creation failed:", err);
+        Alert.alert("Booking Error (dev)", msg);
+      } else {
+        Alert.alert("Error", "Failed to create booking. Please try again.");
+      }
     } finally {
       setLoading(false);
     }

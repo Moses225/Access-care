@@ -8,9 +8,11 @@ import { useAuth } from '../context/AuthContext';
 interface MFASetupProps {
   onClose: () => void;
   onEnrolled: () => void;
+  /** When true, hides the "Set up later" button — used for enforcement gates */
+  required?: boolean;
 }
 
-export default function MFASetup({ onClose, onEnrolled }: MFASetupProps) {
+export default function MFASetup({ onClose, onEnrolled, required = false }: MFASetupProps) {
   const { startMFAEnrollment, completeMFAEnrollment, cancelMFAEnrollment } = useAuth();
 
   const [step,     setStep]     = useState<'phone' | 'code' | 'loading' | 'done'>('phone');
@@ -85,7 +87,11 @@ export default function MFASetup({ onClose, onEnrolled }: MFASetupProps) {
           </div>
           <div>
             <h3 className="text-xl font-bold text-slate-900">Set up two-factor authentication</h3>
-            <p className="text-slate-500 text-xs mt-0.5">Required before adding billing information</p>
+            <p className="text-slate-500 text-xs mt-0.5">
+              {required
+                ? 'Required to access your provider dashboard'
+                : 'Required before adding billing information'}
+            </p>
           </div>
         </div>
 
@@ -125,16 +131,18 @@ export default function MFASetup({ onClose, onEnrolled }: MFASetupProps) {
             </div>
 
             <div className="flex gap-3">
-              <button
-                onClick={handleClose}
-                className="flex-1 border border-slate-200 text-slate-600 font-semibold py-3 rounded-xl text-sm hover:border-slate-300 transition-colors"
-              >
-                Set up later
-              </button>
+              {!required && (
+                <button
+                  onClick={handleClose}
+                  className="flex-1 border border-slate-200 text-slate-600 font-semibold py-3 rounded-xl text-sm hover:border-slate-300 transition-colors"
+                >
+                  Set up later
+                </button>
+              )}
               <button
                 onClick={handleSendCode}
                 disabled={step === 'loading'}
-                className="flex-1 bg-teal-500 hover:bg-teal-600 disabled:opacity-50 text-white font-semibold py-3 rounded-xl text-sm transition-colors"
+                className={`${required ? 'w-full' : 'flex-1'} bg-teal-500 hover:bg-teal-600 disabled:opacity-50 text-white font-semibold py-3 rounded-xl text-sm transition-colors`}
               >
                 {step === 'loading' ? (
                   <span className="flex items-center justify-center gap-2">

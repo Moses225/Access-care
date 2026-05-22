@@ -240,6 +240,8 @@ interface Provider {
   practiceType?: string;
   dpcMonthlyFee?: number;
   dpcDescription?: string;
+  hsaEligible?: boolean;
+  acceptingNewMembers?: boolean;
   telehealthAvailable?: boolean;
   telehealthOnly?: boolean;
   acceptsSelfPay?: boolean;
@@ -644,6 +646,15 @@ export default function HomeScreen() {
       });
     }
 
+    // DPC priority sort — when DPC filter is on, boost accepting members first, then HSA
+    if (dpcFilter) {
+      filtered = [...filtered].sort((a, b) => {
+        const aScore = (a.acceptingNewMembers !== false ? 2 : 0) + (a.hsaEligible ? 1 : 0);
+        const bScore = (b.acceptingNewMembers !== false ? 2 : 0) + (b.hsaEligible ? 1 : 0);
+        return bScore - aScore;
+      });
+    }
+
     setFilteredProviders(filtered);
     setDisplayCount(PAGE_SIZE);
   }, [
@@ -778,6 +789,8 @@ export default function HomeScreen() {
           practiceType: data.practiceType || "standard",
           dpcMonthlyFee: typeof data.dpcMonthlyFee === "number" ? data.dpcMonthlyFee : undefined,
           dpcDescription: typeof data.dpcDescription === "string" ? data.dpcDescription : undefined,
+          hsaEligible: data.hsaEligible ?? false,
+          acceptingNewMembers: data.acceptingNewMembers ?? true,
           telehealthAvailable: data.telehealthAvailable ?? data.telehealthOnly ?? false,
           telehealthOnly: data.telehealthOnly ?? false,
           acceptsSelfPay: data.acceptsSelfPay ?? false,
@@ -1711,6 +1724,41 @@ export default function HomeScreen() {
                           >
                             💊 SoonerCare
                           </Text>
+                        </View>
+                      )}
+                      {item.practiceType === "dpc" && (
+                        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 3 }}>
+                          {/* DPC badge */}
+                          <View style={{ backgroundColor: "#EDE9FE", borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 }}>
+                            <Text style={{ fontSize: 11, fontWeight: "700", color: "#6D28D9" }}>🏥 Direct Primary Care</Text>
+                          </View>
+                          {/* Monthly fee */}
+                          {typeof item.dpcMonthlyFee === "number" && item.dpcMonthlyFee > 0 && (
+                            <View style={{ backgroundColor: "#F5F3FF", borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 }}>
+                              <Text style={{ fontSize: 11, fontWeight: "600", color: "#7C3AED" }}>💵 ${item.dpcMonthlyFee}/mo</Text>
+                            </View>
+                          )}
+                          {!item.dpcMonthlyFee && (
+                            <View style={{ backgroundColor: "#F5F3FF", borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 }}>
+                              <Text style={{ fontSize: 11, color: "#7C3AED" }}>💵 Contact for pricing</Text>
+                            </View>
+                          )}
+                          {/* HSA eligible */}
+                          {item.hsaEligible && (
+                            <View style={{ backgroundColor: "#ECFDF5", borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 }}>
+                              <Text style={{ fontSize: 11, fontWeight: "600", color: "#059669" }}>💰 HSA Eligible</Text>
+                            </View>
+                          )}
+                          {/* Accepting members */}
+                          {item.acceptingNewMembers !== false ? (
+                            <View style={{ backgroundColor: "#EFF6FF", borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 }}>
+                              <Text style={{ fontSize: 11, fontWeight: "600", color: "#2563EB" }}>✓ Accepting Members</Text>
+                            </View>
+                          ) : (
+                            <View style={{ backgroundColor: "#FEF2F2", borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 }}>
+                              <Text style={{ fontSize: 11, fontWeight: "600", color: "#DC2626" }}>Panel Closed</Text>
+                            </View>
+                          )}
                         </View>
                       )}
                       {!!item.hospitalAffiliation && (

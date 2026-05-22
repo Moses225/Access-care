@@ -71,12 +71,14 @@ service cloud.firestore {
     // PROVIDERS
     // ================================================================
     // isProviderSafeUpdate — blocks providers from self-upgrading plan/billing fields
+    // H-2: 'hsaEligible' and 'verified' are admin-only — providers cannot self-certify
     function isProviderSafeUpdate() {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
         'plan', 'foundingExpiresAt', 'stripeCustomerId',
         'stripePaymentMethodId', 'stripeSubscriptionId',
         'manualBilling', 'isFoundingProvider', 'planActivatedAt',
-        'providerNumber', 'commissionRate', 'billable'
+        'providerNumber', 'commissionRate', 'billable',
+        'hsaEligible', 'verified'
       ]);
     }
 
@@ -115,11 +117,22 @@ service cloud.firestore {
     }
 
     match /providers/{providerId} {
-      allow read: if true;
+      // C-4: provider data is not public — requires authentication.
+      // Anonymous / unauthenticated callers cannot enumerate providers.
+      allow read: if isAuthenticated();
       allow create: if isAdmin();
       allow delete: if isAdmin();
+      // M-3: noScript guards on free-text provider fields that render in the
+      // patient app and dashboard. Providers cannot inject scripts via bio,
+      // address, or DPC description fields.
       allow update: if isAdmin()
-        || (isProviderOwner(providerId) && isProviderSafeUpdate());
+        || (isProviderOwner(providerId)
+            && isProviderSafeUpdate()
+            && (!('bio' in request.resource.data)          || validOptionalString('bio', 2000)          && noScript('bio'))
+            && (!('address' in request.resource.data)      || validOptionalString('address', 300)        && noScript('address'))
+            && (!('dpcDescription' in request.resource.data) || validOptionalString('dpcDescription', 1000) && noScript('dpcDescription'))
+            && (!('name' in request.resource.data)         || validString(request.resource.data.name, 200) && noScript('name'))
+            && (!('practiceName' in request.resource.data) || validOptionalString('practiceName', 200)   && noScript('practiceName')));
     }
 
     // ================================================================
@@ -152,6 +165,23 @@ service cloud.firestore {
       allow read: if isAuthenticated() &&
                      (isBookingPatient() || isBookingProvider() || isAdmin());
 
+      // ── providerNotes subcollection ───────────────────────────────────────
+      // HIPAA design: provider-only clinical notes stored separately from the
+      // booking document so patients can NEVER access them, even indirectly.
+      // Patients have no rule granting them access here — the catch-all denies.
+      // Notes are write-once from the dashboard; providers can delete their own.
+      match /providerNotes/{noteId} {
+        allow read:   if isAuthenticated() && (isBookingProvider() || isAdmin());
+        allow create: if isVerifiedProvider()
+                      && isBookingProvider()
+                      && request.resource.data.providerId == request.auth.token.providerId
+                      && request.resource.data.text is string
+                      && request.resource.data.text.size() > 0
+                      && request.resource.data.text.size() <= 2000;
+        allow delete: if isBookingProvider() || isAdmin();
+        allow update: if false; // notes are immutable — delete and re-create
+      }
+
       allow create: if isFullAccount()
                  && request.resource.data.userId == request.auth.uid
                  && request.resource.data.status == 'pending'
@@ -171,13 +201,27 @@ service cloud.firestore {
                                   'invoiced','invoicedAt','stripePaymentIntentId',
                                   'noShowAt','noShowBy','proposedDate','proposedTime',
                                   'updatedAt']))
+                 // Patient cancellation — cannot change date, time, provider, or userId
                  || (isBookingPatient()
                      && isFullAccount()
                      && request.resource.data.status == 'cancelled'
                      && request.resource.data.userId == resource.data.userId
                      && request.resource.data.providerId == resource.data.providerId
                      && request.resource.data.date == resource.data.date
-                     && request.resource.data.time == resource.data.time));
+                     && request.resource.data.time == resource.data.time)
+                 // Patient accepts a provider-proposed reschedule:
+                 // Current status must be reschedule_pending; new status becomes confirmed.
+                 // Date/time may change to the proposed values already on the document.
+                 // Patient cannot change providerId or userId.
+                 || (isBookingPatient()
+                     && isFullAccount()
+                     && resource.data.status == 'reschedule_pending'
+                     && request.resource.data.status == 'confirmed'
+                     && request.resource.data.userId == resource.data.userId
+                     && request.resource.data.providerId == resource.data.providerId
+                     && request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['status','date','time','proposedDate','proposedTime',
+                                  'rescheduleAcceptedAt'])));
       allow delete: if isAdmin();
     }
 
@@ -364,9 +408,17 @@ service cloud.firestore {
     // ================================================================
     // VISIT SUMMARIES
     // ================================================================
+    // H-1: visitSummaries documents have document ID == bookingId, but they do NOT
+    // have a top-level userId field — so isBookingPatient() (which checks
+    // resource.data.userId) would always be false for patients.
+    // Fix: look up the parent booking document to verify ownership.
+    // isBookingProvider() still works because visitSummary docs carry providerId.
     match /visitSummaries/{bookingId} {
       allow read: if isAuthenticated() &&
-                   (isBookingPatient() || isBookingProvider() || isAdmin());
+                   (isAdmin()
+                    || isBookingProvider()
+                    || (isFullAccount()
+                        && get(/databases/$(database)/documents/bookings/$(bookingId)).data.userId == request.auth.uid));
       allow create, update: if isVerifiedProvider() || isAdmin();
       allow delete: if false;
     }
@@ -563,6 +615,18 @@ service cloud.firestore {
                          .hasOnly(['status', 'notes', 'updatedAt']);
         allow delete: if isAdmin();
       }
+    }
+
+    // ================================================================
+    // SMS RATE LIMITS — M-2
+    // ================================================================
+    // Written server-side by sendSMSNotification Cloud Function only.
+    // Doc ID format: "{providerId}_{YYYY-MM-DD}"
+    // Providers cannot read or manipulate their own limit docs —
+    // only the Cloud Function (admin SDK) writes here.
+    match /smsRateLimits/{docId} {
+      allow read, write: if isAdmin();
+      // All other access (provider self-read, patient) — denied by catch-all
     }
 
     // CATCH-ALL — deny everything not explicitly allowed

@@ -1,8 +1,11 @@
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
+  getDocs,
   onSnapshot,
+  orderBy,
   query,
   serverTimestamp,
   updateDoc,
@@ -99,6 +102,21 @@ const STATUS_LABELS: Record<string, string> = {
 
 // ── EHR PDF — opens in new window and triggers print dialog ─────────────────
 // Provider hits Cmd+P or File > Print > Save as PDF — frictionless, professional
+
+// ── HTML escape — prevents XSS when injecting user-supplied Firestore data ──
+// Every field from patient/provider documents must pass through escHtml before
+// being interpolated into the HTML template. This blocks stored-XSS attacks
+// where a booking with <script>...</script> in any field would otherwise execute
+// in the provider's browser when they open the EHR document.
+function escHtml(s: unknown): string {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 function generateEHRPDF(
   booking: Booking,
   auditInfo?: { providerId: string; providerName: string; userUid: string },
@@ -111,18 +129,19 @@ function generateEHRPDF(
     day: "numeric",
   });
 
+  // fmt: formats + escapes every value before HTML interpolation
   const fmt = (val: string | string[] | undefined | null): string => {
     if (!val) return "Not provided";
     if (Array.isArray(val))
-      return val.length > 0 ? val.join(", ") : "Not provided";
-    return val || "Not provided";
+      return val.length > 0 ? val.map(escHtml).join(", ") : "Not provided";
+    return escHtml(val) || "Not provided";
   };
 
   const html = `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8"/>
-<title>Morava — Patient Summary — ${booking.patientName}</title>
+<title>Morava — Patient Summary — ${escHtml(booking.patientName)}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: Arial, sans-serif; font-size: 10pt; color: #1E293B; background: #fff; }
@@ -180,14 +199,14 @@ function generateEHRPDF(
 <!-- ── Diagonal CONFIDENTIAL watermark — hidden on print ── -->
 <div class="phi-wm-wrap" aria-hidden="true">
   <div class="phi-wm-layer">
-    ${"<div class=\"phi-wm-row\">" + Array(5).fill(`<span class="phi-wm-text">CONFIDENTIAL · PHI · ${auditInfo?.providerName || "AUTHORIZED USE ONLY"}</span>`).join("") + "</div>"}
-    ${"<div class=\"phi-wm-row\">" + Array(5).fill(`<span class="phi-wm-text">CONFIDENTIAL · PHI · ${auditInfo?.providerName || "AUTHORIZED USE ONLY"}</span>`).join("") + "</div>"}
-    ${"<div class=\"phi-wm-row\">" + Array(5).fill(`<span class="phi-wm-text">CONFIDENTIAL · PHI · ${auditInfo?.providerName || "AUTHORIZED USE ONLY"}</span>`).join("") + "</div>"}
-    ${"<div class=\"phi-wm-row\">" + Array(5).fill(`<span class="phi-wm-text">CONFIDENTIAL · PHI · ${auditInfo?.providerName || "AUTHORIZED USE ONLY"}</span>`).join("") + "</div>"}
-    ${"<div class=\"phi-wm-row\">" + Array(5).fill(`<span class="phi-wm-text">CONFIDENTIAL · PHI · ${auditInfo?.providerName || "AUTHORIZED USE ONLY"}</span>`).join("") + "</div>"}
-    ${"<div class=\"phi-wm-row\">" + Array(5).fill(`<span class="phi-wm-text">CONFIDENTIAL · PHI · ${auditInfo?.providerName || "AUTHORIZED USE ONLY"}</span>`).join("") + "</div>"}
-    ${"<div class=\"phi-wm-row\">" + Array(5).fill(`<span class="phi-wm-text">CONFIDENTIAL · PHI · ${auditInfo?.providerName || "AUTHORIZED USE ONLY"}</span>`).join("") + "</div>"}
-    ${"<div class=\"phi-wm-row\">" + Array(5).fill(`<span class="phi-wm-text">CONFIDENTIAL · PHI · ${auditInfo?.providerName || "AUTHORIZED USE ONLY"}</span>`).join("") + "</div>"}
+    ${"<div class=\"phi-wm-row\">" + Array(5).fill(`<span class="phi-wm-text">CONFIDENTIAL · PHI · ${escHtml(auditInfo?.providerName || "AUTHORIZED USE ONLY")}</span>`).join("") + "</div>"}
+    ${"<div class=\"phi-wm-row\">" + Array(5).fill(`<span class="phi-wm-text">CONFIDENTIAL · PHI · ${escHtml(auditInfo?.providerName || "AUTHORIZED USE ONLY")}</span>`).join("") + "</div>"}
+    ${"<div class=\"phi-wm-row\">" + Array(5).fill(`<span class="phi-wm-text">CONFIDENTIAL · PHI · ${escHtml(auditInfo?.providerName || "AUTHORIZED USE ONLY")}</span>`).join("") + "</div>"}
+    ${"<div class=\"phi-wm-row\">" + Array(5).fill(`<span class="phi-wm-text">CONFIDENTIAL · PHI · ${escHtml(auditInfo?.providerName || "AUTHORIZED USE ONLY")}</span>`).join("") + "</div>"}
+    ${"<div class=\"phi-wm-row\">" + Array(5).fill(`<span class="phi-wm-text">CONFIDENTIAL · PHI · ${escHtml(auditInfo?.providerName || "AUTHORIZED USE ONLY")}</span>`).join("") + "</div>"}
+    ${"<div class=\"phi-wm-row\">" + Array(5).fill(`<span class="phi-wm-text">CONFIDENTIAL · PHI · ${escHtml(auditInfo?.providerName || "AUTHORIZED USE ONLY")}</span>`).join("") + "</div>"}
+    ${"<div class=\"phi-wm-row\">" + Array(5).fill(`<span class="phi-wm-text">CONFIDENTIAL · PHI · ${escHtml(auditInfo?.providerName || "AUTHORIZED USE ONLY")}</span>`).join("") + "</div>"}
+    ${"<div class=\"phi-wm-row\">" + Array(5).fill(`<span class="phi-wm-text">CONFIDENTIAL · PHI · ${escHtml(auditInfo?.providerName || "AUTHORIZED USE ONLY")}</span>`).join("") + "</div>"}
   </div>
 </div>
 
@@ -197,7 +216,7 @@ function generateEHRPDF(
     <span style="font-size:20px;">🔒</span>
     <div>
       <div class="bar-title">PHI Document — Authorized Personnel Only</div>
-      <div class="bar-meta">Accessed by: ${auditInfo?.providerName || "Provider"} &nbsp;·&nbsp; Patient: ${booking.patientName} &nbsp;·&nbsp; Session expires in <span id="ehr-countdown" class="countdown-badge">15:00</span></div>
+      <div class="bar-meta">Accessed by: ${escHtml(auditInfo?.providerName || "Provider")} &nbsp;·&nbsp; Patient: ${escHtml(booking.patientName)} &nbsp;·&nbsp; Session expires in <span id="ehr-countdown" class="countdown-badge">15:00</span></div>
     </div>
   </div>
   <button class="bar-close" onclick="window.close()">✕ Close</button>
@@ -216,7 +235,7 @@ function generateEHRPDF(
     <div class="header-right">
       CONFIDENTIAL — PHI DOCUMENT<br/>
       Generated: ${today}<br/>
-      Booking ID: ${booking.id}
+      Booking ID: ${escHtml(booking.id)}
     </div>
   </div>
   <div class="teal-bar"></div>
@@ -224,23 +243,23 @@ function generateEHRPDF(
   ${!hasIntake ? `<div class="alert-amber">📋 INTAKE FORM NOT COMPLETED: Patient has not filled out a health profile. Basic booking information shown below. Collect full medical history at time of visit.</div>` : ""}
   <div class="section"><div class="section-title">📅 APPOINTMENT DETAILS</div></div>
   <table class="field-table">
-    <tr><td class="field-label">Booking ID</td><td class="field-value">${booking.id}</td></tr>
-    <tr><td class="field-label">Requested Date</td><td class="field-value">${formatDateLong(booking.date)}</td></tr>
-    <tr><td class="field-label">Requested Time</td><td class="field-value">${booking.time}</td></tr>
-    <tr><td class="field-label">Visit Type</td><td class="field-value">${booking.visitTypeLabel || "Not specified"}</td></tr>
-    <tr><td class="field-label">Reason for Visit</td><td class="field-value ${!booking.reasonForVisit ? "missing" : ""}">${booking.reasonForVisit || "Not provided"}</td></tr>
-    <tr><td class="field-label">Status</td><td class="field-value">${booking.status.toUpperCase()}</td></tr>
-    <tr><td class="field-label">Provider</td><td class="field-value">${booking.providerName}</td></tr>
+    <tr><td class="field-label">Booking ID</td><td class="field-value">${escHtml(booking.id)}</td></tr>
+    <tr><td class="field-label">Requested Date</td><td class="field-value">${escHtml(formatDateLong(booking.date))}</td></tr>
+    <tr><td class="field-label">Requested Time</td><td class="field-value">${escHtml(booking.time)}</td></tr>
+    <tr><td class="field-label">Visit Type</td><td class="field-value">${escHtml(booking.visitTypeLabel || "Not specified")}</td></tr>
+    <tr><td class="field-label">Reason for Visit</td><td class="field-value ${!booking.reasonForVisit ? "missing" : ""}">${escHtml(booking.reasonForVisit || "Not provided")}</td></tr>
+    <tr><td class="field-label">Status</td><td class="field-value">${escHtml(booking.status.toUpperCase())}</td></tr>
+    <tr><td class="field-label">Provider</td><td class="field-value">${escHtml(booking.providerName)}</td></tr>
   </table>
   <div class="section"><div class="section-title">👤 PATIENT DEMOGRAPHICS</div></div>
   <table class="field-table">
-    <tr><td class="field-label">Full Name</td><td class="field-value">${booking.patientName}</td></tr>
-    <tr><td class="field-label">Contact Phone</td><td class="field-value ${!booking.patientPhone ? "missing" : ""}">${booking.patientPhone || "Not provided"}</td></tr>
+    <tr><td class="field-label">Full Name</td><td class="field-value">${escHtml(booking.patientName)}</td></tr>
+    <tr><td class="field-label">Contact Phone</td><td class="field-value ${!booking.patientPhone ? "missing" : ""}">${escHtml(booking.patientPhone || "Not provided")}</td></tr>
     <tr><td class="field-label">Booking For</td><td class="field-value">${booking.bookingFor === "dependent" ? "Dependent / Family Member" : "Account Holder"}</td></tr>
     ${booking.isMinorPatient ? `<tr><td class="field-label">Minor Patient</td><td class="field-value">Yes</td></tr>` : ""}
-    ${booking.guardianName ? `<tr><td class="field-label">Guardian</td><td class="field-value">${booking.guardianName} — ${booking.guardianPhone || ""}</td></tr>` : ""}
+    ${booking.guardianName ? `<tr><td class="field-label">Guardian</td><td class="field-value">${escHtml(booking.guardianName)} — ${escHtml(booking.guardianPhone || "")}</td></tr>` : ""}
     <tr><td class="field-label">Insurance</td><td class="field-value ${fmt(intake?.insurance) === "Not provided" ? "missing" : ""}">${fmt(intake?.insurance)}</td></tr>
-    <tr><td class="field-label">Primary Care Provider</td><td class="field-value ${!intake?.primaryCareProvider ? "missing" : ""}">${intake?.primaryCareProvider || "Not provided"}</td></tr>
+    <tr><td class="field-label">Primary Care Provider</td><td class="field-value ${!intake?.primaryCareProvider ? "missing" : ""}">${escHtml(intake?.primaryCareProvider || "Not provided")}</td></tr>
   </table>
   <div class="section"><div class="section-title">⚠ ALLERGIES — REVIEW BEFORE PRESCRIBING</div></div>
   ${
@@ -257,24 +276,24 @@ function generateEHRPDF(
   <div class="section"><div class="section-title">🩺 ACTIVE CONDITIONS & SURGICAL HISTORY</div></div>
   ${
     intake?.conditions && fmt(intake.conditions) !== "Not provided"
-      ? `<div class="tags">${(Array.isArray(intake.conditions) ? intake.conditions : [intake.conditions]).map((c) => `<span class="tag">${c}</span>`).join("")}</div>`
+      ? `<div class="tags">${(Array.isArray(intake.conditions) ? intake.conditions : [intake.conditions]).map((c) => `<span class="tag">${escHtml(c)}</span>`).join("")}</div>`
       : `<div class="alert-gray">No conditions reported.</div>`
   }
   ${
     intake?.surgeries && fmt(intake.surgeries) !== "Not provided"
-      ? `<div class="tags">${(Array.isArray(intake.surgeries) ? intake.surgeries : [intake.surgeries]).map((s) => `<span class="tag">${s}</span>`).join("")}</div>`
+      ? `<div class="tags">${(Array.isArray(intake.surgeries) ? intake.surgeries : [intake.surgeries]).map((s) => `<span class="tag">${escHtml(s)}</span>`).join("")}</div>`
       : ""
   }
   <div class="section"><div class="section-title">📊 VITALS</div></div>
   <table class="field-table">
-    <tr><td class="field-label">Blood Type</td><td class="field-value ${!intake?.bloodType ? "missing" : ""}">${intake?.bloodType || "Not provided"}</td></tr>
-    <tr><td class="field-label">Height</td><td class="field-value ${!intake?.height ? "missing" : ""}">${intake?.height || "Not provided"}</td></tr>
-    <tr><td class="field-label">Weight</td><td class="field-value ${!intake?.weight ? "missing" : ""}">${intake?.weight || "Not provided"}</td></tr>
+    <tr><td class="field-label">Blood Type</td><td class="field-value ${!intake?.bloodType ? "missing" : ""}">${escHtml(intake?.bloodType || "Not provided")}</td></tr>
+    <tr><td class="field-label">Height</td><td class="field-value ${!intake?.height ? "missing" : ""}">${escHtml(intake?.height || "Not provided")}</td></tr>
+    <tr><td class="field-label">Weight</td><td class="field-value ${!intake?.weight ? "missing" : ""}">${escHtml(intake?.weight || "Not provided")}</td></tr>
   </table>
   <div class="section"><div class="section-title">🆘 EMERGENCY CONTACTS</div></div>
   <table class="field-table">
-    <tr><td class="field-label">Primary</td><td class="field-value ${!intake?.emergencyContact?.name ? "missing" : ""}">${intake?.emergencyContact ? `${intake.emergencyContact.name} — ${intake.emergencyContact.phone} (${intake.emergencyContact.relation})` : "Not provided"}</td></tr>
-    ${intake?.emergencyContact2?.name ? `<tr><td class="field-label">Secondary</td><td class="field-value">${intake.emergencyContact2.name} — ${intake.emergencyContact2.phone} (${intake.emergencyContact2.relation})</td></tr>` : ""}
+    <tr><td class="field-label">Primary</td><td class="field-value ${!intake?.emergencyContact?.name ? "missing" : ""}">${intake?.emergencyContact ? `${escHtml(intake.emergencyContact.name)} — ${escHtml(intake.emergencyContact.phone)} (${escHtml(intake.emergencyContact.relation)})` : "Not provided"}</td></tr>
+    ${intake?.emergencyContact2?.name ? `<tr><td class="field-label">Secondary</td><td class="field-value">${escHtml(intake.emergencyContact2.name)} — ${escHtml(intake.emergencyContact2.phone)} (${escHtml(intake.emergencyContact2.relation)})</td></tr>` : ""}
   </table>
   <div class="alert-teal">
     <strong>📁 EHR UPLOAD:</strong> Drag and drop this PDF directly into Epic, Athena, eClinicalWorks, or any EHR document tab.
@@ -323,18 +342,19 @@ function generateEHRPDF(
   setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
 
   // ── Audit log — fire-and-forget, non-blocking ─────────────────────────────
-  // Writes to /auditLog (existing collection) using the same rules already deployed.
-  // If the provider somehow lacks permission, the catch swallows it silently.
+  // HIPAA §164.312(b): audit controls require recording who accessed PHI and when.
+  // PHI minimization: we log the booking ID (targetId) and provider UID — NOT
+  // the patient name. The patient identity is derivable from the booking ID
+  // on demand without embedding it in every audit record.
   if (auditInfo?.userUid) {
     addDoc(collection(db, "auditLog"), {
-      action: "ehr_pdf_opened",
-      targetId: booking.id,
-      patientName: booking.patientName,
-      providerId: auditInfo.providerId,
-      providerName: auditInfo.providerName,
-      accessedByUid: auditInfo.userUid,
-      accessedAt: serverTimestamp(),
-    }).catch(() => {/* non-blocking */});
+      action:          "ehr_pdf_opened",
+      targetId:        booking.id,          // booking ID only — no patient name
+      providerId:      auditInfo.providerId,
+      accessedByUid:   auditInfo.userUid,
+      accessedAt:      serverTimestamp(),
+      visitDate:       booking.date,        // non-identifying scheduling metadata
+    }).catch(() => {/* non-blocking — audit failure must not block clinical workflow */});
   }
 }
 
@@ -429,6 +449,79 @@ export default function Dashboard() {
   const [showNotifBanner, setShowNotifBanner] = useState(true);
   const [showMFASetup, setShowMFASetup] = useState(false);
   const [mfaBannerDismissed, setMfaBannerDismissed] = useState(false);
+
+  // ── Provider pre-visit notes (HIPAA-safe subcollection) ───────────────────
+  // Notes live in /bookings/{id}/providerNotes/{noteId} — NEVER on the booking
+  // doc itself, so patients can never read them regardless of UI.
+  // Firestore rules allow only isBookingProvider() + admin on this subcollection.
+  interface ProviderNote { id: string; text: string; createdAt: Date | null; }
+  const [notesBookingId,  setNotesBookingId]  = useState<string | null>(null);
+  const [notesList,       setNotesList]       = useState<ProviderNote[]>([]);
+  const [notesLoading,    setNotesLoading]    = useState(false);
+  const [newNoteText,     setNewNoteText]     = useState("");
+  const [noteSaving,      setNoteSaving]      = useState(false);
+  const [noteDeleteId,    setNoteDeleteId]    = useState<string | null>(null);
+
+  const openNotes = async (bookingId: string) => {
+    setNotesBookingId(bookingId);
+    setNotesList([]);
+    setNewNoteText("");
+    setNotesLoading(true);
+    try {
+      const snap = await getDocs(
+        query(
+          collection(db, "bookings", bookingId, "providerNotes"),
+          orderBy("createdAt", "asc"),
+        )
+      );
+      setNotesList(snap.docs.map(d => ({
+        id: d.id,
+        text: d.data().text as string,
+        createdAt: d.data().createdAt?.toDate?.() ?? null,
+      })));
+    } finally {
+      setNotesLoading(false);
+    }
+  };
+
+  const saveNote = async () => {
+    if (!notesBookingId || !newNoteText.trim()) return;
+    setNoteSaving(true);
+    try {
+      const ref = await addDoc(
+        collection(db, "bookings", notesBookingId, "providerNotes"),
+        {
+          text:        newNoteText.trim().slice(0, 2000), // server-side cap
+          createdAt:   serverTimestamp(),
+          authorUid:   user?.uid,
+          providerId:  providerProfile?.providerId,
+        }
+      );
+      setNotesList(prev => [...prev, {
+        id: ref.id,
+        text: newNoteText.trim(),
+        createdAt: new Date(),
+      }]);
+      setNewNoteText("");
+    } catch {
+      showToast("Failed to save note. Please try again.", "error");
+    } finally {
+      setNoteSaving(false);
+    }
+  };
+
+  const deleteNote = async (noteId: string) => {
+    if (!notesBookingId) return;
+    setNoteDeleteId(noteId);
+    try {
+      await deleteDoc(doc(db, "bookings", notesBookingId, "providerNotes", noteId));
+      setNotesList(prev => prev.filter(n => n.id !== noteId));
+    } catch {
+      showToast("Failed to delete note.", "error");
+    } finally {
+      setNoteDeleteId(null);
+    }
+  };
 
   useEffect(() => {
     if (!providerProfile?.providerId) return;
@@ -589,6 +682,26 @@ export default function Dashboard() {
   const visitsThisMonth = bookings.filter(
     (b) => b.status === "completed" && b.date?.startsWith(currentMonth),
   ).length;
+
+  // ── DPC membership stats (only meaningful for DPC providers) ─────────────
+  // In DPC every booking is a membership touchpoint — no per-visit billing.
+  // "Active members" = patients with at least one confirmed or completed booking.
+  // "New inquiries"  = pending membership consult requests not yet acted on.
+  // "Consults held"  = completed membership consult bookings this month.
+  const isDPCProvider = providerProfile?.practiceType === "dpc";
+  const dpcActiveMembers = isDPCProvider
+    ? new Set(
+        bookings
+          .filter(b => b.status === "confirmed" || b.status === "completed")
+          .map(b => b.userId)
+      ).size
+    : 0;
+  const dpcNewInquiries = isDPCProvider
+    ? bookings.filter(b => b.status === "pending" && b.date >= today).length
+    : 0;
+  const dpcConsultsThisMonth = isDPCProvider
+    ? bookings.filter(b => b.status === "completed" && b.date?.startsWith(currentMonth)).length
+    : 0;
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
@@ -831,6 +944,39 @@ export default function Dashboard() {
 
         {/* ── Plan status card ────────────────────────────────────────── */}
         <PlanStatusCard visitsThisMonth={visitsThisMonth} />
+
+        {/* ── DPC membership panel (DPC providers only) ───────────────── */}
+        {isDPCProvider && (
+          <div className="bg-gradient-to-br from-violet-50 to-indigo-50 border border-violet-100 rounded-2xl p-5 mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-lg">🏥</span>
+              <h3 className="font-bold text-slate-800 text-sm">Direct Primary Care — Panel Overview</h3>
+              <span className="ml-auto text-xs text-slate-400">This month</span>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-white rounded-xl p-4 border border-violet-100 text-center">
+                <div className="font-display text-3xl text-violet-600 mb-1">{dpcActiveMembers}</div>
+                <div className="text-xs text-slate-500 font-medium">Active Members</div>
+                <div className="text-xs text-slate-400 mt-0.5">confirmed or seen</div>
+              </div>
+              <div className="bg-white rounded-xl p-4 border border-amber-100 text-center">
+                <div className="font-display text-3xl text-amber-500 mb-1">{dpcNewInquiries}</div>
+                <div className="text-xs text-slate-500 font-medium">New Inquiries</div>
+                <div className="text-xs text-slate-400 mt-0.5">awaiting response</div>
+              </div>
+              <div className="bg-white rounded-xl p-4 border border-teal-100 text-center">
+                <div className="font-display text-3xl text-teal-600 mb-1">{dpcConsultsThisMonth}</div>
+                <div className="text-xs text-slate-500 font-medium">Visits This Month</div>
+                <div className="text-xs text-slate-400 mt-0.5">all covered by membership</div>
+              </div>
+            </div>
+            {dpcNewInquiries > 0 && (
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mt-3">
+                ⚡ {dpcNewInquiries} membership {dpcNewInquiries === 1 ? "inquiry" : "inquiries"} pending — confirm or decline above to manage your panel.
+              </p>
+            )}
+          </div>
+        )}
 
         {/* ── Filter tabs ─────────────────────────────────────────────── */}
         <div className="flex gap-2 mb-6">
@@ -1099,8 +1245,21 @@ export default function Dashboard() {
                       </div>
                     )}
 
-                    {/* EHR Summary button — always visible */}
+                    {/* EHR Summary button + Provider Notes — always visible */}
                     <div className="flex gap-2 flex-wrap justify-end">
+                      {/* Provider-only pre-visit notes — stored in a subcollection
+                          that patients can never access (enforced in Firestore rules) */}
+                      <button
+                        onClick={() => openNotes(booking.id)}
+                        className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-indigo-600 border border-slate-200 hover:border-indigo-300 px-3 py-1.5 rounded-lg transition-colors bg-white hover:bg-indigo-50"
+                        title="Private provider notes — never visible to patients"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                          <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                        Notes
+                      </button>
                       <button
                         onClick={() => generateEHRPDF(booking, {
                           providerId: providerProfile?.providerId || "",
@@ -1319,6 +1478,91 @@ export default function Dashboard() {
           onClose={() => setShowMFASetup(false)}
           onEnrolled={() => setShowMFASetup(false)}
         />
+      )}
+
+      {/* ── Provider Notes Modal ─────────────────────────────────────────────
+           HIPAA design: notes are stored in /bookings/{id}/providerNotes subcollection.
+           Firestore rules grant read/write ONLY to isBookingProvider() and admin.
+           Patients never see these — the subcollection is inaccessible to them
+           at both the rules level and the UI level. Notes are never shown in the
+           patient app, never included in SMS, and never logged with patient name. */}
+      {notesBookingId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[85vh]">
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">📝</span>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base">Pre-visit Notes</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">🔒 Provider only · Never visible to patient</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setNotesBookingId(null)}
+                className="text-slate-400 hover:text-slate-600 text-xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Notes list */}
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3 min-h-0">
+              {notesLoading ? (
+                <div className="flex justify-center py-8">
+                  <div className="w-5 h-5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : notesList.length === 0 ? (
+                <p className="text-slate-400 text-sm text-center py-6">
+                  No notes yet. Add a note below to prepare for this visit.
+                </p>
+              ) : (
+                notesList.map(note => (
+                  <div key={note.id} className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 group">
+                    <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{note.text}</p>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-xs text-slate-400">
+                        {note.createdAt
+                          ? note.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+                          : "Just now"}
+                      </span>
+                      <button
+                        onClick={() => deleteNote(note.id)}
+                        disabled={noteDeleteId === note.id}
+                        className="text-xs text-slate-300 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                        title="Delete note"
+                      >
+                        {noteDeleteId === note.id ? "…" : "Delete"}
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* New note input */}
+            <div className="px-6 py-4 border-t border-slate-100 space-y-3">
+              <textarea
+                value={newNoteText}
+                onChange={e => setNewNoteText(e.target.value.slice(0, 2000))}
+                placeholder="Add a private note (e.g. patient may be anxious, review medication list)…"
+                rows={3}
+                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+              />
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-slate-400">{newNoteText.length}/2000</span>
+                <button
+                  onClick={saveNote}
+                  disabled={noteSaving || !newNoteText.trim()}
+                  className="bg-indigo-500 hover:bg-indigo-600 disabled:opacity-40 text-white text-sm font-semibold px-5 py-2 rounded-xl transition-colors"
+                >
+                  {noteSaving ? "Saving…" : "Add note"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

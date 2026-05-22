@@ -24,6 +24,8 @@ interface ProviderData {
   practiceType?: string;
   dpcMonthlyFee?: number;
   dpcDescription?: string;
+  hsaEligible?: boolean;
+  acceptingNewMembers?: boolean;
   licenseNumber: string;
   email: string;
   phone: string;
@@ -833,6 +835,8 @@ export default function Profile() {
           <DPCSettings
             initialFee={data.dpcMonthlyFee}
             initialDescription={data.dpcDescription}
+            initialHsaEligible={data.hsaEligible}
+            initialAcceptingNewMembers={data.acceptingNewMembers}
           />
         </div>
 
