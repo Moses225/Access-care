@@ -383,17 +383,22 @@ function PlanCard({
 
   return (
     <div className={`relative bg-white rounded-2xl border p-5 flex flex-col gap-4 ${borderClass}`}>
-      {/* Badge */}
-      {badge && (
+      {/* Badge — hidden when this is already the current plan to avoid overlap */}
+      {badge && !current && (
         <div className={`absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap ${
           isStandard ? "bg-teal-500 text-white" : "bg-indigo-500 text-white"
         }`}>
           {badge}
         </div>
       )}
+      {/* Current plan pill — centered when there's no badge competing for space */}
       {current && (
-        <div className="absolute -top-3 right-4 text-xs font-bold px-3 py-1 rounded-full bg-slate-700 text-white whitespace-nowrap">
-          Current plan
+        <div className={`absolute -top-3 ${badge ? "left-1/2 -translate-x-1/2" : "right-4"} text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap ${
+          isStandard ? "bg-teal-600 text-white"
+          : isGrowth  ? "bg-indigo-600 text-white"
+          : "bg-slate-700 text-white"
+        }`}>
+          ✓ Current plan
         </div>
       )}
 

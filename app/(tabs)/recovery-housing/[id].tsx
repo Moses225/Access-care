@@ -289,11 +289,18 @@ export default function RecoveryHousingDetailScreen() {
         {/* Request Admission — Standard+ facilities only */}
         {(listingPlan === "standard" || listingPlan === "growth") && (
           <TouchableOpacity
-            style={[s.actionBtn, { backgroundColor: "#00838F", flex: 1.4 }]}
+            style={[s.actionBtn, { backgroundColor: "#00838F", flex: 1.6, paddingHorizontal: 10 }]}
             onPress={() => setShowIntake(true)}
           >
-            <Ionicons name="document-text-outline" size={18} color="#fff" />
-            <Text style={s.actionBtnText}>Request Admission</Text>
+            <Ionicons name="document-text-outline" size={15} color="#fff" />
+            <Text
+              style={s.actionBtnText}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.75}
+            >
+              Request Admission
+            </Text>
           </TouchableOpacity>
         )}
         <TouchableOpacity
@@ -434,23 +441,67 @@ export default function RecoveryHousingDetailScreen() {
             {intakeSubmitted ? (
               /* ── Success state ── */
               <View style={s.successBox}>
-                <Text style={s.successEmoji}>🎉</Text>
-                <Text style={[s.successTitle, { color: colors.text }]}>Request sent!</Text>
-                <Text style={[s.successSub, { color: colors.subtext }]}>
-                  {facility.facilityName} will reach out to you at the number you provided.
-                  In the meantime, feel free to call them directly.
+                {/* Checkmark circle */}
+                <View style={s.successIconCircle}>
+                  <Ionicons name="checkmark" size={36} color="#fff" />
+                </View>
+
+                <Text style={[s.successTitle, { color: colors.text }]}>
+                  Request submitted!
                 </Text>
+                <Text style={[s.successSub, { color: colors.subtext }]}>
+                  Your admission request has been sent to{" "}
+                  <Text style={{ fontWeight: "700", color: colors.text }}>
+                    {facility.facilityName}
+                  </Text>
+                  . A staff member will call you back at the number you provided.
+                </Text>
+
+                {/* What happens next */}
+                <View style={[s.successSteps, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                  <Text style={[s.successStepsTitle, { color: colors.subtext }]}>WHAT HAPPENS NEXT</Text>
+                  {[
+                    { icon: "time-outline",        text: "Facility reviews your request (usually within 24 hrs)" },
+                    { icon: "call-outline",         text: "A staff member calls you to discuss fit & availability" },
+                    { icon: "home-outline",         text: "If it's a match, they schedule your move-in visit" },
+                  ].map((step, i) => (
+                    <View key={i} style={s.successStepRow}>
+                      <View style={s.successStepDot}>
+                        <Ionicons name={step.icon as any} size={14} color="#00838F" />
+                      </View>
+                      <Text style={[s.successStepText, { color: colors.text }]}>{step.text}</Text>
+                    </View>
+                  ))}
+                </View>
+
+                {/* Primary CTA — call now */}
                 {facility.phone && (
                   <TouchableOpacity
-                    style={[s.successCallBtn, { borderColor: "#00838F" }]}
+                    style={s.successCallBtn}
                     onPress={() => { resetIntakeForm(); Linking.openURL(`tel:${facility.phone}`); }}
                   >
-                    <Ionicons name="call" size={16} color="#00838F" />
-                    <Text style={[s.successCallText, { color: "#00838F" }]}>Call {facility.facilityName}</Text>
+                    <Ionicons name="call" size={16} color="#fff" />
+                    <Text style={s.successCallText}>Call now — don't wait</Text>
                   </TouchableOpacity>
                 )}
+
+                {/* Crisis line nudge */}
+                <View style={[s.successCrisisRow, { borderColor: "#FCA5A5" }]}>
+                  <Ionicons name="heart-outline" size={13} color="#EF4444" />
+                  <Text style={s.successCrisisText}>
+                    Need immediate help?{" "}
+                    <Text
+                      style={s.successCrisisLink}
+                      onPress={() => Linking.openURL("tel:18007994889")}
+                    >
+                      SAMHSA Helpline: 1-800-799-4889
+                    </Text>
+                    {" "}· Free & confidential, 24/7
+                  </Text>
+                </View>
+
                 <TouchableOpacity onPress={resetIntakeForm} style={s.successDoneBtn}>
-                  <Text style={s.successDoneText}>Done</Text>
+                  <Text style={s.successDoneText}>Back to facility</Text>
                 </TouchableOpacity>
               </View>
             ) : (
@@ -634,7 +685,7 @@ const s = StyleSheet.create({
     paddingVertical: 12,
     gap: 6,
   },
-  actionBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
+  actionBtnText: { color: "#fff", fontSize: 14, fontWeight: "700", flexShrink: 1 },
   section: {
     marginHorizontal: 16,
     marginBottom: 12,
@@ -725,24 +776,72 @@ const s = StyleSheet.create({
   submitBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
 
   // ── Success state ───────────────────────────────────────────────────────────
-  successBox: { alignItems: "center", paddingVertical: 40, paddingHorizontal: 24 },
-  successEmoji: { fontSize: 56, marginBottom: 16 },
-  successTitle: { fontSize: 24, fontWeight: "700", marginBottom: 12 },
-  successSub: { fontSize: 15, lineHeight: 24, textAlign: "center", marginBottom: 28 },
+  successBox: { alignItems: "center", paddingTop: 32, paddingBottom: 24, paddingHorizontal: 20 },
+  successIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: "#00838F",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20,
+  },
+  successTitle: { fontSize: 22, fontWeight: "800", marginBottom: 10, textAlign: "center" },
+  successSub: { fontSize: 14, lineHeight: 22, textAlign: "center", marginBottom: 20 },
+  successSteps: {
+    width: "100%",
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 20,
+    gap: 12,
+  },
+  successStepsTitle: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    marginBottom: 4,
+  },
+  successStepRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+  },
+  successStepDot: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "#E0F2F4",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  successStepText: { fontSize: 13, lineHeight: 20, flex: 1 },
   successCallBtn: {
+    width: "100%",
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 8,
-    borderWidth: 1.5,
-    borderRadius: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    marginBottom: 14,
+    backgroundColor: "#00838F",
+    borderRadius: 14,
+    paddingVertical: 15,
+    marginBottom: 12,
   },
-  successCallText: { fontSize: 15, fontWeight: "700" },
-  successDoneBtn: {
-    paddingVertical: 12,
-    paddingHorizontal: 32,
+  successCallText: { fontSize: 15, fontWeight: "700", color: "#fff" },
+  successCrisisRow: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 16,
+    backgroundColor: "#FFF5F5",
   },
-  successDoneText: { fontSize: 15, color: "#9CA3AF", fontWeight: "500" },
+  successCrisisText: { fontSize: 11, lineHeight: 17, color: "#991B1B", flex: 1 },
+  successCrisisLink: { fontWeight: "700", textDecorationLine: "underline" },
+  successDoneBtn: { paddingVertical: 10, paddingHorizontal: 32 },
+  successDoneText: { fontSize: 14, color: "#9CA3AF", fontWeight: "500" },
 });
