@@ -121,24 +121,32 @@ export default function RecoveryHousingDetailScreen() {
     try {
       // ── Rate limit: 1 active (pending or contacted) request per user per facility ──
       // Anonymous users skip this check — only signed-in accounts are tracked.
+      // Wrapped in its own try-catch: a permission error here must never block the
+      // actual submission (e.g. if the user's token is stale or rule hasn't propagated).
       if (user?.uid) {
-        const existing = await getDocs(
-          query(
-            collection(db, "recoveryHousing", id, "intakeRequests"),
-            where("userId", "==", user.uid),
-            where("status", "in", ["pending", "contacted"]),
-            limit(1),
-          )
-        );
-        if (!existing.empty) {
-          setIntakeSubmitting(false);
-          Alert.alert(
-            "Request already submitted",
-            "You already have an active admission request at this facility. " +
-            "They will reach out to you soon. You can submit again once it's been resolved.",
-            [{ text: "OK" }]
+        try {
+          const existing = await getDocs(
+            query(
+              collection(db, "recoveryHousing", id, "intakeRequests"),
+              where("userId", "==", user.uid),
+              where("status", "in", ["pending", "contacted"]),
+              limit(1),
+            )
           );
-          return;
+          if (!existing.empty) {
+            setIntakeSubmitting(false);
+            Alert.alert(
+              "Request already submitted",
+              "You already have an active admission request at this facility. " +
+              "They will reach out to you soon. You can submit again once it's been resolved.",
+              [{ text: "OK" }]
+            );
+            return;
+          }
+        } catch {
+          // Rate-limit check failed (permissions or network) — allow submission to proceed.
+          // The Firestore create rule is the real gatekeeper.
+          console.warn("Rate-limit check skipped — proceeding with submission.");
         }
       }
 

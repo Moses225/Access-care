@@ -524,10 +524,13 @@ service cloud.firestore {
       }
 
       // Intake requests — written by authenticated patients (any signed-in Morava user),
-      // readable ONLY by the facility manager who owns this facility.
-      // Patients cannot read other patients' requests.
+      // readable by the facility manager who owns this facility OR by the patient who
+      // submitted the request (needed for the duplicate-request rate-limit check).
+      // Patients cannot read other patients' requests — the userId constraint enforces this.
       match /intakeRequests/{requestId} {
-        allow read:   if isAdmin() || isFacilityManager(facilityId);
+        allow read:   if isAdmin()
+                      || isFacilityManager(facilityId)
+                      || (isFullAccount() && resource.data.userId == request.auth.uid);
         allow create: if isFullAccount()
                       && request.resource.data.status == "pending"
                       && validString(request.resource.data.patientName, 150)
