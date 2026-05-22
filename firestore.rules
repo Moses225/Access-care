@@ -79,6 +79,40 @@ service cloud.firestore {
       ]);
     }
 
+    // ================================================================
+    // RECOVERY FACILITY HELPERS
+    // ================================================================
+    // isFacilityManager — verifies the caller owns this facility via custom claim
+    // facilityId is stamped into the token by Admin SDK (setRecoveryFacilityRole.js)
+    // so it cannot be self-edited by the operator.
+    function isFacilityManager(facilityId) {
+      return isAuthenticated()
+          && request.auth.token.provider == true
+          && request.auth.token.facilityId == facilityId;
+    }
+
+    // isRecoverySafeUpdate — operators can update operational fields but NEVER
+    // billing or system fields. Only Admin SDK (Cloud Functions) can touch these.
+    function isRecoverySafeUpdate() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'listingStatus', 'listingPlan', 'freeTrialStartedAt', 'warningEmailSent',
+        'managedByUid', 'active'
+      ]);
+    }
+
+    // isProviderUsersSafeUpdate — blocks recovery facility operators from
+    // self-granting paid tiers, changing roles, or hijacking another facility.
+    function isProviderUsersSafeUpdate() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'role', 'listingPlan', 'listingStatus', 'facilityId',
+        'freeTrialStartedAt', 'warningEmailSent', 'providerId',
+        'plan', 'foundingExpiresAt', 'stripeCustomerId',
+        'stripePaymentMethodId', 'stripeSubscriptionId',
+        'manualBilling', 'isFoundingProvider', 'planActivatedAt',
+        'providerNumber', 'commissionRate', 'billable'
+      ]);
+    }
+
     match /providers/{providerId} {
       allow read: if true;
       allow create: if isAdmin();
@@ -236,7 +270,13 @@ service cloud.firestore {
     // ================================================================
     match /providerUsers/{userId} {
       allow read:  if isOwner(userId) && request.auth.token.provider == true;
-      allow write: if isOwner(userId) && isVerifiedProvider();
+      // Operators may update only non-system fields.
+      // Billing (listingPlan, listingStatus), role, facilityId, and plan fields
+      // are admin-only — users cannot self-grant tiers or change roles.
+      allow write: if isOwner(userId)
+                  && isVerifiedProvider()
+                  && isProviderUsersSafeUpdate();
+      allow write: if isAdmin();
     }
 
     // ================================================================
@@ -450,15 +490,52 @@ service cloud.firestore {
     // RECOVERY HOUSING — May 2026
     // ================================================================
     match /recoveryHousing/{facilityId} {
-      allow read: if resource.data.active == true || isAdmin();
-      allow create, update: if isAdmin()
-        && validString(request.resource.data.facilityName, 200)
-        && request.resource.data.totalBeds is int
-        && validString(request.resource.data.phone, 20);
+      // Operator can always read their own facility (even if inactive/not-yet-live).
+      // Everyone else can only read active listings.
+      allow read: if resource.data.active == true
+                  || isAdmin()
+                  || isFacilityManager(facilityId);
+
+      // Facility manager can update operational fields (availability, profile details)
+      // but cannot touch billing/system fields — those are admin-only.
+      allow update: if isFacilityManager(facilityId)
+                    && isRecoverySafeUpdate();
+
+      // Any authenticated patient can increment viewCount or inquiryCount only.
+      // Used by the patient app when opening a facility or submitting an intake form.
+      // Strictly limited to these two counter fields — no other fields can change.
+      allow update: if isFullAccount()
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                       .hasOnly(['viewCount', 'inquiryCount']);
+
+      // Only admins can create facilities, do full updates (billing fields), or delete
+      allow create: if isAdmin()
+                    && validString(request.resource.data.facilityName, 200)
+                    && request.resource.data.totalBeds is int
+                    && validString(request.resource.data.phone, 20);
+      allow update: if isAdmin();
       allow delete: if false;
+
       match /availability/{docId} {
         allow read: if true;
-        allow write: if isAdmin();
+        // Facility manager can update availability subcollection too
+        allow write: if isAdmin() || isFacilityManager(facilityId);
+      }
+
+      // Intake requests — written by authenticated patients (any signed-in Morava user),
+      // readable ONLY by the facility manager who owns this facility.
+      // Patients cannot read other patients' requests.
+      match /intakeRequests/{requestId} {
+        allow read:   if isAdmin() || isFacilityManager(facilityId);
+        allow create: if isFullAccount()
+                      && request.resource.data.status == "pending"
+                      && validString(request.resource.data.patientName, 150)
+                      && validOptionalString('message', 500);
+        // Only the facility manager can update status (pending → contacted/admitted/declined)
+        allow update: if (isAdmin() || isFacilityManager(facilityId))
+                      && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['status', 'notes', 'updatedAt']);
+        allow delete: if isAdmin();
       }
     }
 

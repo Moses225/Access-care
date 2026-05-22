@@ -1072,3 +1072,156 @@ export const sendAppointmentReminders = onSchedule(
     }
   }
 );
+
+// ─────────────────────────────────────────────────────────────────────────────
+// checkRecoveryTrialExpiry
+//
+// Runs daily at 9 AM CT. Scans all recovery facility accounts and:
+//   1. Flips listingStatus → "trial_expired" when 30-day free trial ends
+//   2. Sends a 7-day advance warning email to Moise + the operator
+//   3. Sends an expiry notification when trial ends
+//
+// Trial clock starts at freeTrialStartedAt (ISO string) in providerUsers doc.
+// Idempotent — checks current listingStatus before writing or emailing.
+// ─────────────────────────────────────────────────────────────────────────────
+export const checkRecoveryTrialExpiry = onSchedule(
+  {
+    schedule: "0 9 * * *",        // 9:00 AM daily
+    timeZone: "America/Chicago",
+    region: "us-central1",
+    secrets: [resendApiKey],
+  },
+  async () => {
+    const resend = new Resend(resendApiKey.value());
+    const now    = Date.now();
+    const FREE_TRIAL_MS   = 30 * 24 * 60 * 60 * 1000;  // 30 days
+    const WARNING_MS      = 23 * 24 * 60 * 60 * 1000;  // warn at day 23 (7 days left)
+
+    // Fetch all recovery facility accounts with an active free trial
+    const snap = await db
+      .collection("providerUsers")
+      .where("role", "==", "recovery_facility")
+      .where("listingStatus", "in", ["active_free", null])
+      .get();
+
+    if (snap.empty) {
+      console.log("checkRecoveryTrialExpiry: no active_free recovery facilities found.");
+      return;
+    }
+
+    const expired: string[]  = [];
+    const warned: string[]   = [];
+
+    for (const doc of snap.docs) {
+      const data = doc.data();
+      const facilityId  = data.facilityId as string | undefined;
+      const rawStart    = data.freeTrialStartedAt;
+      const email       = data.email as string | undefined;
+      const facilityName = data.facilityName || facilityId || doc.id;
+
+      // Can't calculate without a start date — skip
+      if (!rawStart) continue;
+
+      let startMs: number;
+      if (typeof rawStart === "string") {
+        startMs = new Date(rawStart).getTime();
+      } else if (typeof rawStart?.toDate === "function") {
+        startMs = rawStart.toDate().getTime();
+      } else {
+        continue;
+      }
+      if (isNaN(startMs)) continue;
+
+      const elapsed     = now - startMs;
+      const daysLeft    = Math.ceil((FREE_TRIAL_MS - elapsed) / (24 * 60 * 60 * 1000));
+      const trialEndDate = new Date(startMs + FREE_TRIAL_MS).toLocaleDateString("en-US", {
+        month: "long", day: "numeric", year: "numeric",
+      });
+
+      // ── EXPIRED ────────────────────────────────────────────────────────────
+      if (elapsed >= FREE_TRIAL_MS) {
+        const batch = db.batch();
+        batch.update(doc.ref, { listingStatus: "trial_expired" });
+        if (facilityId) {
+          batch.update(db.collection("recoveryHousing").doc(facilityId), { listingStatus: "trial_expired" });
+        }
+        await batch.commit();
+        expired.push(`${facilityName} (${email || doc.id})`);
+        console.log(`✅ Trial expired → ${facilityName}`);
+
+        // Email the operator
+        if (email) {
+          await resend.emails.send({
+            from: "Morava <noreply@moravacare.com>",
+            to: email,
+            subject: "Your Morava free listing trial has ended",
+            html: wrapEmail("Listing Update", `
+              <p>Hi ${esc(facilityName)},</p>
+              <p>Your <strong>30-day free listing</strong> on Morava has ended.</p>
+              <p>To keep your facility visible to patients and case managers searching for recovery housing,
+              please reply to this email or contact us to activate your paid plan:</p>
+              <p style="font-size:24px;font-weight:bold;color:#0d9488;margin:16px 0">$80 / month</p>
+              <p>Flat rate — no per-referral fees, no commissions. One filled bed more than covers it.</p>
+              <p><a href="mailto:support@moravacare.com?subject=Activate my listing - ${esc(facilityName)}"
+                style="display:inline-block;background:#0d9488;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold">
+                Contact us to activate →
+              </a></p>
+              <p style="color:#94A3B8;font-size:12px">Questions? Reply to this email or call (855) 812-6996, Mon–Fri 9am–5pm CT.</p>
+            `),
+          }).catch((e) => console.error(`Failed to email operator ${email}:`, e));
+        }
+        continue;
+      }
+
+      // ── 7-DAY WARNING (day 23–29, warn once by checking warningEmailSent) ──
+      if (elapsed >= WARNING_MS && !data.warningEmailSent) {
+        await doc.ref.update({ warningEmailSent: true });
+        warned.push(`${facilityName} (${email || doc.id}) — ${daysLeft}d left`);
+        console.log(`⏳ Trial warning → ${facilityName} (${daysLeft} days left)`);
+
+        if (email) {
+          await resend.emails.send({
+            from: "Morava <noreply@moravacare.com>",
+            to: email,
+            subject: `Your Morava free listing ends in ${daysLeft} day${daysLeft === 1 ? "" : "s"}`,
+            html: wrapEmail("Listing Update", `
+              <p>Hi ${esc(facilityName)},</p>
+              <p>Your <strong>free listing</strong> on Morava ends on <strong>${trialEndDate}</strong>
+              — that's <strong>${daysLeft} day${daysLeft === 1 ? "" : "s"} from now</strong>.</p>
+              <p>After that, continuing costs just <strong>$80/month</strong> — flat rate,
+              no hidden fees, no per-referral charges.</p>
+              <p>We'll reach out before anything is charged. No surprises, no automatic billing.</p>
+              <p><a href="mailto:support@moravacare.com?subject=Questions about my listing - ${esc(facilityName)}"
+                style="display:inline-block;background:#0d9488;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold">
+                Questions? Contact us →
+              </a></p>
+            `),
+          }).catch((e) => console.error(`Failed to email warning to ${email}:`, e));
+        }
+      }
+    }
+
+    // ── Admin summary email ────────────────────────────────────────────────
+    if (expired.length > 0 || warned.length > 0) {
+      await resend.emails.send({
+        from: "Morava System <noreply@moravacare.com>",
+        to: "moise@moravacare.com",
+        subject: `Recovery trial check: ${expired.length} expired, ${warned.length} warned`,
+        html: wrapEmail("Trial Expiry Report", `
+          <p><strong>Daily recovery facility trial check complete.</strong></p>
+          ${expired.length > 0 ? `
+            <p style="color:#dc2626"><strong>🔴 Expired (${expired.length}):</strong></p>
+            <ul>${expired.map((f) => `<li>${esc(f)}</li>`).join("")}</ul>
+            <p>These facilities have been flipped to <code>trial_expired</code> and emailed.</p>
+          ` : ""}
+          ${warned.length > 0 ? `
+            <p style="color:#d97706"><strong>⏳ 7-day warnings sent (${warned.length}):</strong></p>
+            <ul>${warned.map((f) => `<li>${esc(f)}</li>`).join("")}</ul>
+          ` : ""}
+        `),
+      }).catch((e) => console.error("Failed to send admin summary:", e));
+    } else {
+      console.log("checkRecoveryTrialExpiry: no expirations or warnings today.");
+    }
+  }
+);

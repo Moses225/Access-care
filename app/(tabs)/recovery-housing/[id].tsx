@@ -7,20 +7,34 @@
 // ================================================================
 
 import { Ionicons } from "@expo/vector-icons";
-import { doc, getDoc } from "firebase/firestore";
+import {
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  increment,
+  serverTimestamp,
+  updateDoc,
+} from "firebase/firestore";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
+  KeyboardAvoidingView,
   Linking,
+  Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { useTheme } from "../../../context/ThemeContext";
+import { useAuth } from "../../../context/AuthContext";
 import { db } from "../../../firebase";
 import {
   RecoveryHousingFacility,
@@ -35,9 +49,23 @@ export default function RecoveryHousingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { colors } = useTheme();
-  const [facility, setFacility] = useState<RecoveryHousingFacility | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [photoIndex, setPhotoIndex] = useState(0);
+  const { user } = useAuth();
+
+  const [facility, setFacility]         = useState<RecoveryHousingFacility | null>(null);
+  const [listingPlan, setListingPlan]   = useState<"free" | "standard" | "growth">("free");
+  const [loading, setLoading]           = useState(true);
+  const [photoIndex, setPhotoIndex]     = useState(0);
+
+  // Intake form state
+  const [showIntake, setShowIntake]           = useState(false);
+  const [intakeName, setIntakeName]           = useState("");
+  const [intakePhone, setIntakePhone]         = useState("");
+  const [intakeSobriety, setIntakeSobriety]   = useState("");
+  const [intakeGender, setIntakeGender]       = useState("");
+  const [intakeMessage, setIntakeMessage]     = useState("");
+  const [intakeSubmitting, setIntakeSubmitting] = useState(false);
+  const [intakeSubmitted, setIntakeSubmitted] = useState(false);
+  const viewCounted = useRef(false);
 
   useEffect(() => {
     if (!id) return;
@@ -46,6 +74,17 @@ export default function RecoveryHousingDetailScreen() {
         const snap = await getDoc(doc(db, "recoveryHousing", id));
         if (snap.exists()) {
           setFacility(mapFirestoreToFacility(snap.id, snap.data()));
+          setListingPlan((snap.data().listingPlan as "free" | "standard" | "growth") || "free");
+
+          // ── View count tracking ────────────────────────────────────────────
+          // Increment once per screen visit. viewCounted ref prevents double-fire
+          // in React Strict Mode. Anonymous guests count too — they're real eyes.
+          if (!viewCounted.current) {
+            viewCounted.current = true;
+            updateDoc(doc(db, "recoveryHousing", id), {
+              viewCount: increment(1),
+            }).catch(() => {/* non-critical — don't surface to user */});
+          }
         }
       } catch (err) {
         console.error("❌ Error loading facility:", err);
@@ -54,6 +93,52 @@ export default function RecoveryHousingDetailScreen() {
       }
     })();
   }, [id]);
+
+  // ── Intake form submission ───────────────────────────────────────────────────
+  const handleIntakeSubmit = async () => {
+    if (!intakeName.trim()) {
+      Alert.alert("Name required", "Please enter your name so the facility can reach you.");
+      return;
+    }
+    if (!intakePhone.trim()) {
+      Alert.alert("Phone required", "Please enter a phone number so the facility can contact you.");
+      return;
+    }
+    if (!id) return;
+
+    setIntakeSubmitting(true);
+    try {
+      await addDoc(collection(db, "recoveryHousing", id, "intakeRequests"), {
+        patientName:   intakeName.trim(),
+        phone:         intakePhone.trim(),
+        gender:        intakeGender.trim() || null,
+        sobrietyDays:  intakeSobriety ? parseInt(intakeSobriety, 10) || 0 : null,
+        message:       intakeMessage.trim() || null,
+        status:        "pending",
+        userId:        user?.uid || null,   // links request to patient account if signed in
+        facilityId:    id,
+        createdAt:     serverTimestamp(),
+      });
+
+      // Increment inquiry counter on the facility doc for analytics
+      updateDoc(doc(db, "recoveryHousing", id), {
+        inquiryCount: increment(1),
+      }).catch(() => {});
+
+      setIntakeSubmitted(true);
+    } catch (err) {
+      console.error("❌ Intake submission failed:", err);
+      Alert.alert("Submission failed", "Please try again or contact the facility directly.");
+    } finally {
+      setIntakeSubmitting(false);
+    }
+  };
+
+  const resetIntakeForm = () => {
+    setIntakeName(""); setIntakePhone(""); setIntakeSobriety("");
+    setIntakeGender(""); setIntakeMessage("");
+    setIntakeSubmitted(false); setShowIntake(false);
+  };
 
   if (loading) {
     return (
@@ -194,12 +279,26 @@ export default function RecoveryHousingDetailScreen() {
 
       {/* Quick actions */}
       <View style={s.actionsRow}>
+        {/* Request Admission — Standard+ facilities only */}
+        {(listingPlan === "standard" || listingPlan === "growth") && (
+          <TouchableOpacity
+            style={[s.actionBtn, { backgroundColor: "#00838F", flex: 1.4 }]}
+            onPress={() => setShowIntake(true)}
+          >
+            <Ionicons name="document-text-outline" size={18} color="#fff" />
+            <Text style={s.actionBtnText}>Request Admission</Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
-          style={[s.actionBtn, { backgroundColor: "#00838F" }]}
+          style={[s.actionBtn, {
+            backgroundColor: (listingPlan === "standard" || listingPlan === "growth") ? colors.card : "#00838F",
+            borderWidth: (listingPlan === "standard" || listingPlan === "growth") ? 1.5 : 0,
+            borderColor: "#00838F",
+          }]}
           onPress={() => facility.phone && Linking.openURL(`tel:${facility.phone}`)}
         >
-          <Ionicons name="call" size={18} color="#fff" />
-          <Text style={s.actionBtnText}>Call</Text>
+          <Ionicons name="call" size={18} color={(listingPlan === "standard" || listingPlan === "growth") ? "#00838F" : "#fff"} />
+          <Text style={[s.actionBtnText, { color: (listingPlan === "standard" || listingPlan === "growth") ? "#00838F" : "#fff" }]}>Call</Text>
         </TouchableOpacity>
         {facility.email && (
           <TouchableOpacity
@@ -210,7 +309,7 @@ export default function RecoveryHousingDetailScreen() {
             <Text style={[s.actionBtnText, { color: "#00838F" }]}>Email</Text>
           </TouchableOpacity>
         )}
-        {facility.website && (
+        {facility.website && !(listingPlan === "standard" || listingPlan === "growth") && (
           <TouchableOpacity
             style={[s.actionBtn, { backgroundColor: colors.card, borderWidth: 1.5, borderColor: colors.border }]}
             onPress={() => Linking.openURL(facility.website!)}
@@ -303,6 +402,163 @@ export default function RecoveryHousingDetailScreen() {
       </View>
 
       <View style={{ height: 40 }} />
+
+      {/* ── Intake Request Modal ────────────────────────────────────────────── */}
+      <Modal
+        visible={showIntake}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={resetIntakeForm}
+      >
+        <KeyboardAvoidingView
+          style={{ flex: 1, backgroundColor: colors.background }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          {/* Header */}
+          <View style={[s.modalHeader, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+            <TouchableOpacity onPress={resetIntakeForm} style={s.modalClose}>
+              <Ionicons name="close" size={24} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={[s.modalTitle, { color: colors.text }]}>Request Admission</Text>
+            <View style={{ width: 40 }} />
+          </View>
+
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={s.modalBody} keyboardShouldPersistTaps="handled">
+            {intakeSubmitted ? (
+              /* ── Success state ── */
+              <View style={s.successBox}>
+                <Text style={s.successEmoji}>🎉</Text>
+                <Text style={[s.successTitle, { color: colors.text }]}>Request sent!</Text>
+                <Text style={[s.successSub, { color: colors.subtext }]}>
+                  {facility.facilityName} will reach out to you at the number you provided.
+                  In the meantime, feel free to call them directly.
+                </Text>
+                {facility.phone && (
+                  <TouchableOpacity
+                    style={[s.successCallBtn, { borderColor: "#00838F" }]}
+                    onPress={() => { resetIntakeForm(); Linking.openURL(`tel:${facility.phone}`); }}
+                  >
+                    <Ionicons name="call" size={16} color="#00838F" />
+                    <Text style={[s.successCallText, { color: "#00838F" }]}>Call {facility.facilityName}</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity onPress={resetIntakeForm} style={s.successDoneBtn}>
+                  <Text style={s.successDoneText}>Done</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              /* ── Form ── */
+              <>
+                {/* Facility context */}
+                <View style={[s.formFacilityBadge, { backgroundColor: "#E0F2FE", borderColor: "#BAE6FD" }]}>
+                  <Text style={{ fontSize: 13, color: "#0369A1", fontWeight: "600" }}>
+                    📍 {facility.facilityName} · {facility.city}
+                  </Text>
+                </View>
+
+                <Text style={[s.formNote, { color: colors.subtext }]}>
+                  This form goes directly to the facility. No diagnosis or medical info needed —
+                  just the basics so they can reach you.
+                </Text>
+
+                {/* Name */}
+                <View style={s.fieldGroup}>
+                  <Text style={[s.fieldLabel, { color: colors.subtext }]}>Your name *</Text>
+                  <TextInput
+                    style={[s.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
+                    placeholder="First name is fine"
+                    placeholderTextColor={colors.subtext}
+                    value={intakeName}
+                    onChangeText={setIntakeName}
+                    autoCapitalize="words"
+                    returnKeyType="next"
+                  />
+                </View>
+
+                {/* Phone */}
+                <View style={s.fieldGroup}>
+                  <Text style={[s.fieldLabel, { color: colors.subtext }]}>Phone number *</Text>
+                  <TextInput
+                    style={[s.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
+                    placeholder="(405) 555-0100"
+                    placeholderTextColor={colors.subtext}
+                    value={intakePhone}
+                    onChangeText={setIntakePhone}
+                    keyboardType="phone-pad"
+                    returnKeyType="next"
+                  />
+                </View>
+
+                {/* Gender + Sobriety — side by side */}
+                <View style={s.rowFields}>
+                  <View style={[s.fieldGroup, { flex: 1, marginRight: 8 }]}>
+                    <Text style={[s.fieldLabel, { color: colors.subtext }]}>Gender (optional)</Text>
+                    <TextInput
+                      style={[s.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
+                      placeholder="e.g. Male"
+                      placeholderTextColor={colors.subtext}
+                      value={intakeGender}
+                      onChangeText={setIntakeGender}
+                      autoCapitalize="words"
+                    />
+                  </View>
+                  <View style={[s.fieldGroup, { flex: 1 }]}>
+                    <Text style={[s.fieldLabel, { color: colors.subtext }]}>Days sober (optional)</Text>
+                    <TextInput
+                      style={[s.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
+                      placeholder="e.g. 30"
+                      placeholderTextColor={colors.subtext}
+                      value={intakeSobriety}
+                      onChangeText={setIntakeSobriety}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                </View>
+
+                {/* Message */}
+                <View style={s.fieldGroup}>
+                  <Text style={[s.fieldLabel, { color: colors.subtext }]}>Anything else to share? (optional)</Text>
+                  <TextInput
+                    style={[s.input, s.textarea, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
+                    placeholder="Special needs, questions for the facility, best time to call..."
+                    placeholderTextColor={colors.subtext}
+                    value={intakeMessage}
+                    onChangeText={setIntakeMessage}
+                    multiline
+                    numberOfLines={4}
+                    textAlignVertical="top"
+                  />
+                </View>
+
+                {/* PHI notice */}
+                <View style={[s.phiNotice, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <Ionicons name="shield-checkmark-outline" size={14} color="#00838F" />
+                  <Text style={[s.phiText, { color: colors.subtext }]}>
+                    Don't include medical diagnoses, medications, or insurance details here.
+                    That conversation happens directly with the facility.
+                  </Text>
+                </View>
+
+                {/* Submit */}
+                <TouchableOpacity
+                  style={[s.submitBtn, { backgroundColor: intakeSubmitting ? "#9CA3AF" : "#00838F" }]}
+                  onPress={handleIntakeSubmit}
+                  disabled={intakeSubmitting}
+                >
+                  {intakeSubmitting ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <>
+                      <Ionicons name="send-outline" size={18} color="#fff" />
+                      <Text style={s.submitBtnText}>Send request to facility</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </>
+            )}
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </Modal>
     </ScrollView>
   );
 }
@@ -408,4 +664,78 @@ const s = StyleSheet.create({
     marginBottom: 6,
   },
   crisisSub: { fontSize: 12, marginTop: 4 },
+
+  // ── Intake modal ────────────────────────────────────────────────────────────
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingTop: Platform.OS === "ios" ? 16 : 24,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  modalClose: { width: 40, alignItems: "flex-start" },
+  modalTitle: { fontSize: 17, fontWeight: "700" },
+  modalBody: { padding: 20, paddingBottom: 60 },
+  formFacilityBadge: {
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 14,
+  },
+  formNote: { fontSize: 13, lineHeight: 20, marginBottom: 20 },
+  fieldGroup: { marginBottom: 16 },
+  fieldLabel: { fontSize: 12, fontWeight: "600", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 },
+  input: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+  },
+  textarea: { height: 100, paddingTop: 12 },
+  rowFields: { flexDirection: "row" },
+  phiNotice: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 20,
+  },
+  phiText: { fontSize: 12, lineHeight: 18, flex: 1 },
+  submitBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 14,
+    paddingVertical: 16,
+    gap: 8,
+  },
+  submitBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+
+  // ── Success state ───────────────────────────────────────────────────────────
+  successBox: { alignItems: "center", paddingVertical: 40, paddingHorizontal: 24 },
+  successEmoji: { fontSize: 56, marginBottom: 16 },
+  successTitle: { fontSize: 24, fontWeight: "700", marginBottom: 12 },
+  successSub: { fontSize: 15, lineHeight: 24, textAlign: "center", marginBottom: 28 },
+  successCallBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderWidth: 1.5,
+    borderRadius: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    marginBottom: 14,
+  },
+  successCallText: { fontSize: 15, fontWeight: "700" },
+  successDoneBtn: {
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+  },
+  successDoneText: { fontSize: 15, color: "#9CA3AF", fontWeight: "500" },
 });

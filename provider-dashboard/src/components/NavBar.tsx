@@ -6,13 +6,25 @@ export default function NavBar() {
   const location = useLocation();
   const { providerProfile } = useAuth();
   const isPro = providerProfile?.plan === "pro";
+  const isRecoveryFacility = providerProfile?.role === "recovery_facility";
 
-  const tabs = [
-    { label: "Home", path: "/dashboard" },
-    { label: "Billing", path: "/billing" },
-    { label: "Profile", path: "/profile" },
-    { label: "Analytics", path: "/analytics", locked: !isPro, soon: isPro },
-  ];
+  const isGrowthPlan = providerProfile?.listingPlan === "growth";
+
+  // Recovery facilities get a purpose-built tab set.
+  // Analytics is visible but locked on Free/Standard — creates upgrade awareness.
+  const tabs = isRecoveryFacility
+    ? [
+        { label: "Home",              path: "/dashboard" },
+        { label: "Listing & Billing", path: "/billing"   },
+        { label: "Facility Profile",  path: "/profile"   },
+        { label: "Analytics",         path: "/analytics", locked: !isGrowthPlan, soon: isGrowthPlan },
+      ]
+    : [
+        { label: "Home",      path: "/dashboard"  },
+        { label: "Billing",   path: "/billing"    },
+        { label: "Profile",   path: "/profile"    },
+        { label: "Analytics", path: "/analytics", locked: !isPro, soon: isPro },
+      ];
 
   return (
     <div className="bg-white border-b border-slate-200 sticky top-16 z-30">

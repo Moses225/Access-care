@@ -26,12 +26,22 @@ interface ProviderProfile {
   manualBilling?: boolean;
   plan?: "founding" | "standard" | "pro";
   foundingExpiresAt?: string | null;
+  // Role-based routing — "recovery_facility" sends user to RecoveryDashboard
+  role?: "provider" | "recovery_facility" | "admin";
+  facilityId?: string;
+  practiceType?: string;
+  // Recovery facility trial/billing fields
+  listingStatus?: "active_free" | "trial_expired" | "active_paid" | "suspended";
+  freeTrialStartedAt?: string | null;
+  // Recovery facility plan tier — free = basic listing only, standard = $80/mo, growth = $159/mo
+  listingPlan?: "free" | "standard" | "growth";
 }
 
 interface AuthContextType {
   user: User | null;
   providerProfile: ProviderProfile | null;
   loading: boolean;
+  profileLoading: boolean;
   isMFAEnrolled: boolean;
   mfaResolver: MultiFactorResolver | null;
   login: (email: string, password: string) => Promise<void>;
@@ -52,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [providerProfile, setProviderProfile] =
     useState<ProviderProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(true);
   const [mfaResolver, setMfaResolver] = useState<MultiFactorResolver | null>(
     null,
   );
@@ -75,6 +86,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
+      // ── Security: immediately wipe stale profile data before any async work ──
+      // Without this, a second login (different user or re-auth) would show the
+      // previous session's providerProfile for the duration of the Firestore fetch,
+      // letting a recovery facility user briefly see a provider's data (or vice versa).
+      if (u) {
+        setProviderProfile(null);
+        setProfileLoading(true);
+      }
       setUser(u);
       if (u) {
         try {
@@ -83,9 +102,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const d = snap.data();
             const provSnap = await getDoc(doc(db, "providers", d.providerId));
             const prov = provSnap.exists() ? provSnap.data() : {};
+            setProfileLoading(false);
             setProviderProfile({
               providerId: d.providerId,
-              name: prov.name || "",
+              name: prov.name || d.facilityName || "",
               specialty: prov.specialty || "",
               email: u.email || "",
               stripeCustomerId:
@@ -102,15 +122,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   return raw.toDate().toISOString();
                 return null;
               })(),
+              role: (d.role as "provider" | "recovery_facility" | "admin") || "provider",
+              facilityId: d.facilityId || undefined,
+              practiceType: prov.practiceType || d.practiceType || undefined,
+              listingStatus: d.listingStatus || undefined,
+              listingPlan: (d.listingPlan as "free" | "standard" | "growth") || "free",
+              freeTrialStartedAt: (() => {
+                const raw = d.freeTrialStartedAt;
+                if (!raw) return null;
+                if (typeof raw === "string") return raw;
+                if (typeof raw?.toDate === "function") return raw.toDate().toISOString();
+                return null;
+              })(),
             });
           } else {
             setProviderProfile(null);
+            setProfileLoading(false);
           }
         } catch {
           setProviderProfile(null);
+          setProfileLoading(false);
         }
       } else {
         setProviderProfile(null);
+        setProfileLoading(false);
       }
       setLoading(false);
     });
@@ -226,6 +261,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         providerProfile,
         loading,
+        profileLoading,
         isMFAEnrolled,
         mfaResolver,
         login,
