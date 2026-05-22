@@ -1,4 +1,6 @@
+import { sendEmailVerification } from 'firebase/auth';
 import { useState } from 'react';
+import { auth } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 
 // ─── MFA Enrollment Modal ──────────────────────────────────────────────────
@@ -15,10 +17,11 @@ interface MFASetupProps {
 export default function MFASetup({ onClose, onEnrolled, required = false }: MFASetupProps) {
   const { startMFAEnrollment, completeMFAEnrollment, cancelMFAEnrollment } = useAuth();
 
-  const [step,     setStep]     = useState<'phone' | 'code' | 'loading' | 'done'>('phone');
+  const [step,     setStep]     = useState<'phone' | 'code' | 'loading' | 'done' | 'verify-email'>('phone');
   const [phone,    setPhone]    = useState('');
   const [code,     setCode]     = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [verifyEmailSent, setVerifyEmailSent] = useState(false);
 
   const formatPhone = (val: string) => {
     const digits = val.replace(/\D/g, '').slice(0, 10);
@@ -44,8 +47,25 @@ export default function MFASetup({ onClose, onEnrolled, required = false }: MFAS
       await startMFAEnrollment(e164(phone));
       setStep('code');
     } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : 'Failed to send code. Try again.');
-      setStep('phone');
+      const code = (err as { code?: string })?.code || '';
+      if (code === 'auth/unverified-email') {
+        // Firebase requires email verification before MFA enrollment.
+        // Show the verify-email step so the provider can get the link.
+        setStep('verify-email');
+      } else {
+        setErrorMsg(err instanceof Error ? err.message : 'Failed to send code. Try again.');
+        setStep('phone');
+      }
+    }
+  };
+
+  const handleSendVerificationEmail = async () => {
+    try {
+      const user = auth.currentUser;
+      if (user) await sendEmailVerification(user);
+      setVerifyEmailSent(true);
+    } catch {
+      setErrorMsg('Could not send verification email. Try again or contact support.');
     }
   };
 
@@ -94,6 +114,50 @@ export default function MFASetup({ onClose, onEnrolled, required = false }: MFAS
             </p>
           </div>
         </div>
+
+        {/* Step: verify-email (shown when Firebase rejects MFA because email is unverified) */}
+        {step === 'verify-email' && (
+          <div className="space-y-5">
+            <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 flex gap-3">
+              <span className="text-amber-500 text-xl mt-0.5">✉️</span>
+              <div>
+                <p className="text-amber-900 text-sm font-semibold mb-1">Email verification required</p>
+                <p className="text-amber-700 text-sm leading-relaxed">
+                  Firebase requires your email address to be verified before
+                  you can add phone 2FA. Click below to receive a verification
+                  link, then come back and try again.
+                </p>
+              </div>
+            </div>
+
+            {errorMsg && (
+              <div className="bg-red-50 border border-red-100 text-red-600 text-sm px-4 py-3 rounded-lg">
+                {errorMsg}
+              </div>
+            )}
+
+            {verifyEmailSent ? (
+              <div className="bg-teal-50 border border-teal-100 text-teal-700 text-sm px-4 py-3 rounded-lg text-center">
+                ✅ Verification email sent — check your inbox, then reload this page.
+              </div>
+            ) : (
+              <button
+                onClick={handleSendVerificationEmail}
+                className="w-full py-3 rounded-xl text-white font-semibold text-sm"
+                style={{ background: '#14B8A6' }}
+              >
+                Send verification email
+              </button>
+            )}
+
+            <button
+              onClick={() => { setStep('phone'); setErrorMsg(''); }}
+              className="w-full py-3 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium"
+            >
+              ← Back to phone number
+            </button>
+          </div>
+        )}
 
         {/* Step: phone */}
         {(step === 'phone' || (step === 'loading' && code === '')) && (

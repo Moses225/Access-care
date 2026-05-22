@@ -145,9 +145,10 @@ async function main() {
     console.log(`ℹ️   Auth account already exists: ${uid}`);
   } catch {
     const newUser = await auth.createUser({
-      email:    DASHBOARD_EMAIL,
-      password: DASHBOARD_PASSWORD,
-      displayName: providerDoc.name,
+      email:         DASHBOARD_EMAIL,
+      password:      DASHBOARD_PASSWORD,
+      displayName:   providerDoc.name,
+      emailVerified: true,   // required by Firebase before MFA enrollment
     });
     uid = newUser.uid;
     console.log(`✅  Firebase Auth account created: ${uid}`);
