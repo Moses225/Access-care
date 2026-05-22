@@ -531,10 +531,32 @@ service cloud.firestore {
         allow read:   if isAdmin()
                       || isFacilityManager(facilityId)
                       || (isFullAccount() && resource.data.userId == request.auth.uid);
+
+        // GAP 2 FIX: userId must match the caller (prevents attributing requests to other users)
+        // GAP 3 FIX: noScript on name and message (defense-in-depth against injection)
+        // GAP 4 FIX: phone length-capped; sobrietyDays must be a non-negative int when present
         allow create: if isFullAccount()
                       && request.resource.data.status == "pending"
+                      // Caller can only write their own userId (or omit it)
+                      && (!(  'userId' in request.resource.data)
+                          || request.resource.data.userId == request.auth.uid)
+                      // patientName: required, max 150 chars, no script tags
                       && validString(request.resource.data.patientName, 150)
-                      && validOptionalString('message', 500);
+                      && noScript('patientName')
+                      // phone: required, max 20 chars
+                      && validString(request.resource.data.phone, 20)
+                      // message: optional, max 500 chars, no script tags if present
+                      && validOptionalString('message', 500)
+                      && (!(  'message' in request.resource.data)
+                          || request.resource.data.message == null
+                          || noScript('message'))
+                      // sobrietyDays: optional, must be a non-negative integer if present
+                      && (!('sobrietyDays' in request.resource.data)
+                          || request.resource.data.sobrietyDays == null
+                          || (request.resource.data.sobrietyDays is int
+                              && request.resource.data.sobrietyDays >= 0
+                              && request.resource.data.sobrietyDays <= 36500));
+
         // Only the facility manager can update status (pending → contacted/admitted/declined)
         allow update: if (isAdmin() || isFacilityManager(facilityId))
                       && request.resource.data.diff(resource.data).affectedKeys()
