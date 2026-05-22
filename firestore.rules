@@ -171,14 +171,21 @@ service cloud.firestore {
       // Patients have no rule granting them access here — the catch-all denies.
       // Notes are write-once from the dashboard; providers can delete their own.
       match /providerNotes/{noteId} {
+        // read/delete: note already exists so resource.data.providerId is accessible
         allow read:   if isAuthenticated() && (isBookingProvider() || isAdmin());
+        allow delete: if isBookingProvider() || isAdmin();
+
+        // create: note doesn't exist yet — resource is null, so isBookingProvider()
+        // (which checks resource.data.providerId) always fails on create.
+        // Instead, look up the PARENT booking to confirm the provider owns it.
         allow create: if isVerifiedProvider()
-                      && isBookingProvider()
                       && request.resource.data.providerId == request.auth.token.providerId
+                      && get(/databases/$(database)/documents/bookings/$(bookingId)).data.providerId
+                         == request.auth.token.providerId
                       && request.resource.data.text is string
                       && request.resource.data.text.size() > 0
                       && request.resource.data.text.size() <= 2000;
-        allow delete: if isBookingProvider() || isAdmin();
+
         allow update: if false; // notes are immutable — delete and re-create
       }
 
