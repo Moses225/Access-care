@@ -1225,3 +1225,100 @@ export const checkRecoveryTrialExpiry = onSchedule(
     }
   }
 );
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INTAKE REQUEST NOTIFICATION
+// Fires when a patient submits an admission request through the patient app.
+// PHI POLICY: We do NOT include patient name, phone, or any identifying info
+// in the email — only the facility name, a count, and a link to the dashboard.
+// The facility operator reads the full request securely inside the dashboard.
+// ─────────────────────────────────────────────────────────────────────────────
+export const onIntakeRequestCreated = onDocumentCreated(
+  {
+    document: "recoveryHousing/{facilityId}/intakeRequests/{reqId}",
+    database: "(default)",
+    region: "us-central1",
+    secrets: [resendApiKey],
+  },
+  async (event) => {
+    const facilityId = event.params.facilityId;
+    if (!facilityId) return;
+
+    // ── Look up facility name + operator email ────────────────────────────────
+    let facilityName = "your facility";
+    let operatorEmail: string | null = null;
+
+    try {
+      const facilitySnap = await db.collection("recoveryHousing").doc(facilityId).get();
+      if (facilitySnap.exists) {
+        facilityName = (facilitySnap.data()?.facilityName as string) || facilityName;
+      }
+
+      // Operator email lives on the providerUsers doc that owns this facility
+      const puSnap = await db
+        .collection("providerUsers")
+        .where("facilityId", "==", facilityId)
+        .limit(1)
+        .get();
+      if (!puSnap.empty) {
+        const email = puSnap.docs[0].data()?.email as string | undefined;
+        if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          operatorEmail = email;
+        }
+      }
+    } catch (err) {
+      console.error("onIntakeRequestCreated: lookup failed", err);
+      return;
+    }
+
+    if (!operatorEmail) {
+      console.log(`onIntakeRequestCreated: no operator email found for ${facilityId}`);
+      return;
+    }
+
+    // ── PHI-free email to facility operator ───────────────────────────────────
+    const resend = new Resend(resendApiKey.value());
+    try {
+      await resend.emails.send({
+        from: "Morava <noreply@moravacare.com>",
+        to: operatorEmail,
+        subject: `New admission inquiry — ${esc(facilityName)}`,
+        html: wrapEmail(
+          "New Admission Inquiry",
+          `
+          <p style="margin:0 0 16px">
+            Someone submitted an admission request for
+            <strong>${esc(facilityName)}</strong> through the Morava patient app.
+          </p>
+
+          <div style="background:#f0fdfa;border:1px solid #99f6e4;border-radius:10px;padding:16px;margin-bottom:20px">
+            <p style="margin:0 0 6px;color:#0f766e;font-weight:bold;font-size:15px">
+              📋 Their information is waiting in your dashboard
+            </p>
+            <p style="margin:0;color:#134e4a;font-size:13px">
+              Log in to review their contact details, sobriety timeline, and message.
+              Then mark them as Contacted, Admitted, or Declined — right from the home screen.
+            </p>
+          </div>
+
+          <a
+            href="https://morava-dashboard.web.app/dashboard#intake-requests"
+            style="display:inline-block;background:#0f766e;color:#fff;font-weight:bold;
+                   padding:12px 24px;border-radius:10px;text-decoration:none;font-size:14px"
+          >
+            View Request in Dashboard →
+          </a>
+
+          <p style="margin:20px 0 0;font-size:12px;color:#94a3b8">
+            This email contains no patient health information. Full request details are
+            accessible only inside your secure dashboard.
+          </p>
+          `
+        ),
+      });
+      console.log(`onIntakeRequestCreated: notified ${operatorEmail} for ${facilityId}`);
+    } catch (err) {
+      console.error("onIntakeRequestCreated: email send failed", err);
+    }
+  }
+);

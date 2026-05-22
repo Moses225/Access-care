@@ -6,7 +6,7 @@
 // Writes to /recoveryHousing/{facilityId} in Firestore.
 // ================================================================
 
-import { collection, doc, getDoc, getDocs, orderBy, query, serverTimestamp, updateDoc } from "firebase/firestore";
+import { collection, doc, getDoc, onSnapshot, orderBy, query, serverTimestamp, updateDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import NavBar from "../components/NavBar";
@@ -103,18 +103,8 @@ export default function RecoveryDashboard() {
           setStatus(d.availabilityStatus ?? "available");
           setWaitlistDays(d.waitlistDays ?? 0);
         }
-        // Load intake requests (Standard+ only — empty on free)
-        try {
-          const reqSnap = await getDocs(
-            query(
-              collection(db, "recoveryHousing", facilityId, "intakeRequests"),
-              orderBy("createdAt", "desc"),
-            )
-          );
-          setIntakeRequests(
-            reqSnap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<IntakeRequest, "id">) }))
-          );
-        } catch { /* subcollection may not exist yet — silent */ }
+        // Real-time intake requests listener (Standard+ only)
+        // Unsubscribe is handled in a separate useEffect below
       } catch {
         setError("Could not load facility data.");
       } finally {
@@ -122,6 +112,44 @@ export default function RecoveryDashboard() {
       }
     })();
   }, [facilityId]);
+
+  // ── Real-time intake requests listener ───────────────────────────────────────
+  useEffect(() => {
+    if (!facilityId) return;
+    const unsub = onSnapshot(
+      query(
+        collection(db, "recoveryHousing", facilityId, "intakeRequests"),
+        orderBy("createdAt", "desc"),
+      ),
+      (snap) => {
+        setIntakeRequests(
+          snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<IntakeRequest, "id">) }))
+        );
+      },
+      () => { /* subcollection may not exist yet — silent */ }
+    );
+    return () => unsub();
+  }, [facilityId]);
+
+  // ── Update a single intake request status ────────────────────────────────────
+  const updateIntakeStatus = async (
+    requestId: string,
+    newStatus: IntakeRequest["status"]
+  ) => {
+    if (!facilityId) return;
+    // Optimistic update
+    setIntakeRequests((prev) =>
+      prev.map((r) => (r.id === requestId ? { ...r, status: newStatus } : r))
+    );
+    try {
+      await updateDoc(
+        doc(db, "recoveryHousing", facilityId, "intakeRequests", requestId),
+        { status: newStatus, updatedAt: serverTimestamp() }
+      );
+    } catch {
+      // Revert on failure — snapshot will self-correct anyway
+    }
+  };
 
   const handleSave = async () => {
     if (!facilityId) return;
@@ -199,11 +227,37 @@ export default function RecoveryDashboard() {
 
   const occupancyPct = totalBeds > 0 ? Math.round(((totalBeds - availableBeds) / totalBeds) * 100) : 0;
 
+  const pendingCount = intakeRequests.filter((r) => r.status === "pending").length;
+
   // ── Main dashboard ───────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-slate-50">
       <TopNav onLogout={handleLogout} loggingOut={loggingOut} profile={providerProfile} />
       <NavBar />
+
+      {/* ── Pending intake banner — shown immediately, above the fold ────────── */}
+      {pendingCount > 0 && !isFreePlan && (
+        <div className="bg-amber-500 text-white px-4 py-3">
+          <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="flex-shrink-0 w-8 h-8 bg-white/25 rounded-full flex items-center justify-center font-bold text-sm">
+                {pendingCount}
+              </span>
+              <p className="text-sm font-semibold leading-tight">
+                {pendingCount === 1
+                  ? "1 new admission request is waiting for your response"
+                  : `${pendingCount} new admission requests are waiting for your response`}
+              </p>
+            </div>
+            <a
+              href="#intake-requests"
+              className="flex-shrink-0 bg-white text-amber-600 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-amber-50 transition-colors whitespace-nowrap"
+            >
+              Review now ↓
+            </a>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-3xl mx-auto px-4 py-8">
 
@@ -413,11 +467,14 @@ export default function RecoveryDashboard() {
         />
 
         {/* ── Intake requests ──────────────────────────────────────────────── */}
-        <IntakeRequestsCard
-          plan={listingPlan as "free" | "standard" | "growth"}
-          requests={intakeRequests}
-          onUpgrade={() => navigate("/billing")}
-        />
+        <div id="intake-requests">
+          <IntakeRequestsCard
+            plan={listingPlan as "free" | "standard" | "growth"}
+            requests={intakeRequests}
+            onUpgrade={() => navigate("/billing")}
+            onStatusChange={updateIntakeStatus}
+          />
+        </div>
 
         {/* ── Quick links ──────────────────────────────────────────────────── */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-5">
@@ -605,21 +662,36 @@ function AnalyticsCard({
 
 // ── Intake requests card ───────────────────────────────────────────────────────
 const REQUEST_STATUS_META = {
-  pending:   { label: "New",       dot: "bg-teal-500",   text: "text-teal-700",   bg: "bg-teal-50"   },
-  contacted: { label: "Contacted", dot: "bg-blue-500",   text: "text-blue-700",   bg: "bg-blue-50"   },
-  admitted:  { label: "Admitted",  dot: "bg-green-500",  text: "text-green-700",  bg: "bg-green-50"  },
-  declined:  { label: "Declined",  dot: "bg-slate-400",  text: "text-slate-500",  bg: "bg-slate-100" },
+  pending:   { label: "New",       dot: "bg-teal-500",   text: "text-teal-700",   bg: "bg-teal-50",   border: "border-teal-200"  },
+  contacted: { label: "Contacted", dot: "bg-blue-500",   text: "text-blue-700",   bg: "bg-blue-50",   border: "border-blue-200"  },
+  admitted:  { label: "Admitted",  dot: "bg-green-500",  text: "text-green-700",  bg: "bg-green-50",  border: "border-green-200" },
+  declined:  { label: "Declined",  dot: "bg-slate-400",  text: "text-slate-500",  bg: "bg-slate-100", border: "border-slate-200" },
 } as const;
 
+type RequestStatus = IntakeRequest["status"];
+
 function IntakeRequestsCard({
-  plan, requests, onUpgrade,
+  plan, requests, onUpgrade, onStatusChange,
 }: {
   plan: "free" | "standard" | "growth";
   requests: IntakeRequest[];
   onUpgrade: () => void;
+  onStatusChange: (id: string, status: RequestStatus) => void;
 }) {
   const isLocked = plan === "free";
   const pending  = requests.filter((r) => r.status === "pending").length;
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [updating, setUpdating]     = useState<string | null>(null);
+
+  const handleStatus = async (id: string, newStatus: RequestStatus) => {
+    setUpdating(id);
+    await onStatusChange(id, newStatus);
+    setUpdating(null);
+    // Collapse after a terminal action
+    if (newStatus === "admitted" || newStatus === "declined") {
+      setExpandedId(null);
+    }
+  };
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-5">
@@ -627,8 +699,8 @@ function IntakeRequestsCard({
         <div className="flex items-center gap-2">
           <h2 className="text-base font-bold text-slate-800">Intake Requests</h2>
           {pending > 0 && (
-            <span className="bg-teal-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
-              {pending}
+            <span className="bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+              {pending} new
             </span>
           )}
         </div>
@@ -661,41 +733,126 @@ function IntakeRequestsCard({
           <p className="text-xs mt-1">When patients submit an intake inquiry through Morava, they'll appear here.</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {requests.slice(0, 5).map((r) => {
-            const meta = REQUEST_STATUS_META[r.status] || REQUEST_STATUS_META.pending;
-            const date = r.createdAt?.toDate?.()?.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        <div className="space-y-2">
+          {requests.map((r) => {
+            const meta    = REQUEST_STATUS_META[r.status] ?? REQUEST_STATUS_META.pending;
+            const date    = r.createdAt?.toDate?.()?.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+            const isOpen  = expandedId === r.id;
+            const isBusy  = updating === r.id;
+            const isPending = r.status === "pending";
+
             return (
-              <div key={r.id} className="flex items-start gap-3 p-3 rounded-xl border border-slate-100 hover:border-slate-200 transition-colors">
-                <div className="w-9 h-9 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0 text-teal-700 font-bold text-sm">
-                  {r.patientName?.[0]?.toUpperCase() || "?"}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-sm text-slate-800">{r.patientName || "Anonymous"}</span>
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${meta.bg} ${meta.text}`}>
-                      <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${meta.dot}`} />
-                      {meta.label}
-                    </span>
-                    {date && <span className="text-xs text-slate-400 ml-auto">{date}</span>}
+              <div
+                key={r.id}
+                className={`rounded-xl border transition-all ${
+                  isPending
+                    ? "border-amber-200 bg-amber-50/40"
+                    : "border-slate-100 bg-white hover:border-slate-200"
+                }`}
+              >
+                {/* ── Row header — always visible, click to expand ── */}
+                <button
+                  className="w-full flex items-center gap-3 p-3 text-left"
+                  onClick={() => setExpandedId(isOpen ? null : r.id)}
+                >
+                  {/* Avatar */}
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm ${
+                    isPending ? "bg-amber-200 text-amber-800" : "bg-teal-100 text-teal-700"
+                  }`}>
+                    {r.patientName?.[0]?.toUpperCase() || "?"}
                   </div>
-                  <div className="flex items-center gap-3 mt-0.5 text-xs text-slate-400 flex-wrap">
-                    {r.phone    && <span>📞 {r.phone}</span>}
-                    {r.gender   && <span>👤 {r.gender}</span>}
-                    {r.sobrietyDays != null && <span>🌱 {r.sobrietyDays}d sober</span>}
+
+                  {/* Name + meta row */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-sm text-slate-800 truncate">
+                        {r.patientName || "Anonymous"}
+                      </span>
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${meta.bg} ${meta.text} ${meta.border}`}>
+                        <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${meta.dot}`} />
+                        {meta.label}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 mt-0.5 text-xs text-slate-400 flex-wrap">
+                      {r.sobrietyDays != null && <span>🌱 {r.sobrietyDays}d sober</span>}
+                      {r.gender && <span>👤 {r.gender}</span>}
+                      {date && <span>{date}</span>}
+                    </div>
                   </div>
-                  {r.message && (
-                    <p className="text-xs text-slate-500 mt-1 line-clamp-2">{r.message}</p>
-                  )}
-                </div>
+
+                  {/* Expand chevron */}
+                  <span className={`text-slate-400 text-xs transition-transform flex-shrink-0 ${isOpen ? "rotate-180" : ""}`}>
+                    ▼
+                  </span>
+                </button>
+
+                {/* ── Expanded detail panel ── */}
+                {isOpen && (
+                  <div className="px-4 pb-4 border-t border-slate-100">
+                    {/* Contact info */}
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 pt-3 mb-3">
+                      {r.phone && (
+                        <a
+                          href={`tel:${r.phone}`}
+                          className="flex items-center gap-1.5 text-sm text-teal-700 font-semibold hover:text-teal-900"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          📞 {r.phone}
+                        </a>
+                      )}
+                      {r.gender && (
+                        <span className="text-sm text-slate-500">👤 {r.gender}</span>
+                      )}
+                      {r.sobrietyDays != null && (
+                        <span className="text-sm text-slate-500">🌱 {r.sobrietyDays} days sober</span>
+                      )}
+                    </div>
+
+                    {/* Message */}
+                    {r.message && (
+                      <div className="bg-slate-50 rounded-lg p-3 mb-3 text-sm text-slate-600 leading-relaxed border border-slate-100">
+                        "{r.message}"
+                      </div>
+                    )}
+
+                    {/* ── Status action buttons ── */}
+                    <div className="flex flex-wrap gap-2">
+                      {r.status !== "contacted" && (
+                        <button
+                          disabled={isBusy}
+                          onClick={() => handleStatus(r.id, "contacted")}
+                          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors disabled:opacity-50"
+                        >
+                          📞 Mark Contacted
+                        </button>
+                      )}
+                      {r.status !== "admitted" && (
+                        <button
+                          disabled={isBusy}
+                          onClick={() => handleStatus(r.id, "admitted")}
+                          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors disabled:opacity-50"
+                        >
+                          ✅ Mark Admitted
+                        </button>
+                      )}
+                      {r.status !== "declined" && (
+                        <button
+                          disabled={isBusy}
+                          onClick={() => handleStatus(r.id, "declined")}
+                          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100 transition-colors disabled:opacity-50"
+                        >
+                          ✗ Decline
+                        </button>
+                      )}
+                      {isBusy && (
+                        <span className="text-xs text-slate-400 self-center">Saving…</span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
-          {requests.length > 5 && (
-            <p className="text-xs text-slate-400 text-center pt-1">
-              + {requests.length - 5} more requests
-            </p>
-          )}
         </div>
       )}
     </div>
