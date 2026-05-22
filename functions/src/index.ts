@@ -1344,3 +1344,134 @@ export const onIntakeRequestCreated = onDocumentCreated(
     }
   }
 );
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INTAKE REQUEST STATUS CHANGE — notify the patient via push + email
+// Fires when the facility operator updates the status field on an intakeRequest.
+// PHI POLICY: push/email contain no clinical data — only the facility name
+// and the status outcome. Patient reads full context in the app.
+// ─────────────────────────────────────────────────────────────────────────────
+export const onIntakeStatusChanged = onDocumentUpdated(
+  {
+    document: "recoveryHousing/{facilityId}/intakeRequests/{reqId}",
+    database: "(default)",
+    region: "us-central1",
+    secrets: [resendApiKey],
+  },
+  async (event) => {
+    const before = event.data?.before.data();
+    const after  = event.data?.after.data();
+    if (!before || !after) return;
+
+    const oldStatus = before.status as string;
+    const newStatus = after.status  as string;
+
+    // Only fire when status actually changed
+    if (oldStatus === newStatus) return;
+    // Only notify on the three terminal/actionable transitions
+    const notifiableStatuses = ["contacted", "admitted", "declined"];
+    if (!notifiableStatuses.includes(newStatus)) return;
+
+    const facilityId  = event.params.facilityId;
+    const userId      = after.userId as string | undefined;
+
+    // ── Look up facility name ─────────────────────────────────────────────────
+    let facilityName = "the facility";
+    try {
+      const facilitySnap = await db.collection("recoveryHousing").doc(facilityId).get();
+      if (facilitySnap.exists) {
+        facilityName = (facilitySnap.data()?.facilityName as string) || facilityName;
+      }
+    } catch { /* non-critical */ }
+
+    // ── Message copy by status ───────────────────────────────────────────────
+    const messages: Record<string, { pushTitle: string; pushBody: string; emailSubject: string; emailBody: string }> = {
+      contacted: {
+        pushTitle: "📞 Facility is reaching out!",
+        pushBody:  `${facilityName} has reviewed your request and will be calling you soon. Keep your phone nearby.`,
+        emailSubject: `${facilityName} is reviewing your admission request`,
+        emailBody: `
+          <p>Great news — <strong>${esc(facilityName)}</strong> has reviewed your admission request
+          and is preparing to reach out to you.</p>
+          <p>Make sure your phone is available. They will call you at the number you provided.</p>
+          <p style="color:#94A3B8;font-size:12px">
+            If you no longer need housing, you don't need to do anything.
+            They will follow up directly.
+          </p>`,
+      },
+      admitted: {
+        pushTitle: "🎉 Admission accepted!",
+        pushBody:  `${facilityName} has accepted your request. They'll be in touch with move-in details.`,
+        emailSubject: `You've been accepted at ${facilityName}`,
+        emailBody: `
+          <p>Congratulations — <strong>${esc(facilityName)}</strong> has <strong>accepted your admission request</strong>.</p>
+          <p>A staff member will contact you soon with next steps and move-in details.</p>
+          <p>This is a big step. We're rooting for you. 🌱</p>`,
+      },
+      declined: {
+        pushTitle: "Update on your admission request",
+        pushBody:  `${facilityName} couldn't accommodate your request right now. Other facilities may have availability.`,
+        emailSubject: `Update on your request at ${facilityName}`,
+        emailBody: `
+          <p><strong>${esc(facilityName)}</strong> was unable to accommodate your admission request at this time.</p>
+          <p>This may be due to bed availability or program fit — it's not a reflection of your journey.</p>
+          <p>Open the Morava app to browse other recovery housing options in your area.
+          There are other facilities that may be a great fit.</p>
+          <p><a href="https://moravacare.com"
+            style="display:inline-block;background:#0f766e;color:#fff;font-weight:bold;
+                   padding:12px 24px;border-radius:10px;text-decoration:none;font-size:14px">
+            Find Other Housing →
+          </a></p>`,
+      },
+    };
+
+    const msg = messages[newStatus];
+    if (!msg) return;
+
+    const resend = new Resend(resendApiKey.value());
+
+    // ── Push notification to patient ─────────────────────────────────────────
+    if (userId) {
+      try {
+        const userDoc  = await db.collection("users").doc(userId).get();
+        const userData = userDoc.data();
+        const pushToken = userData?.expoPushToken as string | undefined;
+
+        if (pushToken?.startsWith("ExponentPushToken[")) {
+          await fetch("https://exp.host/--/api/v2/push/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              to:        pushToken,
+              title:     msg.pushTitle,
+              body:      msg.pushBody,
+              sound:     "default",
+              priority:  "high",
+              channelId: "intake_requests",
+              data: {
+                type:       "intake_status_change",
+                facilityId,
+                status:     newStatus,
+              },
+            }),
+          });
+          console.log(`onIntakeStatusChanged: push sent to ${userId} (${newStatus})`);
+        }
+
+        // ── Email to patient if they have one on file ────────────────────────
+        const patientEmail = userData?.email as string | undefined;
+        if (patientEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(patientEmail)) {
+          await resend.emails.send({
+            from: "Morava <noreply@moravacare.com>",
+            to:   patientEmail,
+            subject: msg.emailSubject,
+            html: wrapEmail("Admission Update", msg.emailBody),
+          });
+          console.log(`onIntakeStatusChanged: email sent to ${patientEmail} (${newStatus})`);
+        }
+      } catch (err) {
+        console.error("onIntakeStatusChanged: notification failed", err);
+      }
+    }
+  }
+);

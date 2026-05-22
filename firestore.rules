@@ -44,6 +44,7 @@ service cloud.firestore {
 
     function validOptionalString(field, maxLen) {
       return !(field in request.resource.data) ||
+             request.resource.data[field] == null ||
              (request.resource.data[field] is string &&
               request.resource.data[field].size() <= maxLen);
     }

@@ -142,17 +142,21 @@ export default function RecoveryHousingDetailScreen() {
         }
       }
 
-      await addDoc(collection(db, "recoveryHousing", id, "intakeRequests"), {
-        patientName:   intakeName.trim(),
-        phone:         intakePhone.trim(),
-        gender:        intakeGender.trim() || null,
-        sobrietyDays:  intakeSobriety ? parseInt(intakeSobriety, 10) || 0 : null,
-        message:       intakeMessage.trim() || null,
-        status:        "pending",
-        userId:        user?.uid || null,   // links request to patient account if signed in
-        facilityId:    id,
-        createdAt:     serverTimestamp(),
-      });
+      // Build the doc without null fields — Firestore rules reject null on
+      // optional string checks (validOptionalString returns false for null).
+      const requestData: Record<string, unknown> = {
+        patientName: intakeName.trim(),
+        phone:       intakePhone.trim(),
+        status:      "pending",
+        facilityId:  id,
+        createdAt:   serverTimestamp(),
+      };
+      if (user?.uid)              requestData.userId      = user.uid;
+      if (intakeGender.trim())    requestData.gender      = intakeGender.trim();
+      if (intakeSobriety.trim())  requestData.sobrietyDays = parseInt(intakeSobriety, 10) || 0;
+      if (intakeMessage.trim())   requestData.message     = intakeMessage.trim();
+
+      await addDoc(collection(db, "recoveryHousing", id, "intakeRequests"), requestData);
 
       // Increment inquiry counter on the facility doc for analytics
       updateDoc(doc(db, "recoveryHousing", id), {
