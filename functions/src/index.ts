@@ -197,6 +197,23 @@ export const onBookingCreated = onDocumentCreated(
       console.error("onBookingCreated: email send failed", err);
     }
 
+    // ── Mark availability slot as taken (admin SDK — bypasses client rules) ──
+    // Patients cannot write to availability/* from the client (security rule).
+    // We do it here instead so the slot is blocked for concurrent bookers.
+    if (data.providerId && data.date && data.time) {
+      try {
+        await db
+          .collection("availability")
+          .doc(data.providerId as string)
+          .collection("slots")
+          .doc(data.date as string)
+          .set({ [data.time as string]: true }, { merge: true });
+      } catch (err) {
+        // Non-fatal: provider can still confirm/decline; slot just stays open
+        console.error("onBookingCreated: availability update failed", err);
+      }
+    }
+
     // Push notification to patient — booking received confirmation
     if (data.userId) {
       try {

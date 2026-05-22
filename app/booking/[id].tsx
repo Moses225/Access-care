@@ -1989,7 +1989,10 @@ export default function BookingScreen() {
           throw new Error("SLOT_TAKEN");
         bookingRef = doc(collection(db, "bookings"));
         transaction.set(bookingRef, bookingData);
-        transaction.set(slotRef, { ...slotData, [sanitizedData.time]: true });
+        // NOTE: availability slot is intentionally NOT written here.
+        // Patients do not have write access to the availability collection.
+        // The onBookingCreated Cloud Function marks the slot taken server-side
+        // using admin SDK immediately after this booking document is created.
       });
 
       // Record booking in rate limiter after successful creation
