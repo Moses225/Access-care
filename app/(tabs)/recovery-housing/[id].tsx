@@ -11,10 +11,14 @@ import {
   addDoc,
   collection,
   doc,
+  getDocs,
   getDoc,
   increment,
+  limit,
+  query,
   serverTimestamp,
   updateDoc,
+  where,
 } from "firebase/firestore";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
@@ -115,6 +119,29 @@ export default function RecoveryHousingDetailScreen() {
 
     setIntakeSubmitting(true);
     try {
+      // ── Rate limit: 1 active (pending or contacted) request per user per facility ──
+      // Anonymous users skip this check — only signed-in accounts are tracked.
+      if (user?.uid) {
+        const existing = await getDocs(
+          query(
+            collection(db, "recoveryHousing", id, "intakeRequests"),
+            where("userId", "==", user.uid),
+            where("status", "in", ["pending", "contacted"]),
+            limit(1),
+          )
+        );
+        if (!existing.empty) {
+          setIntakeSubmitting(false);
+          Alert.alert(
+            "Request already submitted",
+            "You already have an active admission request at this facility. " +
+            "They will reach out to you soon. You can submit again once it's been resolved.",
+            [{ text: "OK" }]
+          );
+          return;
+        }
+      }
+
       await addDoc(collection(db, "recoveryHousing", id, "intakeRequests"), {
         patientName:   intakeName.trim(),
         phone:         intakePhone.trim(),

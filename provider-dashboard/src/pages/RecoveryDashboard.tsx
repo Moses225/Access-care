@@ -146,8 +146,33 @@ export default function RecoveryDashboard() {
         doc(db, "recoveryHousing", facilityId, "intakeRequests", requestId),
         { status: newStatus, updatedAt: serverTimestamp() }
       );
+
+      // ── Auto-decrement available beds when a patient is admitted ────────────
+      // Ensures the bed count stays accurate without a manual edit.
+      // Floors at 0 — can't go negative.
+      if (newStatus === "admitted") {
+        const current = availableBeds;
+        if (current > 0) {
+          const next = current - 1;
+          setAvailableBeds(next);
+          // Derive a sensible status automatically
+          const autoStatus: AvailabilityStatus =
+            next === 0 ? "full"
+            : totalBeds > 0 && next / totalBeds <= 0.25 ? "limited"
+            : "available";
+          setStatus(autoStatus);
+          await updateDoc(doc(db, "recoveryHousing", facilityId), {
+            availableBeds: next,
+            availabilityStatus: autoStatus,
+            lastUpdated: serverTimestamp(),
+          });
+          setFacility((prev) =>
+            prev ? { ...prev, availableBeds: next, availabilityStatus: autoStatus } : prev
+          );
+        }
+      }
     } catch {
-      // Revert on failure — snapshot will self-correct anyway
+      // Snapshot listener will self-correct on failure
     }
   };
 

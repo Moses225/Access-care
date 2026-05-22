@@ -1254,16 +1254,38 @@ export const onIntakeRequestCreated = onDocumentCreated(
         facilityName = (facilitySnap.data()?.facilityName as string) || facilityName;
       }
 
-      // Operator email lives on the providerUsers doc that owns this facility
+      // Operator email: try providerUsers.email first, then fall back to
+      // Firebase Auth record via managedByUid (handles stale / placeholder emails)
       const puSnap = await db
         .collection("providerUsers")
         .where("facilityId", "==", facilityId)
         .limit(1)
         .get();
       if (!puSnap.empty) {
-        const email = puSnap.docs[0].data()?.email as string | undefined;
-        if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-          operatorEmail = email;
+        const puData = puSnap.docs[0].data();
+        const storedEmail = puData?.email as string | undefined;
+        if (storedEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(storedEmail)) {
+          operatorEmail = storedEmail;
+        }
+        // Fallback: look up the Auth user record directly (always authoritative)
+        if (!operatorEmail) {
+          const uid = puSnap.docs[0].id;
+          try {
+            const authUser = await admin.auth().getUser(uid);
+            if (authUser.email) operatorEmail = authUser.email;
+          } catch { /* uid not in Auth — skip */ }
+        }
+      }
+      // Second fallback: managedByUid on the recoveryHousing doc
+      if (!operatorEmail) {
+        const managedByUid = facilitySnap.exists
+          ? (facilitySnap.data()?.managedByUid as string | undefined)
+          : undefined;
+        if (managedByUid) {
+          try {
+            const authUser = await admin.auth().getUser(managedByUid);
+            if (authUser.email) operatorEmail = authUser.email;
+          } catch { /* skip */ }
         }
       }
     } catch (err) {
