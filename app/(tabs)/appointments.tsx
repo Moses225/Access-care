@@ -362,35 +362,14 @@ export default function AppointmentsScreen() {
                     </Text>
                   )}
 
-                  {/* Reschedule proposal — requires patient action */}
+                  {/* Reschedule proposal — tap card to open detail page with full Accept/Decline UI */}
                   {item.status === 'reschedule_pending' && item.proposedDate && item.proposedTime && (
                     <View style={styles.rescheduleBox}>
                       <Text style={styles.rescheduleTitle}>📅 New time proposed</Text>
                       <Text style={styles.rescheduleTime}>
                         {item.proposedDate} · {item.proposedTime}
                       </Text>
-                      <View style={styles.rescheduleActions}>
-                        <TouchableOpacity
-                          style={[styles.rescheduleBtn, styles.rescheduleBtnAccept]}
-                          onPress={(e) => { e.stopPropagation?.(); handleRescheduleAccept(item); }}
-                          disabled={rescheduleActionId === item.id}
-                          accessibilityRole="button"
-                          accessibilityLabel="Accept new appointment time"
-                        >
-                          <Text style={styles.rescheduleBtnAcceptText}>
-                            {rescheduleActionId === item.id ? '…' : '✓ Accept'}
-                          </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[styles.rescheduleBtn, styles.rescheduleBtnDecline]}
-                          onPress={(e) => { e.stopPropagation?.(); handleRescheduleDecline(item); }}
-                          disabled={rescheduleActionId === item.id}
-                          accessibilityRole="button"
-                          accessibilityLabel="Decline new appointment time"
-                        >
-                          <Text style={styles.rescheduleBtnDeclineText}>✕ Decline</Text>
-                        </TouchableOpacity>
-                      </View>
+                      <Text style={styles.rescheduleTapHint}>Tap to accept or decline →</Text>
                     </View>
                   )}
                 </View>
@@ -453,19 +432,12 @@ const styles = StyleSheet.create({
   lockIcon: { fontSize: 64, marginBottom: 20 },
   guestWallTitle: { fontSize: 22, fontWeight: 'bold', marginBottom: 12, textAlign: 'center' },
   guestWallText: { fontSize: 15, lineHeight: 22, textAlign: 'center', marginBottom: 32 },
-  // Reschedule proposal styles
+  // Reschedule proposal styles — card shows info only, detail page has action buttons
   rescheduleBox: {
     marginTop: 8, backgroundColor: '#F5F3FF', borderRadius: 10,
     borderWidth: 1, borderColor: '#DDD6FE', padding: 10,
   },
   rescheduleTitle: { fontSize: 12, fontWeight: '700', color: '#7C3AED', marginBottom: 2 },
-  rescheduleTime:  { fontSize: 13, fontWeight: '600', color: '#4C1D95', marginBottom: 8 },
-  rescheduleActions: { flexDirection: 'row', gap: 8 },
-  rescheduleBtn: {
-    flex: 1, paddingVertical: 7, borderRadius: 8, alignItems: 'center', borderWidth: 1,
-  },
-  rescheduleBtnAccept: { backgroundColor: '#7C3AED', borderColor: '#7C3AED' },
-  rescheduleBtnDecline: { backgroundColor: '#fff', borderColor: '#DDD6FE' },
-  rescheduleBtnAcceptText:  { fontSize: 12, fontWeight: '700', color: '#fff' },
-  rescheduleBtnDeclineText: { fontSize: 12, fontWeight: '700', color: '#7C3AED' },
+  rescheduleTime:  { fontSize: 13, fontWeight: '600', color: '#4C1D95', marginBottom: 4 },
+  rescheduleTapHint: { fontSize: 11, color: '#7C3AED', fontStyle: 'italic' },
 });

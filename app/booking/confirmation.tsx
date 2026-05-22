@@ -56,6 +56,12 @@ const STATUS_CONFIG: Record<string, {
     icon: '🎉',
     message: 'This appointment has been completed. We hope your visit went well.',
   },
+  reschedule_pending: {
+    label: 'Reschedule Proposed',
+    color: '#8B5CF6',
+    icon: '🔄',
+    message: 'Your provider has proposed a new appointment time. Review below and accept or decline.',
+  },
 };
 
 function formatDate(dateString: string): string {
@@ -166,6 +172,7 @@ export default function BookingConfirmationScreen() {
   const [loading, setLoading]           = useState(true);
   const [cancelling, setCancelling]     = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [rescheduleActing, setRescheduleActing] = useState(false);
 
   const snapshotUnsubRef  = useRef<(() => void) | null>(null);
   // Track previous status to detect transitions and avoid re-notifying
@@ -283,6 +290,74 @@ export default function BookingConfirmationScreen() {
     }
   };
 
+  // ── Accept provider-proposed reschedule ────────────────────────────────────
+  const handleAcceptReschedule = () => {
+    if (!booking?.proposedDate || !booking?.proposedTime) return;
+    Alert.alert(
+      'Accept New Time?',
+      `Confirm your appointment on\n${formatDate(booking.proposedDate)} at ${booking.proposedTime}`,
+      [
+        { text: 'Go Back', style: 'cancel' },
+        {
+          text: 'Accept',
+          onPress: async () => {
+            setRescheduleActing(true);
+            try {
+              await updateDoc(doc(db, 'bookings', bookingId!), {
+                status:               'confirmed',
+                date:                 booking.proposedDate,
+                time:                 booking.proposedTime,
+                proposedDate:         null,
+                proposedTime:         null,
+                rescheduleAcceptedAt: serverTimestamp(),
+              });
+            } catch {
+              Alert.alert('Error', 'Could not accept reschedule. Please try again.');
+            } finally {
+              setRescheduleActing(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // ── Decline provider-proposed reschedule ────────────────────────────────────
+  // Two choices so the patient keeps control:
+  //   1. Keep original time  → revert to confirmed, clear the proposal
+  //   2. Cancel appointment  → opens the normal cancel-reason flow
+  const handleDeclineReschedule = () => {
+    Alert.alert(
+      'Decline Proposed Time',
+      "What would you like to do?",
+      [
+        { text: 'Go Back', style: 'cancel' },
+        {
+          text: 'Keep My Original Time',
+          onPress: async () => {
+            setRescheduleActing(true);
+            try {
+              await updateDoc(doc(db, 'bookings', bookingId!), {
+                status:        'confirmed',
+                proposedDate:  null,
+                proposedTime:  null,
+              });
+            } catch {
+              Alert.alert('Error', 'Could not decline. Please try again.');
+            } finally {
+              setRescheduleActing(false);
+            }
+          },
+        },
+        {
+          text: 'Cancel Appointment',
+          style: 'destructive',
+          onPress: () => setShowCancelModal(true),
+        },
+      ]
+    );
+  };
+
   if (loading) {
     return (
       <View style={[styles.container, styles.center, { backgroundColor: colors.background }]}>
@@ -345,6 +420,48 @@ export default function BookingConfirmationScreen() {
             </Text>
           </View>
         </View>
+
+        {/* ── Reschedule proposal card ─────────────────────────────────────── */}
+        {booking.status === 'reschedule_pending' && booking.proposedDate && booking.proposedTime && (
+          <View style={[styles.rescheduleCard, { backgroundColor: '#FAF5FF', borderColor: '#DDD6FE' }]}>
+            <Text style={styles.rescheduleCardTitle}>📅 NEW TIME PROPOSED</Text>
+            <Text style={[styles.rescheduleCardDate, { color: '#6D28D9' }]}>
+              {formatDate(booking.proposedDate)}
+            </Text>
+            <Text style={[styles.rescheduleCardTime, { color: '#7C3AED' }]}>
+              {booking.proposedTime}
+            </Text>
+            <View style={[styles.rescheduleDivider, { borderColor: '#DDD6FE' }]} />
+            <Text style={[styles.rescheduleOriginalLabel, { color: '#94A3B8' }]}>ORIGINAL APPOINTMENT</Text>
+            <Text style={[styles.rescheduleOriginalTime, { color: '#94A3B8' }]}>
+              {formatDate(booking.date)} · {booking.time}
+            </Text>
+
+            <View style={styles.rescheduleActions}>
+              <TouchableOpacity
+                style={[styles.rescheduleAcceptBtn, rescheduleActing && { opacity: 0.6 }]}
+                onPress={handleAcceptReschedule}
+                disabled={rescheduleActing}
+                accessibilityRole="button"
+                accessibilityLabel="Accept proposed new time"
+              >
+                <Text style={styles.rescheduleAcceptText}>
+                  {rescheduleActing ? 'Processing…' : '✓ Accept New Time'}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.rescheduleDeclineBtn, { borderColor: '#DDD6FE' }, rescheduleActing && { opacity: 0.6 }]}
+                onPress={handleDeclineReschedule}
+                disabled={rescheduleActing}
+                accessibilityRole="button"
+                accessibilityLabel="Decline proposed time"
+              >
+                <Text style={[styles.rescheduleDeclineText, { color: '#7C3AED' }]}>✕ Decline</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         {/* Provider cancelled */}
         {cancelledByProvider && (
@@ -504,6 +621,39 @@ const styles = StyleSheet.create({
   ghostButton: { padding: 12, alignItems: 'center' },
   ghostButtonText: { fontSize: 14 },
   bookingId: { fontSize: 11, textAlign: 'center', marginTop: 24, opacity: 0.5 },
+  // Reschedule proposal card
+  rescheduleCard: {
+    borderWidth: 2, borderRadius: 16, padding: 20, marginBottom: 16,
+  },
+  rescheduleCardTitle: {
+    fontSize: 11, fontWeight: '700', letterSpacing: 1.5,
+    color: '#7C3AED', marginBottom: 10,
+  },
+  rescheduleCardDate: {
+    fontSize: 20, fontWeight: '700', marginBottom: 4,
+  },
+  rescheduleCardTime: {
+    fontSize: 26, fontWeight: '800', marginBottom: 14,
+  },
+  rescheduleDivider: { borderTopWidth: 1, marginBottom: 12 },
+  rescheduleOriginalLabel: {
+    fontSize: 10, fontWeight: '700', letterSpacing: 1.5, marginBottom: 4,
+  },
+  rescheduleOriginalTime: { fontSize: 13, marginBottom: 20 },
+  rescheduleActions: { gap: 12 },
+  rescheduleAcceptBtn: {
+    backgroundColor: '#7C3AED', borderRadius: 14,
+    paddingVertical: 18, alignItems: 'center',
+  },
+  rescheduleAcceptText: {
+    color: '#fff', fontSize: 17, fontWeight: '800', letterSpacing: 0.3,
+  },
+  rescheduleDeclineBtn: {
+    borderWidth: 2, borderRadius: 14,
+    paddingVertical: 16, alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  rescheduleDeclineText: { fontSize: 16, fontWeight: '700' },
   modalBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)' },
   modalSheet: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
