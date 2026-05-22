@@ -200,7 +200,7 @@ service cloud.firestore {
                                   'declineNote','completedAt','completedBy','billable',
                                   'invoiced','invoicedAt','stripePaymentIntentId',
                                   'noShowAt','noShowBy','proposedDate','proposedTime',
-                                  'updatedAt']))
+                                  'rescheduledAt','rescheduledBy','updatedAt']))
                  // Patient cancellation — cannot change date, time, provider, or userId
                  || (isBookingPatient()
                      && isFullAccount()
