@@ -1,4 +1,5 @@
 import {
+  addDoc,
   collection,
   doc,
   onSnapshot,
@@ -98,7 +99,10 @@ const STATUS_LABELS: Record<string, string> = {
 
 // ── EHR PDF — opens in new window and triggers print dialog ─────────────────
 // Provider hits Cmd+P or File > Print > Save as PDF — frictionless, professional
-function generateEHRPDF(booking: Booking) {
+function generateEHRPDF(
+  booking: Booking,
+  auditInfo?: { providerId: string; providerName: string; userUid: string },
+) {
   const intake = booking.patientIntakeSummary;
   const hasIntake = !!intake;
   const today = new Date().toLocaleDateString("en-US", {
@@ -148,13 +152,57 @@ function generateEHRPDF(booking: Booking) {
   .tag-green { background: #F0FDF4; border-color: #BBF7D0; color: #166534; }
   .footer { margin-top: 16px; padding-top: 10px; border-top: 1px solid #E2E8F0; font-size: 7.5pt; color: #94A3B8; text-align: center; }
   .no-print { display: block; background: #0D9488; color: white; padding: 10px 20px; border: none; border-radius: 8px; font-size: 11pt; font-weight: bold; cursor: pointer; margin: 0 auto 16px; font-family: Arial, sans-serif; }
+
+  /* ── Session security bar ── */
+  #ehr-session-bar { position: sticky; top: 0; z-index: 10000; background: #FEF3C7; border-bottom: 2px solid #F59E0B; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; font-family: Arial, sans-serif; gap: 12px; }
+  #ehr-session-bar .bar-left { display: flex; align-items: center; gap: 10px; }
+  #ehr-session-bar .bar-title { font-size: 10pt; font-weight: bold; color: #92400E; }
+  #ehr-session-bar .bar-meta { font-size: 8.5pt; color: #B45309; margin-top: 2px; }
+  #ehr-session-bar .bar-close { background: #F59E0B; color: white; border: none; padding: 6px 14px; border-radius: 6px; font-size: 9.5pt; font-weight: bold; cursor: pointer; white-space: nowrap; }
+  #ehr-session-bar .countdown-badge { background: #FDE68A; border: 1px solid #F59E0B; border-radius: 20px; padding: 3px 10px; font-size: 9pt; font-weight: bold; color: #92400E; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  /* ── Diagonal CONFIDENTIAL watermark — screen only ── */
+  .phi-wm-wrap { position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 9990; overflow: hidden; }
+  .phi-wm-layer { position: absolute; top: -60%; left: -60%; width: 220%; height: 300%; display: flex; flex-direction: column; gap: 90px; transform: rotate(-38deg); transform-origin: center; }
+  .phi-wm-row { display: flex; gap: 80px; white-space: nowrap; }
+  .phi-wm-text { font-size: 13px; font-weight: bold; color: rgba(0,0,0,0.042); letter-spacing: 4px; text-transform: uppercase; font-family: Arial, sans-serif; user-select: none; }
+
   @media print {
+    #ehr-session-bar { display: none !important; }
+    .phi-wm-wrap { display: none !important; }
     .no-print { display: none !important; }
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
 </style>
 </head>
 <body>
+
+<!-- ── Diagonal CONFIDENTIAL watermark — hidden on print ── -->
+<div class="phi-wm-wrap" aria-hidden="true">
+  <div class="phi-wm-layer">
+    ${"<div class=\"phi-wm-row\">" + Array(5).fill(`<span class="phi-wm-text">CONFIDENTIAL · PHI · ${auditInfo?.providerName || "AUTHORIZED USE ONLY"}</span>`).join("") + "</div>"}
+    ${"<div class=\"phi-wm-row\">" + Array(5).fill(`<span class="phi-wm-text">CONFIDENTIAL · PHI · ${auditInfo?.providerName || "AUTHORIZED USE ONLY"}</span>`).join("") + "</div>"}
+    ${"<div class=\"phi-wm-row\">" + Array(5).fill(`<span class="phi-wm-text">CONFIDENTIAL · PHI · ${auditInfo?.providerName || "AUTHORIZED USE ONLY"}</span>`).join("") + "</div>"}
+    ${"<div class=\"phi-wm-row\">" + Array(5).fill(`<span class="phi-wm-text">CONFIDENTIAL · PHI · ${auditInfo?.providerName || "AUTHORIZED USE ONLY"}</span>`).join("") + "</div>"}
+    ${"<div class=\"phi-wm-row\">" + Array(5).fill(`<span class="phi-wm-text">CONFIDENTIAL · PHI · ${auditInfo?.providerName || "AUTHORIZED USE ONLY"}</span>`).join("") + "</div>"}
+    ${"<div class=\"phi-wm-row\">" + Array(5).fill(`<span class="phi-wm-text">CONFIDENTIAL · PHI · ${auditInfo?.providerName || "AUTHORIZED USE ONLY"}</span>`).join("") + "</div>"}
+    ${"<div class=\"phi-wm-row\">" + Array(5).fill(`<span class="phi-wm-text">CONFIDENTIAL · PHI · ${auditInfo?.providerName || "AUTHORIZED USE ONLY"}</span>`).join("") + "</div>"}
+    ${"<div class=\"phi-wm-row\">" + Array(5).fill(`<span class="phi-wm-text">CONFIDENTIAL · PHI · ${auditInfo?.providerName || "AUTHORIZED USE ONLY"}</span>`).join("") + "</div>"}
+  </div>
+</div>
+
+<!-- ── PHI session bar — visible on screen, hidden on print ── -->
+<div id="ehr-session-bar">
+  <div class="bar-left">
+    <span style="font-size:20px;">🔒</span>
+    <div>
+      <div class="bar-title">PHI Document — Authorized Personnel Only</div>
+      <div class="bar-meta">Accessed by: ${auditInfo?.providerName || "Provider"} &nbsp;·&nbsp; Patient: ${booking.patientName} &nbsp;·&nbsp; Session expires in <span id="ehr-countdown" class="countdown-badge">15:00</span></div>
+    </div>
+  </div>
+  <button class="bar-close" onclick="window.close()">✕ Close</button>
+</div>
+
 <div class="page">
   <button class="no-print" onclick="window.print()">⬇ Save as PDF / Print</button>
   <div class="header">
@@ -238,6 +286,26 @@ function generateEHRPDF(booking: Booking) {
   </div>
 </div>
 <script>
+  // ── Auto-close session timer: 15 minutes ──────────────────────────────
+  var EHR_SECS = 15 * 60;
+  var ehrLeft = EHR_SECS;
+  var ehrTimer = setInterval(function() {
+    ehrLeft--;
+    var m = Math.floor(ehrLeft / 60);
+    var s = ehrLeft % 60;
+    var el = document.getElementById('ehr-countdown');
+    if (el) {
+      el.textContent = m + ':' + (s < 10 ? '0' + s : s);
+      if (ehrLeft <= 60) { el.style.background = '#FEE2E2'; el.style.borderColor = '#EF4444'; el.style.color = '#991B1B'; }
+    }
+    if (ehrLeft <= 0) {
+      clearInterval(ehrTimer);
+      var bar = document.getElementById('ehr-session-bar');
+      if (bar) bar.style.background = '#FEE2E2';
+      setTimeout(function() { window.close(); }, 2000);
+    }
+  }, 1000);
+
   // Auto-trigger print after a short render delay
   window.onload = function() { setTimeout(function() { window.print(); }, 600); };
 </script>
@@ -253,6 +321,21 @@ function generateEHRPDF(booking: Booking) {
     );
   }
   setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
+
+  // ── Audit log — fire-and-forget, non-blocking ─────────────────────────────
+  // Writes to /auditLog (existing collection) using the same rules already deployed.
+  // If the provider somehow lacks permission, the catch swallows it silently.
+  if (auditInfo?.userUid) {
+    addDoc(collection(db, "auditLog"), {
+      action: "ehr_pdf_opened",
+      targetId: booking.id,
+      patientName: booking.patientName,
+      providerId: auditInfo.providerId,
+      providerName: auditInfo.providerName,
+      accessedByUid: auditInfo.userUid,
+      accessedAt: serverTimestamp(),
+    }).catch(() => {/* non-blocking */});
+  }
 }
 
 // ── Add to Calendar — generates ICS file, works with Google, Apple, Outlook ─
@@ -578,8 +661,15 @@ export default function Dashboard() {
                 <div className="text-sm font-semibold text-slate-700">
                   {providerProfile.name}
                 </div>
-                <div className="text-xs text-slate-400">
-                  {providerProfile.specialty}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-slate-400">
+                    {providerProfile.specialty}
+                  </span>
+                  {providerProfile.practiceType === "dpc" && (
+                    <span className="text-xs bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded">
+                      DPC
+                    </span>
+                  )}
                 </div>
               </div>
             )}
@@ -948,7 +1038,7 @@ export default function Dashboard() {
 
                     {/* Pending actions */}
                     {booking.status === "pending" && (
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap justify-end">
                         <button
                           onClick={() => handleConfirm(booking)}
                           disabled={actionLoading === booking.id}
@@ -965,6 +1055,18 @@ export default function Dashboard() {
                           className="border border-slate-200 hover:border-red-200 hover:text-red-600 text-slate-500 text-xs font-semibold px-4 py-2 rounded-lg transition-colors"
                         >
                           Decline
+                        </button>
+                        <button
+                          onClick={() => {
+                            setRescheduleId(booking.id);
+                            setRescheduleDate("");
+                            setRescheduleTime("");
+                          }}
+                          disabled={actionLoading === booking.id}
+                          className="border border-slate-200 hover:border-purple-300 hover:text-purple-600 text-slate-500 text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
+                          title="Propose a different date & time"
+                        >
+                          ⟳ Reschedule
                         </button>
                       </div>
                     )}
@@ -1000,7 +1102,11 @@ export default function Dashboard() {
                     {/* EHR Summary button — always visible */}
                     <div className="flex gap-2 flex-wrap justify-end">
                       <button
-                        onClick={() => generateEHRPDF(booking)}
+                        onClick={() => generateEHRPDF(booking, {
+                          providerId: providerProfile?.providerId || "",
+                          providerName: providerProfile?.name || "",
+                          userUid: user?.uid || "",
+                        })}
                         className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-teal-600 border border-slate-200 hover:border-teal-300 px-3 py-1.5 rounded-lg transition-colors bg-white hover:bg-teal-50"
                         title="Open and print patient summary PDF"
                       >

@@ -6,6 +6,7 @@ import {
   uploadBytesResumable,
 } from "firebase/storage";
 import { useEffect, useRef, useState } from "react";
+import DPCSettings from "../components/DPCSettings";
 import NavBar from "../components/NavBar";
 import { useAuth } from "../context/AuthContext";
 import { db } from "../firebase";
@@ -20,6 +21,9 @@ interface ProviderData {
   name: string;
   specialty: string;
   npi: string;
+  practiceType?: string;
+  dpcMonthlyFee?: number;
+  dpcDescription?: string;
   licenseNumber: string;
   email: string;
   phone: string;
@@ -809,6 +813,28 @@ export default function Profile() {
             />
           </div>,
         )}
+
+        {/* SECTION 6 — Direct Primary Care (DPC) — shown when practiceType is dpc, or as opt-in for any provider */}
+        <div className="bg-white rounded-2xl border border-purple-100 p-6 mb-6">
+          <div className="flex items-center gap-3 mb-5 pb-4 border-b border-slate-100">
+            <span className="text-2xl">💳</span>
+            <div>
+              <h2 className="font-semibold text-slate-900 text-lg">Direct Primary Care</h2>
+              <p className="text-slate-400 text-xs mt-0.5">
+                Only fill this out if you operate a DPC practice — patients pay a flat monthly membership instead of per-visit.
+              </p>
+            </div>
+            {(data.practiceType === "dpc" || providerProfile?.practiceType === "dpc") && (
+              <span className="bg-purple-100 text-purple-700 text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0">
+                ✓ Active
+              </span>
+            )}
+          </div>
+          <DPCSettings
+            initialFee={data.dpcMonthlyFee}
+            initialDescription={data.dpcDescription}
+          />
+        </div>
 
         {/* Save button bottom */}
         <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
