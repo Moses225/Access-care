@@ -338,9 +338,10 @@ export default function BookingConfirmationScreen() {
             setRescheduleActing(true);
             try {
               await updateDoc(doc(db, 'bookings', bookingId!), {
-                status:        'confirmed',
-                proposedDate:  null,
-                proposedTime:  null,
+                status:               'confirmed',
+                proposedDate:         null,
+                proposedTime:         null,
+                rescheduleDeclinedAt: serverTimestamp(),
               });
             } catch {
               Alert.alert('Error', 'Could not decline. Please try again.');

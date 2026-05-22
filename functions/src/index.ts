@@ -262,6 +262,18 @@ export const onBookingStatusChanged = onDocumentUpdated(
     )
       return;
     if (!after.userId) return;
+
+    // Patient declined a reschedule and kept their original time.
+    // The status reverts to 'confirmed' but the patient already knows —
+    // they made the choice. Sending "Your appointment is confirmed!" is
+    // confusing, so we skip all notifications for this transition.
+    const isRescheduleDecline =
+      before.status === "reschedule_pending" &&
+      after.status === "confirmed" &&
+      !before.rescheduleDeclinedAt &&
+      !!after.rescheduleDeclinedAt;
+    if (isRescheduleDecline) return;
+
     let patientEmail: string | null = null;
     try {
       const snap = await db.collection("users").doc(after.userId).get();

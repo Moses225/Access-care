@@ -228,7 +228,7 @@ service cloud.firestore {
                      && request.resource.data.providerId == resource.data.providerId
                      && request.resource.data.diff(resource.data).affectedKeys()
                         .hasOnly(['status','date','time','proposedDate','proposedTime',
-                                  'rescheduleAcceptedAt'])));
+                                  'rescheduleAcceptedAt','rescheduleDeclinedAt'])));
       allow delete: if isAdmin();
     }
 

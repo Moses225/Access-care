@@ -468,17 +468,26 @@ export default function Dashboard() {
     setNewNoteText("");
     setNotesLoading(true);
     try {
+      // No orderBy — avoids index-not-ready failures on new subcollections.
+      // Sort client-side after fetch; note counts per booking are tiny (<50).
       const snap = await getDocs(
-        query(
-          collection(db, "bookings", bookingId, "providerNotes"),
-          orderBy("createdAt", "asc"),
-        )
+        collection(db, "bookings", bookingId, "providerNotes"),
       );
-      setNotesList(snap.docs.map(d => ({
-        id: d.id,
-        text: d.data().text as string,
-        createdAt: d.data().createdAt?.toDate?.() ?? null,
-      })));
+      const notes = snap.docs
+        .map(d => ({
+          id: d.id,
+          text: d.data().text as string,
+          createdAt: d.data().createdAt?.toDate?.() ?? null,
+        }))
+        .sort((a, b) => {
+          if (!a.createdAt) return 1;
+          if (!b.createdAt) return -1;
+          return a.createdAt.getTime() - b.createdAt.getTime();
+        });
+      setNotesList(notes);
+    } catch (err) {
+      console.error("openNotes fetch failed:", err);
+      showToast("Could not load notes. Please try again.", "error");
     } finally {
       setNotesLoading(false);
     }
@@ -633,6 +642,25 @@ export default function Dashboard() {
     } catch (e) {
       console.error(e);
       showToast("Failed to mark no-show. Please try again.", "error");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // ── Mark complete (patient arrived, visit done) ────────────────────────────
+  const handleMarkComplete = async (booking: Booking) => {
+    if (booking.providerId !== providerProfile?.providerId) return;
+    setActionLoading(booking.id);
+    try {
+      await updateDoc(doc(db, "bookings", booking.id), {
+        status: "completed",
+        completedAt: serverTimestamp(),
+        completedBy: user?.uid,
+      });
+      showToast(`✓ ${booking.patientName}'s visit marked as complete`);
+    } catch (e) {
+      console.error(e);
+      showToast("Failed to mark complete. Please try again.", "error");
     } finally {
       setActionLoading(null);
     }
@@ -1234,13 +1262,23 @@ export default function Dashboard() {
                           </button>
                         )}
                         {canNoShow && (
-                          <button
-                            onClick={() => setNoShowBooking(booking)}
-                            disabled={actionLoading === booking.id}
-                            className="border border-slate-200 hover:border-orange-300 hover:text-orange-600 text-slate-400 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
-                          >
-                            {actionLoading === booking.id ? "..." : "No-show"}
-                          </button>
+                          <>
+                            <button
+                              onClick={() => handleMarkComplete(booking)}
+                              disabled={actionLoading === booking.id}
+                              className="border border-slate-200 hover:border-emerald-300 hover:text-emerald-600 text-slate-400 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                              title="Patient arrived and visit completed"
+                            >
+                              {actionLoading === booking.id ? "..." : "✓ Complete"}
+                            </button>
+                            <button
+                              onClick={() => setNoShowBooking(booking)}
+                              disabled={actionLoading === booking.id}
+                              className="border border-slate-200 hover:border-orange-300 hover:text-orange-600 text-slate-400 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                            >
+                              {actionLoading === booking.id ? "..." : "No-show"}
+                            </button>
+                          </>
                         )}
                       </div>
                     )}
