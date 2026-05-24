@@ -15,7 +15,8 @@ const db = admin.firestore();
 const resendApiKey = defineSecret("RESEND_API_KEY");
 const stripeSecretKey    = defineSecret("STRIPE_SECRET_KEY");
 const twilioAccountSid   = defineSecret("TWILIO_ACCOUNT_SID");
-const twilioAuthToken    = defineSecret("TWILIO_AUTH_TOKEN");
+const twilioApiKeySid    = defineSecret("TWILIO_API_KEY_SID");
+const twilioApiKeySecret = defineSecret("TWILIO_API_KEY_SECRET");
 const twilioFromNumber   = defineSecret("TWILIO_FROM_NUMBER");
 
 function esc(str: unknown): string {
@@ -1643,7 +1644,7 @@ export const onboardProvider = onCall(
 //   Logging: never logs phone number or message body — only the Twilio SID.
 // ================================================================
 export const sendSMSNotification = onCall(
-  { secrets: [twilioAccountSid, twilioAuthToken, twilioFromNumber] },
+  { secrets: [twilioAccountSid, twilioApiKeySid, twilioApiKeySecret, twilioFromNumber] },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Must be signed in to send SMS");
@@ -1710,15 +1711,17 @@ export const sendSMSNotification = onCall(
     );
 
     // ── Send via Twilio ────────────────────────────────────────────────────
-    const sid   = twilioAccountSid.value();
-    const token = twilioAuthToken.value();
-    const from  = twilioFromNumber.value();
+    const sid     = twilioAccountSid.value();
+    const apiSid  = twilioApiKeySid.value();
+    const apiSec  = twilioApiKeySecret.value();
+    const from    = twilioFromNumber.value();
 
     const sanitized = to.replace(/[^\d+]/g, "");
     const e164 = sanitized.startsWith("+") ? sanitized : `+1${sanitized}`;
     if (e164.length < 12) throw new HttpsError("invalid-argument", "Invalid phone number");
 
-    const credentials = Buffer.from(`${sid}:${token}`).toString("base64");
+    // API key auth: user=KeySid, password=KeySecret (account SID stays in URL path)
+    const credentials = Buffer.from(`${apiSid}:${apiSec}`).toString("base64");
     const response = await fetch(
       `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`,
       {
@@ -1752,7 +1755,7 @@ export const sendSMSNotification = onCall(
 // ================================================================
 export const sendAppointmentReminders = onSchedule(
   { schedule: "every 60 minutes",
-    secrets: [twilioAccountSid, twilioAuthToken, twilioFromNumber] },
+    secrets: [twilioAccountSid, twilioApiKeySid, twilioApiKeySecret, twilioFromNumber] },
   async () => {
     const now = new Date();
 
@@ -1767,10 +1770,12 @@ export const sendAppointmentReminders = onSchedule(
       { label: "2h",  dateStr: toDateStr(2),  field: "reminder2hSent"  },
     ];
 
-    const sid   = twilioAccountSid.value();
-    const token = twilioAuthToken.value();
-    const from  = twilioFromNumber.value();
-    const credentials = Buffer.from(`${sid}:${token}`).toString("base64");
+    const sid     = twilioAccountSid.value();
+    const apiSid  = twilioApiKeySid.value();
+    const apiSec  = twilioApiKeySecret.value();
+    const from    = twilioFromNumber.value();
+    // API key auth: user=KeySid, password=KeySecret
+    const credentials = Buffer.from(`${apiSid}:${apiSec}`).toString("base64");
 
     for (const w of windows) {
       // Query bookings collection (not "appointments") using string date equality
