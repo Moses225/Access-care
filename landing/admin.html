@@ -135,6 +135,7 @@
       }
       .pw-toggle:hover { color: #475569; }
       .pw-toggle svg { width: 18px; height: 18px; }
+      @keyframes spin { to { transform: rotate(360deg); } }
       .login-btn {
         width: 100%;
         padding: 13px;
@@ -938,6 +939,40 @@
       </div>
     </div>
 
+    <!-- ── MFA CHALLENGE ─────────────────────────────────────── -->
+    <div id="mfaScreen" style="display:none;">
+      <div class="login-card">
+        <div class="login-logo">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
+            <path d="M3 17 Q7 7 12 12 Q17 17 21 7" /><circle cx="21" cy="7" r="2" fill="white" stroke="none"/>
+          </svg>
+        </div>
+        <h1>Two-step verification</h1>
+        <p id="mfaDesc">Sending verification code to your enrolled phone...</p>
+        <div id="mfaCodeWrap" style="display:none;">
+          <div class="login-field">
+            <label>Verification code</label>
+            <input type="text" id="mfa-code" placeholder="000000" maxlength="6" inputmode="numeric"
+              autocomplete="one-time-code"
+              style="letter-spacing:6px;font-size:20px;font-weight:700;text-align:center;"
+              onkeydown="if(event.key==='Enter') completeMFA();"/>
+          </div>
+          <button class="login-btn" id="mfaVerifyBtn" onclick="completeMFA()">Verify →</button>
+          <div class="login-error" id="mfaError"></div>
+          <div style="text-align:center;margin-top:12px;">
+            <button id="mfaResendBtn" onclick="startMFAChallenge()" style="background:none;border:none;color:var(--teal);font-size:13px;cursor:pointer;">Resend code</button>
+          </div>
+        </div>
+        <div id="mfaSendingWrap" style="text-align:center;padding:16px 0;">
+          <div style="display:inline-block;width:24px;height:24px;border:3px solid var(--teal);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;"></div>
+        </div>
+        <button onclick="cancelMFA()" style="background:none;border:none;color:#94a3b8;font-size:13px;cursor:pointer;margin-top:16px;display:block;width:100%;text-align:center;">← Back to sign in</button>
+      </div>
+    </div>
+
+    <!-- invisible reCAPTCHA mount point for phone MFA -->
+    <div id="recaptcha-admin" style="display:none;"></div>
+
     <!-- ── ADMIN PANEL ───────────────────────────────────────── -->
     <div id="adminPanel" style="display: none">
       <nav>
@@ -1215,6 +1250,10 @@
         onAuthStateChanged,
         sendPasswordResetEmail,
         signOut,
+        getMultiFactorResolver,
+        PhoneAuthProvider,
+        PhoneMultiFactorGenerator,
+        RecaptchaVerifier,
       } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
       // ── SECURITY: Sanitize all displayed text to prevent XSS ──
@@ -1262,11 +1301,14 @@
             return;
           }
           document.getElementById("loginScreen").style.display = "none";
+          document.getElementById("mfaScreen").style.display = "none";
           document.getElementById("adminPanel").style.display = "block";
           document.getElementById("adminEmailDisplay").textContent = user.email;
+          window._mfaResolver = null;
           loadAll();
         } else {
           document.getElementById("loginScreen").style.display = "flex";
+          document.getElementById("mfaScreen").style.display = "none";
           document.getElementById("adminPanel").style.display = "none";
         }
       });
@@ -1295,14 +1337,21 @@
         try {
           await signInWithEmailAndPassword(auth, email, pw);
         } catch (err) {
+          if (err.code === "auth/multi-factor-auth-required") {
+            // MFA required — store resolver and start phone challenge
+            window._mfaResolver = getMultiFactorResolver(auth, err);
+            document.getElementById("loginScreen").style.display = "none";
+            document.getElementById("mfaScreen").style.display = "flex";
+            startMFAChallenge();
+            btn.disabled = false;
+            btn.textContent = "Sign In →";
+            return;
+          }
           const msgs = {
-            // Legacy codes (SDK < 10.7)
             "auth/wrong-password":            "Incorrect password.",
             "auth/user-not-found":            "No account found for that email.",
-            // Modern codes (SDK ≥ 10.7) — Firebase consolidates for security
             "auth/invalid-credential":        "Incorrect email or password.",
             "auth/invalid-login-credentials": "Incorrect email or password.",
-            // Account / rate issues
             "auth/user-disabled":             "This account has been disabled. Contact support.",
             "auth/too-many-requests":         "Too many attempts. Please wait and try again.",
             "auth/network-request-failed":    "Network error. Check your connection and try again.",
@@ -1328,6 +1377,90 @@
         showIcon.style.display = isHidden ? "none" : "";
         hideIcon.style.display = isHidden ? "" : "none";
         btn.setAttribute("aria-label", isHidden ? "Hide password" : "Show password");
+      };
+
+      // ── MFA Challenge ─────────────────────────────────────────────────────
+      let _recaptchaVerifier = null;
+      let _verificationId = null;
+
+      window.startMFAChallenge = async function() {
+        const resolver = window._mfaResolver;
+        if (!resolver) return;
+
+        document.getElementById("mfaCodeWrap").style.display = "none";
+        document.getElementById("mfaSendingWrap").style.display = "block";
+        document.getElementById("mfaDesc").textContent = "Sending verification code to your enrolled phone...";
+        document.getElementById("mfaError").classList.remove("show");
+        document.getElementById("mfa-code").value = "";
+
+        try {
+          // Tear down any existing verifier
+          if (_recaptchaVerifier) {
+            try { _recaptchaVerifier.clear(); } catch(e) { /* ignore */ }
+            _recaptchaVerifier = null;
+          }
+
+          _recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-admin", { size: "invisible" });
+
+          const phoneHint = resolver.hints.find(
+            h => h.factorId === PhoneMultiFactorGenerator.FACTOR_ID
+          );
+          if (!phoneHint) throw new Error("No phone factor enrolled on this account.");
+
+          const provider = new PhoneAuthProvider(auth);
+          _verificationId = await provider.verifyPhoneNumber(
+            { multiFactorHint: phoneHint, session: resolver.session },
+            _recaptchaVerifier
+          );
+
+          document.getElementById("mfaSendingWrap").style.display = "none";
+          document.getElementById("mfaCodeWrap").style.display = "block";
+          document.getElementById("mfaDesc").textContent = "Enter the 6-digit code sent to your enrolled phone number.";
+          document.getElementById("mfa-code").focus();
+        } catch(err) {
+          document.getElementById("mfaSendingWrap").style.display = "none";
+          document.getElementById("mfaCodeWrap").style.display = "block";
+          const el = document.getElementById("mfaError");
+          el.textContent = err.message || "Failed to send verification code. Try again.";
+          el.classList.add("show");
+        }
+      };
+
+      window.completeMFA = async function() {
+        const code = document.getElementById("mfa-code").value.trim();
+        if (code.length !== 6) return;
+
+        const btn = document.getElementById("mfaVerifyBtn");
+        btn.disabled = true;
+        btn.textContent = "Verifying...";
+        document.getElementById("mfaError").classList.remove("show");
+
+        try {
+          const cred = PhoneAuthProvider.credential(_verificationId, code);
+          const assertion = PhoneMultiFactorGenerator.assertion(cred);
+          await window._mfaResolver.resolveSignIn(assertion);
+          // onAuthStateChanged will fire and show the admin panel
+        } catch(err) {
+          const msgs = {
+            "auth/invalid-verification-code": "Incorrect code. Please try again.",
+            "auth/code-expired":              "Code expired — click Resend code.",
+            "auth/too-many-requests":         "Too many attempts. Please wait.",
+          };
+          const el = document.getElementById("mfaError");
+          el.textContent = msgs[err.code] || "Verification failed. Please try again.";
+          el.classList.add("show");
+          document.getElementById("mfa-code").value = "";
+          document.getElementById("mfa-code").focus();
+        }
+        btn.disabled = false;
+        btn.textContent = "Verify →";
+      };
+
+      window.cancelMFA = function() {
+        window._mfaResolver = null;
+        _verificationId = null;
+        document.getElementById("mfaScreen").style.display = "none";
+        document.getElementById("loginScreen").style.display = "flex";
       };
 
       window.doForgotPassword = async function () {
