@@ -3,5 +3,15 @@
     "default": "accesscare-app",
     "production": "accesscare-app",
     "staging": "accesscare-staging"
-  }
+  },
+  "targets": {
+    "accesscare-staging": {
+      "hosting": {
+        "staging-dashboard": [
+          "morava-dashboard-staging"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

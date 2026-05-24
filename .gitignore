@@ -96,6 +96,16 @@ test-*.js
 fix_*.py
 strip_*.py
 migrate_*.js
+layout_patch.py
+patch_ui_layer.py
+
+# Backup files — never commit
+*.backup
+*.bak
+
+# One-off seed/update scripts at project root
+seed_*.js
+update_*.js
 
 # Firebase private config
 firebase-debug.log
