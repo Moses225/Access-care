@@ -713,6 +713,16 @@ service cloud.firestore {
       // All other access (provider self-read, patient) — denied by catch-all
     }
 
+    // ================================================================
+    // REP OTP — admin-only (written/deleted by Cloud Functions only)
+    // ================================================================
+    match /repVerificationCodes/{docId} {
+      allow read, write: if isAdmin();
+    }
+    match /repOtpRateLimit/{docId} {
+      allow read, write: if isAdmin();
+    }
+
     // CATCH-ALL — deny everything not explicitly allowed
     // ================================================================
     match /{document=**} {

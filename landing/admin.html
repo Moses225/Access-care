@@ -114,6 +114,27 @@
       .login-field input:focus {
         border-color: var(--teal);
       }
+      .pw-wrap {
+        position: relative;
+      }
+      .pw-wrap input {
+        padding-right: 44px;
+      }
+      .pw-toggle {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px;
+        color: #94a3b8;
+        display: flex;
+        align-items: center;
+      }
+      .pw-toggle:hover { color: #475569; }
+      .pw-toggle svg { width: 18px; height: 18px; }
       .login-btn {
         width: 100%;
         padding: 13px;
@@ -891,12 +912,20 @@
         </div>
         <div class="login-field">
           <label>Password</label>
-          <input
-            type="password"
-            id="login-pw"
-            placeholder="••••••••"
-            onkeydown="if (event.key === 'Enter') doLogin();"
-          />
+          <div class="pw-wrap">
+            <input
+              type="password"
+              id="login-pw"
+              placeholder="••••••••"
+              onkeydown="if (event.key === 'Enter') doLogin();"
+            />
+            <button type="button" class="pw-toggle" onclick="toggleAdminPw(this)" aria-label="Show password">
+              <!-- eye icon -->
+              <svg id="eye-show" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+              <!-- eye-off icon (hidden by default) -->
+              <svg id="eye-hide" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="display:none"><path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.97 9.97 0 012.082-3.372M9.88 9.88a3 3 0 104.243 4.243M3 3l18 18"/></svg>
+            </button>
+          </div>
         </div>
         <button class="login-btn" id="loginBtn" onclick="doLogin()">
           Sign In →
@@ -1267,14 +1296,19 @@
           await signInWithEmailAndPassword(auth, email, pw);
         } catch (err) {
           const msgs = {
-            "auth/wrong-password": "Incorrect password.",
-            "auth/user-not-found": "No account found for that email.",
-            "auth/invalid-credential": "Incorrect email or password.",
-            "auth/too-many-requests":
-              "Too many attempts. Please wait and try again.",
+            // Legacy codes (SDK < 10.7)
+            "auth/wrong-password":            "Incorrect password.",
+            "auth/user-not-found":            "No account found for that email.",
+            // Modern codes (SDK ≥ 10.7) — Firebase consolidates for security
+            "auth/invalid-credential":        "Incorrect email or password.",
+            "auth/invalid-login-credentials": "Incorrect email or password.",
+            // Account / rate issues
+            "auth/user-disabled":             "This account has been disabled. Contact support.",
+            "auth/too-many-requests":         "Too many attempts. Please wait and try again.",
+            "auth/network-request-failed":    "Network error. Check your connection and try again.",
           };
           showLoginError(
-            msgs[err.code] || "Sign-in failed. Check your credentials.",
+            msgs[err.code] || `Sign-in failed (${err.code || "unknown"}). Try resetting your password.`,
           );
         }
         btn.disabled = false;
@@ -1283,6 +1317,17 @@
 
       window.doLogout = async function () {
         await signOut(auth);
+      };
+
+      window.toggleAdminPw = function(btn) {
+        const input = document.getElementById("login-pw");
+        const showIcon = document.getElementById("eye-show");
+        const hideIcon = document.getElementById("eye-hide");
+        const isHidden = input.type === "password";
+        input.type = isHidden ? "text" : "password";
+        showIcon.style.display = isHidden ? "none" : "";
+        hideIcon.style.display = isHidden ? "" : "none";
+        btn.setAttribute("aria-label", isHidden ? "Hide password" : "Show password");
       };
 
       window.doForgotPassword = async function () {

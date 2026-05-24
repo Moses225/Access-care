@@ -47,6 +47,7 @@ export default function Login() {
       if (code === "auth/multi-factor-auth-required") return;
       if (
         code === "auth/invalid-credential" ||
+        code === "auth/invalid-login-credentials" ||
         code === "auth/wrong-password" ||
         code === "auth/user-not-found"
       ) {

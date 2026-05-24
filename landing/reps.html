@@ -461,17 +461,35 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   <!-- ── TAB 2: SUBMIT PROVIDER ──────────────────────────── -->
   <div class="tab-panel" id="tab-submit">
 
-    <!-- GATE (shown until verified) -->
+    <!-- GATE step 1: email -->
     <div class="gate-card" id="repGate">
       <div class="gate-icon">🔐</div>
       <h2>Active reps only</h2>
-      <p>Enter the email address you used to apply. We'll verify your rep status before you can submit providers.</p>
+      <p>Enter the email address you used to apply. We'll send a 6-digit verification code to confirm it's you.</p>
       <div class="gate-row">
-        <input type="email" id="gate-email" placeholder="your@email.com" onkeydown="if(event.key==='Enter'){event.preventDefault();verifyRepGate()}"/>
-        <button class="btn btn-sm" onclick="verifyRepGate()" id="gateBtn">Verify →</button>
+        <input type="email" id="gate-email" placeholder="your@email.com" onkeydown="if(event.key==='Enter'){event.preventDefault();requestRepCode()}"/>
+        <button class="btn btn-sm" onclick="requestRepCode()" id="gateBtn">Send code →</button>
       </div>
       <div class="gate-error" id="gateError">We couldn't find an approved rep account for that email. <a href="#" onclick="switchTabByName('apply')" style="color:var(--teal)">Apply here</a> if you haven't yet.</div>
       <div class="gate-pending" id="gatePending">Your application is still under review. We'll email you at <strong id="gatePendingEmail"></strong> within 1–2 business days once approved.</div>
+    </div>
+
+    <!-- GATE step 2: OTP input (hidden until code is sent) -->
+    <div class="gate-card" id="repOtpGate" style="display:none;">
+      <div class="gate-icon">📧</div>
+      <h2>Check your email</h2>
+      <p id="otpSentMsg">We sent a 6-digit code to <strong id="otpEmailDisplay"></strong>. Enter it below — it expires in 15 minutes.</p>
+      <div class="gate-row" style="justify-content:center;">
+        <input type="text" id="otp-code" placeholder="000000" maxlength="6" inputmode="numeric" autocomplete="one-time-code"
+          style="letter-spacing:6px;font-size:20px;font-weight:700;text-align:center;max-width:160px;"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();submitRepCode()}"/>
+        <button class="btn btn-sm" onclick="submitRepCode()" id="otpBtn">Confirm →</button>
+      </div>
+      <div class="gate-error" id="otpError"></div>
+      <button onclick="backToEmail()" style="background:none;border:none;color:var(--teal);font-size:13px;cursor:pointer;margin-top:12px;">← Use a different email</button>
+      <div style="margin-top:8px;font-size:12px;color:var(--text-2);">
+        Didn't get it? <button onclick="requestRepCode(true)" style="background:none;border:none;color:var(--teal);font-size:12px;cursor:pointer;padding:0;">Resend code</button>
+      </div>
     </div>
 
     <!-- FORM (hidden until gate passes) -->
@@ -697,6 +715,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, query, where, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFunctions, httpsCallable }
+  from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 
 // ── Sanitization ─────────────────────────────────────────
 function san(str, max=300) {
@@ -733,67 +753,114 @@ const app = initializeApp({
   appId: "1:283308941540:web:e3c57ebf0e16ca9c8f4cf1",
 });
 const db = getFirestore(app);
+const fns = getFunctions(app);
 
 // ── Expose to vanilla JS ──────────────────────────────────
 window._db = db;
 window._fbUtils = { collection, addDoc, getDocs, query, where, serverTimestamp, san, sanEmail, sanPhone, sanNPI, v, ve, vp };
 
-// ── Rep gate verification ─────────────────────────────────
-window.verifyRepGate = async function() {
+// ── Rep gate — step 1: request OTP ───────────────────────
+window.requestRepCode = async function(isResend = false) {
   const email = sanEmail(document.getElementById('gate-email').value);
   if (!email) { document.getElementById('gate-email').classList.add('input-error'); return; }
   document.getElementById('gate-email').classList.remove('input-error');
 
-  const btn = document.getElementById('gateBtn');
-  btn.disabled = true; btn.textContent = 'Checking...';
+  const btn = document.getElementById(isResend ? 'otpBtn' : 'gateBtn');
+  const origText = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Sending...';
   document.getElementById('gateError').classList.remove('show');
   document.getElementById('gatePending').classList.remove('show');
 
   try {
-    const q = query(collection(db, 'repApplications'), where('email','==',email));
-    const snap = await getDocs(q);
+    const sendCode = httpsCallable(fns, 'sendRepVerificationCode');
+    await sendCode({ email });
 
-    if (snap.empty) {
-      document.getElementById('gateError').classList.add('show');
-      btn.disabled = false; btn.textContent = 'Verify →';
-      return;
-    }
+    // Show OTP step
+    document.getElementById('repGate').style.display = 'none';
+    document.getElementById('repOtpGate').style.display = 'block';
+    document.getElementById('otpEmailDisplay').textContent = email;
+    document.getElementById('otp-code').value = '';
+    document.getElementById('otpError').classList.remove('show');
+    document.getElementById('otp-code').focus();
+  } catch(err) {
+    const code = err.code || '';
+    const msgs = {
+      'functions/not-found': 'No approved rep account found for that email. <a href="#" onclick="switchTabByName(\'apply\')" style="color:var(--teal)">Apply here</a> if you haven\'t yet.',
+      'functions/resource-exhausted': 'Too many code requests. Please wait 10 minutes and try again.',
+    };
+    const el = document.getElementById('gateError');
+    el.innerHTML = msgs[code] || 'Something went wrong. Please try again.';
+    el.classList.add('show');
+    document.getElementById('repGate').style.display = 'block';
+    document.getElementById('repOtpGate').style.display = 'none';
+  }
+  btn.disabled = false; btn.textContent = origText;
+};
 
-    const rep = snap.docs[0].data();
+// ── Rep gate — step 2: verify OTP ────────────────────────
+window.submitRepCode = async function() {
+  const email = sanEmail(document.getElementById('gate-email').value);
+  const code  = document.getElementById('otp-code').value.trim();
+  if (!code || code.length !== 6) {
+    const el = document.getElementById('otpError');
+    el.textContent = 'Enter the 6-digit code from your email.';
+    el.classList.add('show');
+    return;
+  }
+
+  const btn = document.getElementById('otpBtn');
+  btn.disabled = true; btn.textContent = 'Verifying...';
+  document.getElementById('otpError').classList.remove('show');
+
+  try {
+    const verify = httpsCallable(fns, 'verifyRepCode');
+    const result = await verify({ email, code });
+    const rep = result.data.rep;
+
+    // Cache rep info and unlock form
+    window._verifiedRep = {
+      name: rep.name || '',
+      email: rep.email || email,
+      payment: rep.payment || '',
+      verifiedCount: rep.verifiedCount || 0,
+    };
 
     if (rep.status === 'approved') {
-      // Cache rep info
-      window._verifiedRep = {
-        name: rep.name || '',
-        email: rep.email || email,
-        payment: rep.paymentHandle || '',
-        verifiedCount: rep.verifiedCount || 0,
-      };
-      // Hide gate, show form
-      document.getElementById('repGate').style.display = 'none';
+      document.getElementById('repOtpGate').style.display = 'none';
       document.getElementById('submitFormWrap').style.display = 'block';
-      // Pre-fill hidden fields
       document.getElementById('r-name').value = rep.name || '';
       document.getElementById('r-email').value = email;
-      document.getElementById('r-payment').value = rep.paymentHandle || '';
-      // Welcome bar
+      document.getElementById('r-payment').value = rep.payment || '';
       const initials = (rep.name||'?').split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
       document.getElementById('repAvatar').textContent = initials;
       document.getElementById('repWelcomeName').textContent = rep.name || email;
       const count = rep.verifiedCount || 0;
       const nextRate = count < 10 ? '$20 at listing 11' : count < 25 ? '$25 at listing 26' : '$25/provider';
       document.getElementById('repWelcomeTier').textContent = `${count} verified provider${count===1?'':'s'} · Next tier: ${nextRate}`;
-    } else if (rep.status === 'new' || rep.status === 'pending') {
+    } else {
+      // Pending / not approved
+      document.getElementById('repOtpGate').style.display = 'none';
+      document.getElementById('repGate').style.display = 'block';
       document.getElementById('gatePendingEmail').textContent = email;
       document.getElementById('gatePending').classList.add('show');
-    } else {
-      document.getElementById('gateError').classList.add('show');
     }
   } catch(err) {
-    console.error(err);
-    document.getElementById('gateError').classList.add('show');
+    const code = err.code || '';
+    const msgs = {
+      'functions/unauthenticated':   err.message || 'Incorrect code.',
+      'functions/deadline-exceeded': 'Code expired. Click "Resend code" to get a new one.',
+      'functions/resource-exhausted':'Too many failed attempts. Request a new code.',
+    };
+    const el = document.getElementById('otpError');
+    el.textContent = msgs[code] || 'Verification failed. Please try again.';
+    el.classList.add('show');
   }
-  btn.disabled = false; btn.textContent = 'Verify →';
+  btn.disabled = false; btn.textContent = 'Confirm →';
+};
+
+window.backToEmail = function() {
+  document.getElementById('repOtpGate').style.display = 'none';
+  document.getElementById('repGate').style.display = 'block';
 };
 
 // ── NPI duplicate check ───────────────────────────────────

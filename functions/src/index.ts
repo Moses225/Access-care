@@ -2235,3 +2235,142 @@ export const onIntakeStatusChanged = onDocumentUpdated(
     }
   }
 );
+
+// ================================================================
+// REP EMAIL VERIFICATION — OTP flow for moravacare.com/reps
+// Reps are not Firebase Auth users; we verify their identity by
+// sending a 6-digit code to the email on their repApplications doc.
+//
+// sendRepVerificationCode  — generates + emails the code (public callable)
+// verifyRepCode            — validates the code, returns rep data (public callable)
+//
+// Security:
+//   • Codes stored server-side only (repVerificationCodes — admin-read-only)
+//   • 6-digit code, 15-minute expiry, max 5 attempts before lockout
+//   • Rate-limited: 3 send requests per email per 10 minutes
+//   • Code is single-use — deleted on successful verification
+// ================================================================
+export const sendRepVerificationCode = onCall(
+  { secrets: [resendApiKey] },
+  async (request) => {
+    const { email } = request.data as { email?: string };
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new HttpsError("invalid-argument", "Valid email required.");
+    }
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // ── Rate limit: 3 sends per email per 10 min ──────────────────────────
+    const window10min = Math.floor(Date.now() / (10 * 60 * 1000));
+    const rlRef = db.collection("repOtpRateLimit").doc(`${normalizedEmail}_${window10min}`);
+    const rlSnap = await rlRef.get();
+    const rlCount = (rlSnap.data()?.count as number) ?? 0;
+    if (rlCount >= 3) {
+      throw new HttpsError("resource-exhausted", "Too many code requests. Please wait 10 minutes.");
+    }
+    rlRef.set({ count: admin.firestore.FieldValue.increment(1), updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true }).catch(() => {});
+
+    // ── Check rep exists ───────────────────────────────────────────────────
+    const repSnap = await db.collection("repApplications")
+      .where("email", "==", normalizedEmail)
+      .limit(1)
+      .get();
+    if (repSnap.empty) {
+      throw new HttpsError("not-found", "No rep account found for that email.");
+    }
+
+    // ── Generate 6-digit code ──────────────────────────────────────────────
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const expiresAt = Date.now() + 15 * 60 * 1000; // 15 min
+
+    await db.collection("repVerificationCodes").doc(normalizedEmail).set({
+      code,
+      expiresAt,
+      attempts: 0,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // ── Send email via Resend ──────────────────────────────────────────────
+    const resend = new Resend(resendApiKey.value());
+    await resend.emails.send({
+      from: "Morava <noreply@moravacare.com>",
+      to: normalizedEmail,
+      subject: "Your Morava rep verification code",
+      html: wrapEmail("Rep Verification", `
+        <p>Here is your verification code to access the Morava rep portal:</p>
+        <div style="font-size:36px;font-weight:700;letter-spacing:8px;text-align:center;padding:24px 0;color:#0d9488;">
+          ${code}
+        </div>
+        <p style="color:#64748b;font-size:13px;text-align:center;">
+          This code expires in 15 minutes. Do not share it with anyone.
+        </p>
+      `),
+    });
+
+    console.log(`sendRepVerificationCode: code sent to ${normalizedEmail}`);
+    return { success: true };
+  }
+);
+
+export const verifyRepCode = onCall(
+  {},
+  async (request) => {
+    const { email, code } = request.data as { email?: string; code?: string };
+    if (!email || !code) {
+      throw new HttpsError("invalid-argument", "Email and code required.");
+    }
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const codeRef = db.collection("repVerificationCodes").doc(normalizedEmail);
+    const codeSnap = await codeRef.get();
+
+    if (!codeSnap.exists) {
+      throw new HttpsError("not-found", "No verification code found. Request a new one.");
+    }
+
+    const data = codeSnap.data()!;
+
+    // ── Expiry check ───────────────────────────────────────────────────────
+    if (Date.now() > (data.expiresAt as number)) {
+      await codeRef.delete();
+      throw new HttpsError("deadline-exceeded", "Code expired. Request a new one.");
+    }
+
+    // ── Attempt lockout ────────────────────────────────────────────────────
+    const attempts = (data.attempts as number) ?? 0;
+    if (attempts >= 5) {
+      await codeRef.delete();
+      throw new HttpsError("resource-exhausted", "Too many failed attempts. Request a new code.");
+    }
+
+    // ── Code check ─────────────────────────────────────────────────────────
+    if (data.code !== code.trim()) {
+      await codeRef.update({ attempts: admin.firestore.FieldValue.increment(1) });
+      const remaining = 4 - attempts;
+      throw new HttpsError("unauthenticated", `Incorrect code. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`);
+    }
+
+    // ── Valid — delete code (single-use) and return rep data ───────────────
+    await codeRef.delete();
+
+    const repSnap = await db.collection("repApplications")
+      .where("email", "==", normalizedEmail)
+      .limit(1)
+      .get();
+    if (repSnap.empty) {
+      throw new HttpsError("not-found", "Rep account not found.");
+    }
+
+    const rep = repSnap.docs[0].data();
+    console.log(`verifyRepCode: verified rep ${normalizedEmail}`);
+    return {
+      success: true,
+      rep: {
+        name:         rep.name        ?? "",
+        email:        rep.email       ?? normalizedEmail,
+        status:       rep.status      ?? "new",
+        payment:      rep.paymentHandle ?? "",
+        verifiedCount: rep.verifiedCount ?? 0,
+      },
+    };
+  }
+);
