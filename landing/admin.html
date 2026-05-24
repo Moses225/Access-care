@@ -142,6 +142,30 @@
       .login-error.show {
         display: block;
       }
+      .login-success {
+        font-size: 13px;
+        color: #0a7c4e;
+        margin-top: 10px;
+        display: none;
+      }
+      .login-success.show {
+        display: block;
+      }
+      .forgot-link {
+        display: block;
+        text-align: right;
+        font-size: 13px;
+        color: var(--teal);
+        text-decoration: none;
+        margin-top: 6px;
+        cursor: pointer;
+        background: none;
+        border: none;
+        padding: 0;
+      }
+      .forgot-link:hover {
+        text-decoration: underline;
+      }
 
       /* ── NAV ───────────────────────────────────────────────── */
       nav {
@@ -877,7 +901,11 @@
         <button class="login-btn" id="loginBtn" onclick="doLogin()">
           Sign In →
         </button>
+        <button class="forgot-link" id="forgotBtn" onclick="doForgotPassword()">
+          Forgot password?
+        </button>
         <div class="login-error" id="loginError"></div>
+        <div class="login-success" id="loginSuccess"></div>
       </div>
     </div>
 
@@ -1156,6 +1184,7 @@
         getAuth,
         signInWithEmailAndPassword,
         onAuthStateChanged,
+        sendPasswordResetEmail,
         signOut,
       } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
@@ -1256,13 +1285,45 @@
         await signOut(auth);
       };
 
+      window.doForgotPassword = async function () {
+        clearLoginError();
+        clearLoginSuccess();
+        const btn = document.getElementById("forgotBtn");
+        btn.disabled = true;
+        btn.textContent = "Sending…";
+        try {
+          await sendPasswordResetEmail(auth, ADMIN_EMAIL);
+          showLoginSuccess(
+            "Password reset email sent to " + ADMIN_EMAIL + ". Check your inbox."
+          );
+        } catch (err) {
+          const msgs = {
+            "auth/too-many-requests": "Too many requests. Please wait a moment and try again.",
+            "auth/user-not-found": "No account found for that email.",
+          };
+          showLoginError(msgs[err.code] || "Could not send reset email. Try again.");
+        }
+        btn.disabled = false;
+        btn.textContent = "Forgot password?";
+      };
+
       function showLoginError(msg) {
+        clearLoginSuccess();
         const el = document.getElementById("loginError");
         el.textContent = msg;
         el.classList.add("show");
       }
       function clearLoginError() {
         document.getElementById("loginError").classList.remove("show");
+      }
+      function showLoginSuccess(msg) {
+        clearLoginError();
+        const el = document.getElementById("loginSuccess");
+        el.textContent = msg;
+        el.classList.add("show");
+      }
+      function clearLoginSuccess() {
+        document.getElementById("loginSuccess").classList.remove("show");
       }
 
       // ── Load data ─────────────────────────────────────────────
