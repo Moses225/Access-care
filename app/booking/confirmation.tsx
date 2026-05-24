@@ -324,8 +324,12 @@ export default function BookingConfirmationScreen() {
 
   // ── Decline provider-proposed reschedule ────────────────────────────────────
   // Two choices so the patient keeps control:
-  //   1. Keep original time  → revert to confirmed, clear the proposal
+  //   1. Keep original time  → revert to preRescheduleStatus (pending or confirmed),
+  //                            clear the proposal
   //   2. Cancel appointment  → opens the normal cancel-reason flow
+  //
+  // preRescheduleStatus is stamped by the provider when proposing, so we always
+  // revert to exactly what the booking was before — not assume 'confirmed'.
   const handleDeclineReschedule = () => {
     Alert.alert(
       'Decline Proposed Time',
@@ -337,8 +341,17 @@ export default function BookingConfirmationScreen() {
           onPress: async () => {
             setRescheduleActing(true);
             try {
+              // Revert to the status before the provider proposed the reschedule.
+              // If the booking was still pending (provider hadn't confirmed it yet),
+              // reverting to 'confirmed' would be wrong — use preRescheduleStatus.
+              // 1st choice: preRescheduleStatus stamped by dashboard when proposing
+              // 2nd choice: confirmedAt exists → booking was confirmed before reschedule
+              // Last resort: 'pending' (booking was never confirmed)
+              const revertStatus =
+                booking.preRescheduleStatus ||
+                (booking.confirmedAt ? 'confirmed' : 'pending');
               await updateDoc(doc(db, 'bookings', bookingId!), {
-                status:               'confirmed',
+                status:               revertStatus,
                 proposedDate:         null,
                 proposedTime:         null,
                 rescheduleDeclinedAt: serverTimestamp(),

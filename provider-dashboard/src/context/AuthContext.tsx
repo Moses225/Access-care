@@ -12,6 +12,7 @@ import {
   type MultiFactorResolver,
 } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
+import { getFunctions, httpsCallable } from "firebase/functions";
 import type { ReactNode } from "react";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { auth, db } from "../firebase";
@@ -24,7 +25,9 @@ interface ProviderProfile {
   stripeCustomerId?: string;
   stripePaymentMethodId?: string;
   manualBilling?: boolean;
-  plan?: "founding" | "standard" | "pro";
+  // Regular providers: founding | standard | pro
+  // DPC providers:     founding | growth | pro
+  plan?: "founding" | "standard" | "growth" | "pro";
   foundingExpiresAt?: string | null;
   // Role-based routing — "recovery_facility" sends user to RecoveryDashboard
   role?: "provider" | "recovery_facility" | "admin";
@@ -35,6 +38,8 @@ interface ProviderProfile {
   freeTrialStartedAt?: string | null;
   // Recovery facility plan tier — free = basic listing only, standard = $80/mo, growth = $159/mo
   listingPlan?: "free" | "standard" | "growth";
+  // ISO timestamp set when provider account is created — used for billing grace period
+  createdAt?: string;
 }
 
 interface AuthContextType {
@@ -46,6 +51,8 @@ interface AuthContextType {
   mfaResolver: MultiFactorResolver | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  // Call after billing setup to pick up new stripePaymentMethodId without page reload
+  refreshProfile: () => Promise<void>;
   // MFA enrollment (from dashboard)
   startMFAEnrollment: (phone: string) => Promise<void>;
   completeMFAEnrollment: (code: string) => Promise<void>;
@@ -77,11 +84,166 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user && multiFactor(user).enrolledFactors.length > 0
   );
 
-  // Helper: create a fresh invisible reCAPTCHA verifier attached to a container div
+  // Helper: create a fresh invisible reCAPTCHA verifier attached to a container div.
+  //
+  // WHY THE WRAPPER PATTERN:
+  // RecaptchaVerifier registers the element ID with Google's global reCAPTCHA
+  // service. Even after navigating away (e.g. following an email link), the global
+  // registration persists. Calling innerHTML="" on the same element doesn't
+  // unregister it — only .clear() does. But .clear() is unavailable after a page
+  // reload (refs are gone). Replacing the child element with a brand-new DOM node
+  // gives reCAPTCHA a fresh, unregistered element each time, eliminating the
+  // "reCAPTCHA has already been rendered in this element" error.
   const makeVerifier = (containerId: string): RecaptchaVerifier => {
-    const existing = document.getElementById(containerId);
-    if (existing) existing.innerHTML = "";
+    const wrapperId = `${containerId}-wrapper`;
+    const wrapper = document.getElementById(wrapperId);
+    if (wrapper) {
+      // Destroy old child (including any reCAPTCHA iframe it contains), add fresh one
+      wrapper.innerHTML = `<div id="${containerId}"></div>`;
+    }
     return new RecaptchaVerifier(auth, containerId, { size: "invisible" });
+  };
+
+  // ── loadProfileForUser ────────────────────────────────────────────────────
+  // Extracted so it can be called both from onAuthStateChanged AND from
+  // refreshProfile() (called after billing setup to pick up the new
+  // stripePaymentMethodId without requiring a page reload).
+  const loadProfileForUser = async (u: User) => {
+    setProfileLoading(true);
+    try {
+      // ── Force token refresh to ensure custom claims are current ──────────
+      // Custom claims (provider: true, providerId) are set by the Admin SDK.
+      // Firebase caches the JWT for up to 1 hour — force a refresh so we
+      // always start with the latest claims.
+      await u.getIdToken(/* forceRefresh */ true);
+
+      const snap = await getDoc(doc(db, "providerUsers", u.uid));
+      if (snap.exists()) {
+        const d = snap.data();
+
+        // ── Ensure custom claims are stamped ────────────────────────────
+        // Regular providers onboarded before the claim-stamping flow was
+        // added may have a providerUsers document but no custom claims.
+        // Without claims, isBookingProvider() and createSetupIntent both
+        // fail.  Check the token; if claims are absent or stale, call the
+        // ensureProviderClaims Cloud Function then force-refresh so the new
+        // claims are in every subsequent Firestore / Functions call.
+        const tokenResult = await u.getIdTokenResult(/* forceRefresh */ false);
+        const claimedProviderId = tokenResult.claims.providerId as string | undefined;
+
+        if (!tokenResult.claims.provider || claimedProviderId !== d.providerId) {
+          try {
+            const functions = getFunctions();
+            const ensureClaims = httpsCallable(functions, "ensureProviderClaims");
+            await ensureClaims({});
+            // Fresh token now includes the new claims
+            await u.getIdToken(/* forceRefresh */ true);
+          } catch (claimsErr) {
+            console.warn("ensureProviderClaims failed:", claimsErr);
+            // Continue loading the profile even if claims sync fails —
+            // the user can still access their profile; only actions that
+            // require the custom claim (bookings query, Stripe setup) will
+            // be restricted until they sign out and back in.
+          }
+        }
+
+        // ── Guard: providerId missing means the account is incomplete ───
+        // The admin hasn't linked this providerUsers doc to a providers doc
+        // yet.  Set a minimal profile so the UI can show an actionable error
+        // instead of spinning forever.
+        if (!d.providerId) {
+          setProviderProfile({
+            providerId: "",
+            name: d.name || d.facilityName || u.email || "",
+            specialty: "",
+            email: u.email || "",
+            role: (d.role as "provider" | "recovery_facility" | "admin") || "provider",
+            plan: d.plan || "founding",
+          });
+          setProfileLoading(false);
+          return;
+        }
+
+        const provSnap = await getDoc(doc(db, "providers", d.providerId));
+        const prov = provSnap.exists() ? provSnap.data() : {};
+
+        // ── Billing subcollection — provider+admin only ─────────────────────
+        // Sensitive fields (stripeCustomerId, stripePaymentMethodId, manualBilling,
+        // commissionRate, etc.) moved out of the patient-readable providers doc.
+        // Falls back to providerUsers doc fields for providers whose migration
+        // hasn't run yet (handles any race during rollout).
+        let billing: Record<string, unknown> = {};
+        try {
+          const billingSnap = await getDoc(
+            doc(db, "providers", d.providerId, "billing", "main"),
+          );
+          billing = billingSnap.exists() ? (billingSnap.data() as Record<string, unknown>) : {};
+        } catch (billingErr) {
+          // Claims may not be stamped yet — billing data will be absent until
+          // next sign-in or manual token refresh.
+          console.warn("loadProfileForUser: billing subcollection read failed:", billingErr);
+        }
+
+        setProviderProfile({
+          providerId: d.providerId,
+          name: prov.name || d.facilityName || "",
+          specialty: prov.specialty || "",
+          email: u.email || "",
+          // Prefer billing subcollection; fall back to providerUsers doc for
+          // providers who haven't migrated yet.
+          stripeCustomerId:
+            (billing.stripeCustomerId as string) || d.stripeCustomerId || "",
+          stripePaymentMethodId:
+            (billing.stripePaymentMethodId as string) || d.stripePaymentMethodId || "",
+          manualBilling: (billing.manualBilling as boolean) || d.manualBilling || false,
+          plan: d.plan || prov.plan || "founding",
+          foundingExpiresAt: (() => {
+            const raw = d.foundingExpiresAt || prov.foundingExpiresAt;
+            if (!raw) return null;
+            if (typeof raw === "string") return raw;
+            if (typeof raw?.toDate === "function")
+              return raw.toDate().toISOString();
+            return null;
+          })(),
+          role: (d.role as "provider" | "recovery_facility" | "admin") || "provider",
+          facilityId: d.facilityId || undefined,
+          practiceType: prov.practiceType || d.practiceType || undefined,
+          listingStatus: d.listingStatus || undefined,
+          listingPlan: (d.listingPlan as "free" | "standard" | "growth") || "free",
+          freeTrialStartedAt: (() => {
+            const raw = d.freeTrialStartedAt;
+            if (!raw) return null;
+            if (typeof raw === "string") return raw;
+            if (typeof raw?.toDate === "function") return raw.toDate().toISOString();
+            return null;
+          })(),
+          // createdAt — used for billing grace-period countdown.
+          // Must handle Firestore Timestamp objects as well as ISO strings.
+          createdAt: (() => {
+            const raw = d.createdAt;
+            if (!raw) return undefined;
+            if (typeof raw === "string") return raw;
+            if (typeof raw?.toDate === "function") return raw.toDate().toISOString();
+            return undefined;
+          })(),
+        });
+      } else {
+        setProviderProfile(null);
+      }
+    } catch {
+      setProviderProfile(null);
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  // refreshProfile — re-fetches providerUsers + providers docs for the current
+  // user.  Call this after billing setup so hasStripe flips to true immediately
+  // without requiring a page reload.
+  const refreshProfile = async () => {
+    const u = auth.currentUser;
+    if (!u) return;
+    await loadProfileForUser(u);
   };
 
   useEffect(() => {
@@ -96,53 +258,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setUser(u);
       if (u) {
-        try {
-          const snap = await getDoc(doc(db, "providerUsers", u.uid));
-          if (snap.exists()) {
-            const d = snap.data();
-            const provSnap = await getDoc(doc(db, "providers", d.providerId));
-            const prov = provSnap.exists() ? provSnap.data() : {};
-            setProfileLoading(false);
-            setProviderProfile({
-              providerId: d.providerId,
-              name: prov.name || d.facilityName || "",
-              specialty: prov.specialty || "",
-              email: u.email || "",
-              stripeCustomerId:
-                d.stripeCustomerId || prov.stripeCustomerId || "",
-              stripePaymentMethodId:
-                d.stripePaymentMethodId || prov.stripePaymentMethodId || "",
-              manualBilling: d.manualBilling || prov.manualBilling || false,
-              plan: d.plan || prov.plan || "founding",
-              foundingExpiresAt: (() => {
-                const raw = d.foundingExpiresAt || prov.foundingExpiresAt;
-                if (!raw) return null;
-                if (typeof raw === "string") return raw;
-                if (typeof raw?.toDate === "function")
-                  return raw.toDate().toISOString();
-                return null;
-              })(),
-              role: (d.role as "provider" | "recovery_facility" | "admin") || "provider",
-              facilityId: d.facilityId || undefined,
-              practiceType: prov.practiceType || d.practiceType || undefined,
-              listingStatus: d.listingStatus || undefined,
-              listingPlan: (d.listingPlan as "free" | "standard" | "growth") || "free",
-              freeTrialStartedAt: (() => {
-                const raw = d.freeTrialStartedAt;
-                if (!raw) return null;
-                if (typeof raw === "string") return raw;
-                if (typeof raw?.toDate === "function") return raw.toDate().toISOString();
-                return null;
-              })(),
-            });
-          } else {
-            setProviderProfile(null);
-            setProfileLoading(false);
-          }
-        } catch {
-          setProviderProfile(null);
-          setProfileLoading(false);
-        }
+        await loadProfileForUser(u);
       } else {
         setProviderProfile(null);
         setProfileLoading(false);
@@ -150,6 +266,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
     return unsub;
+  // loadProfileForUser is defined inside the component — safe to omit from deps
+  // (it only ever sees the current closure's state setters, which are stable).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Login — catches MFA challenge and stores resolver ─────────────────────
@@ -266,6 +385,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         mfaResolver,
         login,
         logout,
+        refreshProfile,
         startMFAEnrollment,
         completeMFAEnrollment,
         cancelMFAEnrollment,
@@ -273,9 +393,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         completeMFAChallenge,
       }}
     >
-      {/* Invisible reCAPTCHA containers — hidden, required by Firebase Phone Auth */}
-      <div id="recaptcha-enroll" style={{ display: "none" }} />
-      <div id="recaptcha-challenge" style={{ display: "none" }} />
+      {/* Invisible reCAPTCHA wrapper divs — makeVerifier replaces the inner child
+          each time to get a fresh element and avoid "already rendered" errors */}
+      <div id="recaptcha-enroll-wrapper" style={{ display: "none" }}>
+        <div id="recaptcha-enroll" />
+      </div>
+      <div id="recaptcha-challenge-wrapper" style={{ display: "none" }}>
+        <div id="recaptcha-challenge" />
+      </div>
       {children}
     </AuthContext.Provider>
   );

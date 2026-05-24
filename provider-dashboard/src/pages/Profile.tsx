@@ -235,7 +235,7 @@ function MultiSelect({
 }
 
 export default function Profile() {
-  const { providerProfile } = useAuth();
+  const { providerProfile, profileLoading } = useAuth();
   const [data, setData] = useState<Partial<ProviderData>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -246,14 +246,21 @@ export default function Profile() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!providerProfile?.providerId) return;
+    // Profile loading done but no valid account — stop spinner now.
+    // Without this guard, providerProfile === null keeps loading === true forever
+    // because the getDoc block below never runs.
+    if (!profileLoading && (providerProfile === null || !providerProfile.providerId)) {
+      setLoading(false);
+      return;
+    }
+    if (!providerProfile?.providerId) return; // profile still in-flight
     getDoc(doc(db, "providers", providerProfile.providerId))
       .then((snap) => {
         if (snap.exists()) setData(snap.data() as ProviderData);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [providerProfile?.providerId]);
+  }, [providerProfile?.providerId, profileLoading]);
 
   const update = (field: string, value: unknown) =>
     setData((prev) => ({ ...prev, [field]: value }));
@@ -366,6 +373,8 @@ export default function Profile() {
     }
   };
 
+  const accountIncomplete = providerProfile !== null && !providerProfile.providerId;
+
   if (loading)
     return (
       <div className="min-h-screen bg-slate-50">
@@ -381,6 +390,35 @@ export default function Profile() {
         <NavBar />
         <div className="flex items-center justify-center py-24">
           <div className="w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      </div>
+    );
+
+  if (accountIncomplete)
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <nav className="bg-white border-b border-slate-200 sticky top-0 z-40">
+          <div className="max-w-5xl mx-auto px-6 h-16 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-teal-500 flex items-center justify-center">
+              <span className="text-white text-sm font-bold">M</span>
+            </div>
+            <span className="text-slate-900 text-lg font-semibold">Morava</span>
+            <span className="text-slate-400 text-sm">Provider Portal</span>
+          </div>
+        </nav>
+        <NavBar />
+        <div className="flex items-center justify-center py-24">
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-10 text-center max-w-md">
+            <div className="text-5xl mb-4">⚙️</div>
+            <h3 className="font-semibold text-xl text-amber-900 mb-2">Profile setup in progress</h3>
+            <p className="text-amber-700 text-sm">
+              Your provider profile hasn't been fully linked yet. Contact{" "}
+              <a href="mailto:support@moravacare.com" className="underline font-medium">
+                support@moravacare.com
+              </a>{" "}
+              and we'll complete your setup within one business day.
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -816,29 +854,29 @@ export default function Profile() {
           </div>,
         )}
 
-        {/* SECTION 6 — Direct Primary Care (DPC) — shown when practiceType is dpc, or as opt-in for any provider */}
-        <div className="bg-white rounded-2xl border border-purple-100 p-6 mb-6">
-          <div className="flex items-center gap-3 mb-5 pb-4 border-b border-slate-100">
-            <span className="text-2xl">💳</span>
-            <div>
-              <h2 className="font-semibold text-slate-900 text-lg">Direct Primary Care</h2>
-              <p className="text-slate-400 text-xs mt-0.5">
-                Only fill this out if you operate a DPC practice — patients pay a flat monthly membership instead of per-visit.
-              </p>
-            </div>
-            {(data.practiceType === "dpc" || providerProfile?.practiceType === "dpc") && (
+        {/* SECTION 6 — Direct Primary Care (DPC) — DPC accounts only */}
+        {providerProfile?.practiceType === "dpc" && (
+          <div className="bg-white rounded-2xl border border-purple-100 p-6 mb-6">
+            <div className="flex items-center gap-3 mb-5 pb-4 border-b border-slate-100">
+              <span className="text-2xl">🏥</span>
+              <div>
+                <h2 className="font-semibold text-slate-900 text-lg">Direct Primary Care Settings</h2>
+                <p className="text-slate-400 text-xs mt-0.5">
+                  Membership fee, description, and listing badges shown to patients searching for DPC.
+                </p>
+              </div>
               <span className="bg-purple-100 text-purple-700 text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0">
-                ✓ Active
+                ✓ DPC Account
               </span>
-            )}
+            </div>
+            <DPCSettings
+              initialFee={data.dpcMonthlyFee}
+              initialDescription={data.dpcDescription}
+              initialHsaEligible={data.hsaEligible}
+              initialAcceptingNewMembers={data.acceptingNewMembers}
+            />
           </div>
-          <DPCSettings
-            initialFee={data.dpcMonthlyFee}
-            initialDescription={data.dpcDescription}
-            initialHsaEligible={data.hsaEligible}
-            initialAcceptingNewMembers={data.acceptingNewMembers}
-          />
-        </div>
+        )}
 
         {/* Save button bottom */}
         <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">

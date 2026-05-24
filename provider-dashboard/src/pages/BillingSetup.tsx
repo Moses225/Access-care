@@ -5,11 +5,33 @@ import {
   useStripe,
 } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
-import { doc, onSnapshot, updateDoc } from "firebase/firestore";
+import { collection, doc, onSnapshot } from "firebase/firestore";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { db } from "../firebase";
+
+// ── Shared helper: wait for webhook to write stripePaymentMethodId ──────────
+function waitForPaymentMethod(
+  providerId: string,
+  onSuccess: () => void,
+  timeoutMs = 8000,
+) {
+  const billingDoc = doc(
+    collection(doc(db, "providers", providerId), "billing"),
+    "main",
+  );
+  const unsub = onSnapshot(billingDoc, (snap) => {
+    if (snap.data()?.stripePaymentMethodId) {
+      unsub();
+      onSuccess();
+    }
+  });
+  setTimeout(() => {
+    unsub();
+    onSuccess();
+  }, timeoutMs);
+}
 
 // Load Stripe outside component to avoid re-creation on renders
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
@@ -75,23 +97,15 @@ function CardForm({
       }
 
       if (setupIntent?.status === "succeeded") {
-        // Step 3 — Cloud Function already saved stripeCustomerId + stripePaymentMethodId
-        // Wait for Firestore to confirm the write before calling onSuccess
-        const unsub = onSnapshot(doc(db, "providers", providerId), (snap) => {
-          if (snap.data()?.stripePaymentMethodId) {
-            unsub();
-            onSuccess();
-          }
-        });
-        // Fallback timeout — call success after 5s even if snapshot is slow
-        setTimeout(() => {
-          unsub();
-          onSuccess();
-        }, 5000);
+        // Step 3 — wait for the stripeWebhook Cloud Function to write
+        // stripePaymentMethodId to the billing subcollection, then call onSuccess.
+        waitForPaymentMethod(providerId, onSuccess, 6000);
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Something went wrong.";
-      setErrorMsg(msg);
+      // Include the raw error code so permission / config issues are visible
+      const raw  = err instanceof Error ? err.message : "Something went wrong.";
+      const code = (err as { code?: string }).code;
+      setErrorMsg(code ? `${raw} (${code})` : raw);
       setLoading(false);
     }
   };
@@ -99,8 +113,8 @@ function CardForm({
   return (
     <div className="space-y-5">
       {errorMsg && (
-        <div className="bg-red-50 border border-red-100 text-red-600 text-sm px-4 py-3 rounded-lg">
-          {errorMsg}
+        <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg leading-relaxed">
+          ⚠️ {errorMsg}
         </div>
       )}
 
@@ -169,11 +183,161 @@ function CardForm({
   );
 }
 
+// ── Bank Account (ACH) form — must be inside <Elements> ──────────────────────
+function BankForm({
+  providerId,
+  onSuccess,
+  onCancel,
+}: {
+  providerId: string;
+  onSuccess: () => void;
+  onCancel: () => void;
+}) {
+  const stripe = useStripe();
+  const { user } = useAuth();
+
+  const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const handleConnect = async () => {
+    if (!stripe || !user || !name.trim()) return;
+    setLoading(true);
+    setErrorMsg("");
+
+    try {
+      // Step 1 — create Setup Intent for US bank account
+      const functions = getFunctions();
+      const createSetupIntent = httpsCallable<
+        { providerId: string; paymentMethodType: string },
+        { clientSecret: string; customerId: string }
+      >(functions, "createSetupIntent");
+
+      const { data } = await createSetupIntent({
+        providerId,
+        paymentMethodType: "us_bank_account",
+      });
+
+      // Step 2 — open Stripe Financial Connections modal
+      const { setupIntent, error } = await (stripe as any).collectBankAccountForSetup({
+        clientSecret: data.clientSecret,
+        params: {
+          payment_method_type: "us_bank_account",
+          payment_method_data: {
+            billing_details: {
+              name: name.trim(),
+              email: user.email || "",
+            },
+          },
+        },
+        expand: ["payment_method"],
+      });
+
+      if (error) {
+        setErrorMsg(error.message || "Bank account setup failed. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      // Step 3 — confirm mandate (required for ACH)
+      if (setupIntent?.status === "requires_confirmation") {
+        const { error: confirmErr } = await (stripe as any).confirmUsBankAccountSetup(
+          data.clientSecret,
+        );
+        if (confirmErr) {
+          setErrorMsg(confirmErr.message || "Bank account confirmation failed.");
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Step 4 — wait for webhook to write stripePaymentMethodId
+      // ACH webhooks can take a few extra seconds
+      waitForPaymentMethod(providerId, onSuccess, 10000);
+    } catch (err: unknown) {
+      const raw  = err instanceof Error ? err.message : "Something went wrong.";
+      const code = (err as { code?: string }).code;
+      setErrorMsg(code ? `${raw} (${code})` : raw);
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+      {errorMsg && (
+        <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg leading-relaxed">
+          ⚠️ {errorMsg}
+        </div>
+      )}
+
+      <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-xs text-blue-700 space-y-1.5">
+        <div className="font-semibold text-blue-800 mb-1">🏦 ACH Bank Transfer</div>
+        <div>→ Connect your bank account securely via Stripe</div>
+        <div>→ Micro-deposit verification takes 1–2 business days</div>
+        <div>→ Payments deducted directly — no card needed</div>
+      </div>
+
+      <div>
+        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">
+          Account holder name
+        </label>
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Full legal name on the bank account"
+          className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
+        />
+      </div>
+
+      <div className="flex gap-3">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={loading}
+          className="flex-1 border border-slate-200 text-slate-600 font-semibold py-3 rounded-xl text-sm hover:border-slate-300 transition-colors disabled:opacity-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={handleConnect}
+          disabled={!name.trim() || loading || !stripe}
+          className="flex-1 bg-teal-500 hover:bg-teal-600 disabled:opacity-50 text-white font-semibold py-3 rounded-xl text-sm transition-colors"
+        >
+          {loading ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              Connecting...
+            </span>
+          ) : (
+            "Connect bank account →"
+          )}
+        </button>
+      </div>
+
+      <p className="text-xs text-slate-400 text-center leading-relaxed">
+        Powered by Stripe Financial Connections. Bank credentials are never
+        shared with Morava.
+      </p>
+    </div>
+  );
+}
+
+// ── DPC plan → monthly rate lookup ────────────────────────────────────────
+const DPC_RATES: Record<string, string> = {
+  founding: "$25/month",
+  growth:   "$49/month",
+  pro:      "$79/month",
+};
+
 // ── Modal wrapper ─────────────────────────────────────────────────────────
 interface BillingSetupProps {
   providerId: string;
   providerName: string;
   isFoundingProvider: boolean;
+  isDPC?: boolean;
+  dpcPlan?: string; // "founding" | "growth" | "pro"
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -182,10 +346,13 @@ export default function BillingSetup({
   providerId,
   providerName,
   isFoundingProvider,
+  isDPC = false,
+  dpcPlan = "founding",
   onClose,
   onSuccess,
 }: BillingSetupProps) {
   const [step, setStep] = useState<"info" | "card" | "manual" | "done">("info");
+  const [paymentMethod, setPaymentMethod] = useState<"card" | "bank">("card");
   const [manualLoading, setManualLoading] = useState(false);
   const [manualSent, setManualSent] = useState(false);
 
@@ -194,13 +361,83 @@ export default function BillingSetup({
     setTimeout(() => onSuccess(), 1800);
   };
 
+  // ── Info step content differs by account type ──────────────────────────
+  const dpcRate = DPC_RATES[dpcPlan] ?? "$25/month";
+  const infoBadge = isDPC
+    ? `🏥 DPC ${dpcPlan.charAt(0).toUpperCase() + dpcPlan.slice(1)} plan — ${dpcRate}`
+    : isFoundingProvider
+      ? "🏅 Founding Provider rate — $6/visit for 2 years"
+      : "💼 Standard rate — $10/visit";
+
+  const infoPoints = isDPC
+    ? [
+        "→ Flat monthly fee — covers all member visits",
+        "→ Billed automatically on the 1st of each month",
+        "→ Card on file today — first charge begins next billing cycle",
+        "→ Cancel or pause membership anytime by contacting us",
+      ]
+    : [
+        "→ Billed automatically on the 1st of each month",
+        "→ Only charged for completed, attended visits",
+        "→ No-shows and cancellations are never charged",
+        "→ No monthly fees or subscription costs",
+      ];
+
+  const howItWorks = isDPC
+    ? [
+        "1. Add a card on file today (no charge)",
+        "2. Patients search and join your DPC practice",
+        "3. On the 1st, your card is charged your flat monthly rate",
+        "4. You receive an itemized receipt by email",
+      ]
+    : [
+        "1. Add a card on file today (no charge)",
+        "2. Patients book and attend appointments",
+        "3. On the 1st, your card is charged for last month's visits",
+        "4. You receive an itemized receipt by email",
+      ];
+
+  // ── Guard: if providerId is empty the account isn't fully set up yet.
+  // Show a clear message instead of letting the card form call the Cloud
+  // Function and get a cryptic "providerId is required" error.
+  if (!providerId) {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+        <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl">
+          <div className="text-center">
+            <div className="text-4xl mb-4">⚙️</div>
+            <h3 className="text-lg font-bold text-slate-900 mb-2">Account setup incomplete</h3>
+            <p className="text-slate-500 text-sm mb-4 leading-relaxed">
+              Your provider account hasn't been fully linked yet. Billing setup
+              will be available once the Morava team completes your account
+              activation — usually within 1 business day.
+            </p>
+            <p className="text-xs text-slate-400 mb-5">
+              Questions?{" "}
+              <a href="mailto:support@moravacare.com" className="text-teal-600 underline">
+                support@moravacare.com
+              </a>
+              {" "}· (855) 812-6996
+            </p>
+            <button
+              onClick={onClose}
+              className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-6 py-2.5 rounded-xl text-sm transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
       <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-xl">
-            💳
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl ${isDPC ? "bg-purple-50 border border-purple-100" : "bg-teal-50 border border-teal-100"}`}>
+            {isDPC ? "🏥" : "💳"}
           </div>
           <div>
             <h3 className="text-xl font-bold text-slate-900">Set up billing</h3>
@@ -213,17 +450,12 @@ export default function BillingSetup({
         {/* Step: info */}
         {step === "info" && (
           <div className="space-y-5">
-            <div className="bg-teal-50 border border-teal-200 rounded-xl p-4">
-              <div className="text-sm font-semibold text-teal-800 mb-2">
-                {isFoundingProvider
-                  ? "🏅 Founding Provider rate — $6/visit for 2 years"
-                  : "💼 Standard rate — $10/visit"}
+            <div className={`border rounded-xl p-4 ${isDPC ? "bg-purple-50 border-purple-200" : "bg-teal-50 border-teal-200"}`}>
+              <div className={`text-sm font-semibold mb-2 ${isDPC ? "text-purple-800" : "text-teal-800"}`}>
+                {infoBadge}
               </div>
-              <ul className="text-xs text-teal-700 space-y-1.5">
-                <li>→ Billed automatically on the 1st of each month</li>
-                <li>→ Only charged for completed, attended visits</li>
-                <li>→ No-shows and cancellations are never charged</li>
-                <li>→ No monthly fees or subscription costs</li>
+              <ul className={`text-xs space-y-1.5 ${isDPC ? "text-purple-700" : "text-teal-700"}`}>
+                {infoPoints.map((p) => <li key={p}>{p}</li>)}
               </ul>
             </div>
 
@@ -231,12 +463,7 @@ export default function BillingSetup({
               <div className="font-semibold text-slate-700 mb-1">
                 How it works
               </div>
-              <div>1. Add a card on file today (no charge)</div>
-              <div>2. Patients book and attend appointments</div>
-              <div>
-                3. On the 1st, your card is charged for last month's visits
-              </div>
-              <div>4. You receive an itemized receipt by email</div>
+              {howItWorks.map((s) => <div key={s}>{s}</div>)}
             </div>
 
             <div className="flex gap-3">
@@ -248,7 +475,7 @@ export default function BillingSetup({
               </button>
               <button
                 onClick={() => setStep("card")}
-                className="flex-1 bg-teal-500 hover:bg-teal-600 text-white font-semibold py-3 rounded-xl text-sm transition-colors"
+                className={`flex-1 text-white font-semibold py-3 rounded-xl text-sm transition-colors ${isDPC ? "bg-purple-600 hover:bg-purple-700" : "bg-teal-500 hover:bg-teal-600"}`}
               >
                 Add card →
               </button>
@@ -262,15 +489,49 @@ export default function BillingSetup({
           </div>
         )}
 
-        {/* Step: card */}
+        {/* Step: payment method selection + forms */}
         {step === "card" && (
-          <Elements stripe={stripePromise}>
-            <CardForm
-              providerId={providerId}
-              onSuccess={handleSuccess}
-              onCancel={() => setStep("info")}
-            />
-          </Elements>
+          <div className="space-y-4">
+            {/* Payment method tabs */}
+            <div className="flex gap-2 p-1 bg-slate-100 rounded-xl">
+              <button
+                onClick={() => setPaymentMethod("card")}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all ${
+                  paymentMethod === "card"
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                💳 Card
+              </button>
+              <button
+                onClick={() => setPaymentMethod("bank")}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all ${
+                  paymentMethod === "bank"
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                🏦 Bank (ACH)
+              </button>
+            </div>
+
+            <Elements stripe={stripePromise}>
+              {paymentMethod === "card" ? (
+                <CardForm
+                  providerId={providerId}
+                  onSuccess={handleSuccess}
+                  onCancel={() => setStep("info")}
+                />
+              ) : (
+                <BankForm
+                  providerId={providerId}
+                  onSuccess={handleSuccess}
+                  onCancel={() => setStep("info")}
+                />
+              )}
+            </Elements>
+          </div>
         )}
 
         {/* Step: manual billing */}
@@ -316,12 +577,19 @@ export default function BillingSetup({
                   onClick={async () => {
                     setManualLoading(true);
                     try {
-                      await updateDoc(doc(db, "providers", providerId), {
-                        manualBilling: true,
-                        manualBillingRequestedAt: new Date(),
-                      });
+                      // The billing subcollection is admin-write-only via rules —
+                      // use the requestManualBilling callable so the Admin SDK writes it.
+                      const functions = getFunctions();
+                      const requestManualBilling = httpsCallable(
+                        functions,
+                        "requestManualBilling",
+                      );
+                      await requestManualBilling({ providerId });
                       setManualSent(true);
-                    } catch {
+                    } catch (err) {
+                      console.error("requestManualBilling failed:", err);
+                      // Still show success UI — the provider reached out; we'll
+                      // follow up manually if the function write failed.
                       setManualSent(true);
                     } finally {
                       setManualLoading(false);
@@ -345,8 +613,9 @@ export default function BillingSetup({
               Billing set up!
             </h4>
             <p className="text-slate-500 text-sm">
-              Your card is saved. You'll receive an itemized receipt on the 1st
-              of each month for completed visits only.
+              {isDPC
+                ? `Your card is saved. You'll be charged ${dpcRate} on the 1st of each month. Your first charge begins next billing cycle.`
+                : "Your card is saved. You'll receive an itemized receipt on the 1st of each month for completed visits only."}
             </p>
           </div>
         )}

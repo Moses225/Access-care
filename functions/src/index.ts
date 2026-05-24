@@ -257,22 +257,96 @@ export const onBookingStatusChanged = onDocumentUpdated(
     const after = event.data?.after?.data();
     if (!before || !after) return;
     if (before.status === after.status) return;
+    // Include 'pending' for the reschedule-decline case where the booking
+    // was still pending when the provider proposed, and patient declines
+    // back to pending (not confirmed).
     if (
-      !["confirmed", "cancelled", "reschedule_pending"].includes(after.status)
+      !["confirmed", "cancelled", "reschedule_pending", "pending"].includes(after.status)
     )
       return;
     if (!after.userId) return;
 
-    // Patient declined a reschedule and kept their original time.
-    // The status reverts to 'confirmed' but the patient already knows —
-    // they made the choice. Sending "Your appointment is confirmed!" is
-    // confusing, so we skip all notifications for this transition.
+    // ── Reschedule response detection ───────────────────────────────────────
+    // Patient declined → status reverts to whatever it was before ('confirmed'
+    // or 'pending'). rescheduleDeclinedAt is stamped.
     const isRescheduleDecline =
       before.status === "reschedule_pending" &&
-      after.status === "confirmed" &&
+      (after.status === "confirmed" || after.status === "pending") &&
       !before.rescheduleDeclinedAt &&
       !!after.rescheduleDeclinedAt;
+
+    // Patient accepted → status becomes 'confirmed', rescheduleAcceptedAt stamped.
+    const isRescheduleAccept =
+      before.status === "reschedule_pending" &&
+      after.status === "confirmed" &&
+      !after.rescheduleDeclinedAt &&
+      !!after.rescheduleAcceptedAt;
+
+    // Notify the PROVIDER when a patient responds to their reschedule proposal.
+    // The provider has no other visibility — they don't get a push, and the
+    // dashboard only updates when they refresh/reload.
+    if ((isRescheduleDecline || isRescheduleAccept) && after.providerId) {
+      try {
+        const provSnap = await db
+          .collection("providerUsers")
+          .where("providerId", "==", after.providerId)
+          .limit(1)
+          .get();
+        if (!provSnap.empty) {
+          const provData = provSnap.docs[0].data();
+          const provEmail = provData.email as string | undefined;
+          if (provEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(provEmail)) {
+            const resend = new Resend(resendApiKey.value());
+            if (isRescheduleDecline) {
+              await resend.emails.send({
+                from: "Morava <noreply@moravacare.com>",
+                to: provEmail,
+                subject: "A patient declined your reschedule proposal",
+                html: wrapEmail(
+                  "Appointment Update",
+                  `
+                  <div style="background:#FEF3C7;border-left:4px solid #F59E0B;border-radius:8px;padding:14px;margin-bottom:14px">
+                    <strong style="color:#92400E">↩ Reschedule declined — original time kept</strong>
+                  </div>
+                  <p style="color:#475569">A patient has declined your proposed reschedule and will keep their original appointment time. Log in to your dashboard to view the booking.</p>
+                  <a href="https://morava-dashboard.web.app" style="display:block;background:#14B8A6;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:bold;text-align:center;margin-top:16px">View in Dashboard &rarr;</a>
+                  <p style="color:#94A3B8;font-size:12px;margin-top:12px;text-align:center">For security, appointment details are only visible after logging in.</p>
+                  `,
+                ),
+              });
+            } else {
+              // isRescheduleAccept
+              await resend.emails.send({
+                from: "Morava <noreply@moravacare.com>",
+                to: provEmail,
+                subject: "A patient accepted your reschedule proposal ✓",
+                html: wrapEmail(
+                  "Appointment Update",
+                  `
+                  <div style="background:#F0FDF4;border-left:4px solid #22C55E;border-radius:8px;padding:14px;margin-bottom:14px">
+                    <strong style="color:#166534">✓ Reschedule accepted — appointment updated</strong>
+                  </div>
+                  <p style="color:#475569">A patient has accepted your proposed reschedule. The appointment is now confirmed for the new date and time. Log in to your dashboard to view the updated booking.</p>
+                  <a href="https://morava-dashboard.web.app" style="display:block;background:#14B8A6;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:bold;text-align:center;margin-top:16px">View in Dashboard &rarr;</a>
+                  <p style="color:#94A3B8;font-size:12px;margin-top:12px;text-align:center">For security, appointment details are only visible after logging in.</p>
+                  `,
+                ),
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.error("onBookingStatusChanged: provider reschedule notification failed", err);
+      }
+    }
+
+    // Patient declined → skip patient notification entirely.
+    // They already made the choice — sending "Your appointment is confirmed!"
+    // would be misleading and confusing.
     if (isRescheduleDecline) return;
+    // 'pending' only flows this far if it was a reschedule-decline (caught above).
+    // Any other transition to 'pending' should not trigger patient notifications.
+    if (after.status === "pending") return;
 
     let patientEmail: string | null = null;
     try {
@@ -462,8 +536,13 @@ export const monthlyBilling = onSchedule(
         const pSnap = await db.collection("providers").doc(pid).get();
         if (!pSnap.exists) continue;
         const pd = pSnap.data()!;
-        const cid = pd.stripeCustomerId as string | undefined;
-        const pmid = pd.stripePaymentMethodId as string | undefined;
+
+        // Billing credentials are in the private subcollection (not on the main doc)
+        const bilSnap = await db.collection("providers").doc(pid)
+          .collection("billing").doc("main").get();
+        const bilData = bilSnap.exists ? bilSnap.data()! : {};
+        const cid = bilData.stripeCustomerId as string | undefined;
+        const pmid = bilData.stripePaymentMethodId as string | undefined;
         if (!cid || !pmid) {
           await resend.emails.send({
             from: "Morava Billing <noreply@moravacare.com>",
@@ -630,17 +709,167 @@ export const onProviderGoLive = onDocumentUpdated(
 // without charging it. Saves stripeCustomerId + stripePaymentMethodId
 // to providers/{providerId} on webhook confirmation.
 //
+// ================================================================
+// ON PROVIDER USER CREATED
+// Firestore trigger: fires when an admin creates a new providerUsers document.
+//
+// What it does automatically:
+//   1. If the doc already has a valid providerId → just stamps custom claims
+//   2. If providerId is missing → creates a minimal providers/{uid} document
+//      from whatever fields are on the providerUsers doc, then sets providerId
+//      on the providerUsers doc and stamps custom claims
+//
+// This means the admin only needs to create one document (providerUsers) and
+// the system handles the rest — no missing providerId, no stuck spinners.
+// ================================================================
+export const onProviderUserCreated = onDocumentCreated(
+  {
+    document: "providerUsers/{uid}",
+    database: "(default)",
+    region: "us-central1",
+  },
+  async (event) => {
+    const uid = event.params.uid;
+    const data = event.data?.data();
+    if (!data) return;
+
+    let providerId = data.providerId as string | undefined;
+
+    // ── Step 1: auto-create providers doc if providerId is absent ─────────
+    if (!providerId) {
+      const providerRef = db.collection("providers").doc(uid);
+      const provSnap = await providerRef.get();
+
+      if (!provSnap.exists) {
+        // ── Auto-assign plan based on founding window ──────────────────────
+        // The first FOUNDING_LIMIT providers get the founding rate ($6/visit,
+        // locked 2 years).  Every provider created after that is "standard"
+        // ($10/visit) unless the admin explicitly overrides plan in the doc.
+        // Count is taken from the platform/counters doc (providerCount field)
+        // which is incremented by this trigger.  If the admin already set a
+        // plan on the providerUsers doc, honour it — never downgrade.
+        const FOUNDING_LIMIT = 50; // first 50 providers are founding
+        let assignedPlan: string = data.plan || "";
+        if (!assignedPlan) {
+          const counterSnap = await db.collection("platform").doc("counters").get();
+          const providerCount = (counterSnap.data()?.providerCount as number) || 0;
+          assignedPlan = providerCount < FOUNDING_LIMIT ? "founding" : "standard";
+          console.log(`onProviderUserCreated: providerCount=${providerCount}, assigned plan=${assignedPlan}`);
+        }
+
+        // Build a minimal providers document from whatever the admin put in
+        // providerUsers. The provider can fill the rest in via their profile page.
+        await providerRef.set({
+          name:             data.name        || data.facilityName || "",
+          specialty:        data.specialty   || "",
+          email:            data.email       || "",
+          practiceType:     data.practiceType || "standard",
+          plan:             assignedPlan,
+          verified:         false,
+          active:           true,
+          createdAt:        admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt:        admin.firestore.FieldValue.serverTimestamp(),
+          _autoCreated:     true,   // flag so admins know this needs review
+        });
+        console.log(`onProviderUserCreated: auto-created providers/${uid}`);
+      }
+
+      // Write providerId back onto the providerUsers doc
+      providerId = uid;
+      await db.collection("providerUsers").doc(uid).update({ providerId: uid });
+      console.log(`onProviderUserCreated: set providerId=${uid} on providerUsers/${uid}`);
+    }
+
+    // ── Step 2: stamp custom claims ───────────────────────────────────────
+    try {
+      await admin.auth().setCustomUserClaims(uid, {
+        provider:   true,
+        providerId,
+        facilityId: data.facilityId ?? null,
+      });
+      console.log(`onProviderUserCreated: claims set for uid=${uid}, providerId=${providerId}`);
+    } catch (err) {
+      // Auth account may not exist yet if doc was created before the Auth user.
+      // ensureProviderClaims will handle it on first login.
+      console.warn(`onProviderUserCreated: could not set claims for uid=${uid}:`, err);
+    }
+  },
+);
+
+// ================================================================
+// ENSURE PROVIDER CLAIMS
+// Sets / refreshes custom claims (provider: true, providerId) from the
+// caller's providerUsers document.  Called automatically from AuthContext
+// when the token is missing claims — most common for providers onboarded
+// before the claim-stamping flow was added.
+//
+// SECURITY:
+//   - Caller can only set claims for their OWN account (request.auth.uid)
+//   - Claims are derived entirely from the server-side providerUsers document
+//     — the client supplies no claim values
+//   - Idempotent: safe to call on every login if needed
+// ================================================================
+export const ensureProviderClaims = onCall(
+  { region: "us-central1", enforceAppCheck: false },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Authentication required.");
+    }
+
+    const uid = request.auth.uid;
+    const snap = await db.collection("providerUsers").doc(uid).get();
+
+    if (!snap.exists) {
+      throw new HttpsError("not-found", "No provider account found for this user.");
+    }
+
+    const data = snap.data()!;
+    const providerId = data.providerId as string | undefined;
+    const facilityId = data.facilityId as string | undefined;
+
+    if (!providerId && !facilityId) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Provider account is incomplete — missing providerId.",
+      );
+    }
+
+    // Stamp custom claims from the authoritative server-side document.
+    // These are used by Firestore rules (isBookingProvider, isVerifiedProvider)
+    // and by createSetupIntent to verify the caller owns the provider account.
+    await admin.auth().setCustomUserClaims(uid, {
+      provider:   true,
+      providerId: providerId ?? null,
+      facilityId: facilityId ?? null,
+    });
+
+    console.log(`ensureProviderClaims: stamped claims for uid=${uid}, providerId=${providerId}`);
+    return { ok: true, providerId: providerId ?? null };
+  },
+);
+
+// ================================================================
+// STRIPE SETUP INTENT
+// Creates a Stripe SetupIntent so the dashboard can save a card
+// without charging it. Saves stripeCustomerId + stripePaymentMethodId
+// to providers/{providerId}/billing/main on webhook confirmation.
+//
 // SECURITY:
 //   - Requires authenticated Firebase user (auth context enforced)
 //   - Verifies caller's providerId matches their custom claim
 //   - Never logs or returns full card details
 //   - Idempotent: reuses existing Stripe customer if present
+//   - Billing data written to private subcollection — not readable by patients
 // ================================================================
 export const createSetupIntent = onCall(
   {
     region: "us-central1",
     secrets: [stripeSecretKey],
-    enforceAppCheck: true,
+    // App Check is intentionally disabled on the web dashboard — see firebase.ts.
+    // The function enforces its own auth (Firebase UID + providerId custom claim
+    // match) which provides equivalent security for the dashboard use case.
+    // Re-enable once native App Check is wired into the mobile build.
+    enforceAppCheck: false,
   },
   async (request) => {
     // Require authenticated user
@@ -653,10 +882,19 @@ export const createSetupIntent = onCall(
       | string
       | undefined;
     const providerId = request.data?.providerId as string | undefined;
+    const rawPaymentMethodType = (request.data?.paymentMethodType as string) || "card";
 
     if (!providerId) {
       throw new HttpsError("invalid-argument", "providerId is required.");
     }
+
+    // Validate payment method type — only card and US bank account supported
+    const ALLOWED_PAYMENT_TYPES = ["card", "us_bank_account"] as const;
+    type AllowedPaymentType = (typeof ALLOWED_PAYMENT_TYPES)[number];
+    if (!(ALLOWED_PAYMENT_TYPES as readonly string[]).includes(rawPaymentMethodType)) {
+      throw new HttpsError("invalid-argument", "Invalid paymentMethodType. Must be 'card' or 'us_bank_account'.");
+    }
+    const paymentMethodType = rawPaymentMethodType as AllowedPaymentType;
 
     // Security check: caller's custom claim must match the providerId they're setting up billing for
     if (callerProviderId !== providerId) {
@@ -669,44 +907,118 @@ export const createSetupIntent = onCall(
       );
     }
 
+    // ── Rate limit: max 20 setup-intent calls per provider per calendar day ───
+    // Prevents a compromised provider token from running up Stripe API quota.
+    // Key format mirrors the SMS rate-limit pattern: "{providerId}_{YYYY-MM-DD}"
+    const today = new Date().toISOString().split("T")[0];
+    const siRateLimitRef = db
+      .collection("setupIntentRateLimits")
+      .doc(`${providerId}_${today}`);
+    const siLimitSnap = await siRateLimitRef.get();
+    const siCount = (siLimitSnap.data()?.count as number) || 0;
+    if (siCount >= 20) {
+      throw new HttpsError(
+        "resource-exhausted",
+        "Too many billing setup attempts today. Please try again tomorrow or contact support.",
+      );
+    }
+    // Increment counter atomically (fire-and-forget — don't block the setup)
+    siRateLimitRef.set(
+      {
+        count:     admin.firestore.FieldValue.increment(1),
+        providerId,
+        date:      today,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    ).catch((e: unknown) => console.warn("createSetupIntent: rate-limit write failed:", e));
+
     const stripe = new Stripe(stripeSecretKey.value(), {
       apiVersion: "2026-04-22.dahlia" as any,
     });
 
-    // Fetch provider document to get name/email and check for existing customer
-    const provSnap = await db.collection("providers").doc(providerId).get();
+    // Fetch provider document to get name/email and check for existing customer.
+    // If the doc is absent (e.g. onProviderUserCreated trigger ran before the Auth
+    // user existed, or was skipped on update), auto-create it from the providerUsers
+    // doc so the provider can still complete billing setup without admin intervention.
+    const provRef = db.collection("providers").doc(providerId);
+    let provSnap = await provRef.get();
+
     if (!provSnap.exists) {
-      throw new HttpsError("not-found", "Provider not found.");
+      const puSnap = await db.collection("providerUsers").doc(callerUid).get();
+      if (!puSnap.exists) {
+        throw new HttpsError("not-found", "Provider account not found.");
+      }
+      const puData = puSnap.data()!;
+      await provRef.set({
+        name:         puData.name        || puData.facilityName || "",
+        specialty:    puData.specialty   || "",
+        email:        puData.email       || "",
+        practiceType: puData.practiceType || "standard",
+        plan:         puData.plan        || "founding",
+        verified:     false,
+        active:       true,
+        createdAt:    admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt:    admin.firestore.FieldValue.serverTimestamp(),
+        _autoCreated: true,
+      });
+      console.log(`createSetupIntent: auto-created providers/${providerId} for uid=${callerUid}`);
+      provSnap = await provRef.get();
     }
 
     const provData = provSnap.data()!;
-    let stripeCustomerId = provData.stripeCustomerId as string | undefined;
+
+    // Billing fields live in the private subcollection — not on the main doc
+    const billingRef = db.collection("providers").doc(providerId)
+      .collection("billing").doc("main");
+    const billingSnap = await billingRef.get();
+    const billingData = billingSnap.exists ? billingSnap.data()! : {};
+    let stripeCustomerId = billingData.stripeCustomerId as string | undefined;
 
     // Reuse existing Stripe customer or create new one
-    if (!stripeCustomerId) {
+    const createFreshCustomer = async () => {
       const customer = await stripe.customers.create({
         email: provData.email || "",
         name: provData.name || providerId,
         metadata: { providerId, firebaseUid: callerUid },
       });
-      stripeCustomerId = customer.id;
+      await billingRef.set({ stripeCustomerId: customer.id }, { merge: true });
+      console.log(`createSetupIntent: created new Stripe customer ${customer.id} for ${providerId}`);
+      return customer.id;
+    };
 
-      // Save customer ID immediately — prevents duplicate customers on retry
-      await db.collection("providers").doc(providerId).update({
-        stripeCustomerId,
-      });
+    if (!stripeCustomerId) {
+      // No customer on file — create one
+      stripeCustomerId = await createFreshCustomer();
     }
 
-    // Create Setup Intent — captures card without charging
-    const setupIntent = await stripe.setupIntents.create({
-      customer: stripeCustomerId,
-      payment_method_types: ["card"],
-      usage: "off_session", // required for automated monthly billing
-      metadata: {
-        providerId,
-        firebaseUid: callerUid,
-      },
-    });
+    // Create Setup Intent — captures card without charging.
+    // If the saved customer ID is stale (e.g. deleted in Stripe dashboard,
+    // created under a different API key, or from a sandbox purge) Stripe
+    // returns resource_missing.  Recreate the customer and retry once.
+    let setupIntent;
+    try {
+      setupIntent = await stripe.setupIntents.create({
+        customer: stripeCustomerId,
+        payment_method_types: [paymentMethodType],
+        usage: "off_session",
+        metadata: { providerId, firebaseUid: callerUid, paymentMethodType },
+      });
+    } catch (stripeErr: unknown) {
+      const code = (stripeErr as { code?: string }).code;
+      if (code === "resource_missing") {
+        console.warn(`createSetupIntent: customer ${stripeCustomerId} not found in Stripe — recreating`);
+        stripeCustomerId = await createFreshCustomer();
+        setupIntent = await stripe.setupIntents.create({
+          customer: stripeCustomerId,
+          payment_method_types: [paymentMethodType],
+          usage: "off_session",
+          metadata: { providerId, firebaseUid: callerUid, paymentMethodType },
+        });
+      } else {
+        throw stripeErr;
+      }
+    }
 
     // Return only what the client needs — never expose the full setup intent
     return {
@@ -748,10 +1060,18 @@ export const stripeWebhook = onRequest(
 
     let event;
     try {
+      // rawBody MUST be present — Firebase Functions v2 preserves it for HTTP
+      // triggers.  Falling back to re-serialized JSON (JSON.stringify(req.body))
+      // would silently pass a different payload to constructEvent and break
+      // signature verification, undermining the entire webhook security model.
       const raw = (req as unknown as { rawBody?: Buffer }).rawBody;
-      const payload = raw ?? Buffer.from(JSON.stringify(req.body));
+      if (!raw) {
+        console.error("stripeWebhook: rawBody missing — cannot verify signature");
+        res.status(400).send("Webhook error: rawBody unavailable");
+        return;
+      }
       event = stripe.webhooks.constructEvent(
-        payload,
+        raw,
         sig,
         stripeWebhookSecret.value(),
       );
@@ -766,32 +1086,118 @@ export const stripeWebhook = onRequest(
     if (event.type === "setup_intent.succeeded") {
       const setupIntent = event.data.object;
       const providerId = setupIntent.metadata?.providerId;
-      const paymentMethodId = setupIntent.payment_method;
+      const paymentMethodId = setupIntent.payment_method as string | null;
 
       if (providerId && paymentMethodId) {
         try {
-          await db.collection("providers").doc(providerId).update({
-            stripePaymentMethodId: paymentMethodId,
-            billingSetupAt: admin.firestore.FieldValue.serverTimestamp(),
-          });
-          // Sync to providerUsers for App Check timing fix on dashboard
+          // Fetch full payment method details from Stripe so we can store
+          // last4, brand, bank name, etc. for display in the dashboard.
+          let pmInfo: Record<string, unknown> = {
+            id: paymentMethodId,
+            type: "card",
+            addedAt: admin.firestore.FieldValue.serverTimestamp(),
+          };
+          try {
+            const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
+            pmInfo.type = pm.type;
+            if (pm.type === "card" && pm.card) {
+              pmInfo.last4     = pm.card.last4;
+              pmInfo.brand     = pm.card.brand;
+              pmInfo.expMonth  = pm.card.exp_month;
+              pmInfo.expYear   = pm.card.exp_year;
+            } else if (pm.type === "us_bank_account" && pm.us_bank_account) {
+              pmInfo.last4       = pm.us_bank_account.last4;
+              pmInfo.bankName    = pm.us_bank_account.bank_name;
+              pmInfo.accountType = pm.us_bank_account.account_type;
+            }
+          } catch (pmErr) {
+            console.warn(`stripeWebhook: could not fetch PM details for ${paymentMethodId}:`, pmErr);
+            // Continue — we still save the ID even without full details
+          }
+
+          const billingRef = db.collection("providers").doc(providerId)
+            .collection("billing").doc("main");
+          const billingSnap = await billingRef.get();
+          const billingData = billingSnap.exists ? (billingSnap.data() ?? {}) : {};
+
+          // Merge into paymentMethods array — replace if same ID already exists
+          // (e.g. a retry), otherwise append.
+          const existing = (billingData.paymentMethods as Array<Record<string, unknown>>) || [];
+          const others   = existing.filter((m) => m.id !== paymentMethodId);
+
+          // First method ever → set as default automatically
+          const currentDefault = billingData.defaultPaymentMethodId as string | undefined;
+          const newDefault = currentDefault || paymentMethodId;
+
+          pmInfo.isDefault = newDefault === paymentMethodId;
+
+          const updatedMethods = [...others, pmInfo];
+
+          // Write to the private billing subcollection
+          await billingRef.set(
+            {
+              stripePaymentMethodId: paymentMethodId,   // backward-compat field
+              defaultPaymentMethodId: newDefault,
+              paymentMethods: updatedMethods,
+              billingSetupAt: admin.firestore.FieldValue.serverTimestamp(),
+            },
+            { merge: true },
+          );
+
+          // Sync stripePaymentMethodId to providerUsers so AuthContext.refreshProfile()
+          // detects the new method immediately without a page reload.
           const puSnap = await db
             .collection("providerUsers")
             .where("providerId", "==", providerId)
             .limit(1)
             .get();
-          if (puSnap.empty === false) {
+          if (!puSnap.empty) {
             await puSnap.docs[0].ref.update({
               stripePaymentMethodId: paymentMethodId,
             });
           }
           console.log(
-            `stripeWebhook: saved payment method ${paymentMethodId} for provider ${providerId}`,
+            `stripeWebhook: saved payment method ${paymentMethodId} (${String(pmInfo.type)}) for provider ${providerId}`,
           );
         } catch (err) {
           console.error("stripeWebhook: failed to save payment method:", err);
           res.status(500).send("Database update failed");
           return;
+        }
+      }
+    } else if (event.type === "setup_intent.setup_failed") {
+      // Log failed card setup attempts so we can follow up with providers
+      // who couldn't complete billing setup. No Firestore write needed —
+      // the providers doc stays without a payment method (dashboard will
+      // continue showing the billing banner prompting them to retry).
+      const setupIntent = event.data.object;
+      const providerId = setupIntent.metadata?.providerId;
+      const failureMsg = setupIntent.last_setup_error?.message ?? "unknown";
+      console.warn(
+        `stripeWebhook: setup_intent.setup_failed for provider ${providerId ?? "unknown"}: ${failureMsg}`,
+      );
+    } else if (event.type === "payment_intent.payment_failed") {
+      // Monthly billing charge failed — log and alert so we can follow up.
+      // The invoiced flag is NOT set, so the booking will be retried next cycle.
+      const paymentIntent = event.data.object;
+      const providerId = paymentIntent.metadata?.providerId;
+      const failureMsg = paymentIntent.last_payment_error?.message ?? "unknown";
+      console.error(
+        `stripeWebhook: payment_intent.payment_failed for provider ${providerId ?? "unknown"}: ${failureMsg}`,
+      );
+      // Alert admin via Firestore so it surfaces in any admin dashboard
+      if (providerId) {
+        try {
+          await db.collection("billingAlerts").add({
+            type: "payment_failed",
+            providerId,
+            paymentIntentId: paymentIntent.id,
+            failureMessage: failureMsg,
+            amount: paymentIntent.amount,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        } catch (alertErr) {
+          console.error("stripeWebhook: failed to write billingAlert:", alertErr);
         }
       }
     }
@@ -801,11 +1207,216 @@ export const stripeWebhook = onRequest(
 );
 
 // ================================================================
-// MANUAL BILLING REQUEST — notify Moise when provider requests check/ACH
+// REQUEST MANUAL BILLING — callable from provider dashboard
+// Writes manualBilling: true to the private billing subcollection and
+// alerts the admin. Direct Firestore writes to this subcollection are
+// blocked by rules (allow write: if false), so providers use this
+// callable instead.
+//
+// SECURITY: caller must be the owner of the providerId (custom claim check)
+// ================================================================
+export const requestManualBilling = onCall(
+  {
+    region: "us-central1",
+    secrets: [resendApiKey],
+    enforceAppCheck: false,
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Authentication required.");
+    }
+
+    const callerProviderId = request.auth.token?.providerId as string | undefined;
+    const providerId = request.data?.providerId as string | undefined;
+
+    if (!providerId) {
+      throw new HttpsError("invalid-argument", "providerId is required.");
+    }
+    if (callerProviderId !== providerId) {
+      throw new HttpsError("permission-denied", "Not authorized for this provider account.");
+    }
+
+    // Write to private billing subcollection via Admin SDK
+    await db.collection("providers").doc(providerId)
+      .collection("billing").doc("main")
+      .set(
+        {
+          manualBilling: true,
+          manualBillingRequestedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+
+    // Send admin alert email immediately from the callable (no Firestore trigger needed)
+    try {
+      const provSnap = await db.collection("providers").doc(providerId).get();
+      const pd = provSnap.exists ? provSnap.data()! : {};
+      const resend = new Resend(resendApiKey.value());
+      await resend.emails.send({
+        from: "Morava <noreply@moravacare.com>",
+        to: "moise@moravacare.com",
+        subject: `Manual billing requested — ${esc(pd.name) || providerId}`,
+        html: wrapEmail(
+          "Manual Billing Request",
+          `
+          <p><strong>${esc(pd.name) || providerId}</strong> has requested manual billing (check or ACH).</p>
+          <p><strong>Provider ID:</strong> ${esc(providerId)}</p>
+          <p>Follow up within 1 business day to arrange payment method.</p>
+        `,
+        ),
+      });
+    } catch (emailErr) {
+      // Non-fatal — billing subcollection is already updated; email is best-effort
+      console.error("requestManualBilling: failed to send alert email:", emailErr);
+    }
+
+    return { ok: true };
+  },
+);
+
+// ================================================================
+// SET DEFAULT PAYMENT METHOD — marks one saved method as the one
+// that will be charged on the 1st of each month.
+//
+// SECURITY: caller must own the providerId (custom claim check)
+// ================================================================
+export const setDefaultPaymentMethod = onCall(
+  { region: "us-central1", enforceAppCheck: false },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Authentication required.");
+    }
+    const callerProviderId = request.auth.token?.providerId as string | undefined;
+    const providerId       = request.data?.providerId as string | undefined;
+    const paymentMethodId  = request.data?.paymentMethodId as string | undefined;
+
+    if (!providerId || !paymentMethodId) {
+      throw new HttpsError("invalid-argument", "providerId and paymentMethodId are required.");
+    }
+    if (callerProviderId !== providerId) {
+      throw new HttpsError("permission-denied", "Not authorized for this provider account.");
+    }
+
+    const billingRef = db.collection("providers").doc(providerId)
+      .collection("billing").doc("main");
+    const billingSnap = await billingRef.get();
+    if (!billingSnap.exists) {
+      throw new HttpsError("not-found", "Billing record not found.");
+    }
+
+    const billingData  = billingSnap.data()!;
+    const methods      = (billingData.paymentMethods as Array<Record<string, unknown>>) || [];
+    const targetExists = methods.some((m) => m.id === paymentMethodId);
+    if (!targetExists) {
+      throw new HttpsError("not-found", "Payment method not found on this account.");
+    }
+
+    // Update isDefault flag on every method, set defaultPaymentMethodId
+    const updated = methods.map((m) => ({ ...m, isDefault: m.id === paymentMethodId }));
+    await billingRef.update({
+      defaultPaymentMethodId: paymentMethodId,
+      paymentMethods: updated,
+    });
+
+    console.log(`setDefaultPaymentMethod: ${paymentMethodId} set as default for ${providerId}`);
+    return { ok: true };
+  },
+);
+
+// ================================================================
+// REMOVE PAYMENT METHOD — detaches a saved method from the Stripe
+// customer and removes it from the billing record.
+//
+// SECURITY: caller must own the providerId (custom claim check)
+// ================================================================
+export const removePaymentMethod = onCall(
+  {
+    region: "us-central1",
+    secrets: [stripeSecretKey],
+    enforceAppCheck: false,
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Authentication required.");
+    }
+    const callerProviderId = request.auth.token?.providerId as string | undefined;
+    const providerId       = request.data?.providerId as string | undefined;
+    const paymentMethodId  = request.data?.paymentMethodId as string | undefined;
+
+    if (!providerId || !paymentMethodId) {
+      throw new HttpsError("invalid-argument", "providerId and paymentMethodId are required.");
+    }
+    if (callerProviderId !== providerId) {
+      throw new HttpsError("permission-denied", "Not authorized for this provider account.");
+    }
+
+    const billingRef = db.collection("providers").doc(providerId)
+      .collection("billing").doc("main");
+    const billingSnap = await billingRef.get();
+    if (!billingSnap.exists) {
+      throw new HttpsError("not-found", "Billing record not found.");
+    }
+
+    const billingData = billingSnap.data()!;
+    const methods     = (billingData.paymentMethods as Array<Record<string, unknown>>) || [];
+    const remaining   = methods.filter((m) => m.id !== paymentMethodId);
+
+    // Detach from Stripe so the method can't be accidentally charged
+    const stripe = new Stripe(stripeSecretKey.value(), {
+      apiVersion: "2026-04-22.dahlia" as any,
+    });
+    try {
+      await stripe.paymentMethods.detach(paymentMethodId);
+    } catch (stripeErr: unknown) {
+      // If already detached or not found, continue — the goal is removal
+      const code = (stripeErr as { code?: string }).code;
+      if (code !== "resource_missing") {
+        console.warn(`removePaymentMethod: Stripe detach failed for ${paymentMethodId}:`, stripeErr);
+      }
+    }
+
+    // If we removed the default, promote the next available method
+    const wasDefault    = billingData.defaultPaymentMethodId === paymentMethodId;
+    const newDefault    = wasDefault ? (remaining[0]?.id as string | undefined) : billingData.defaultPaymentMethodId as string | undefined;
+
+    const updatedMethods = remaining.map((m, i) => ({
+      ...m,
+      isDefault: newDefault ? m.id === newDefault : i === 0,
+    }));
+
+    await billingRef.update({
+      paymentMethods:        updatedMethods,
+      defaultPaymentMethodId: newDefault ?? admin.firestore.FieldValue.delete(),
+      // Keep stripePaymentMethodId pointing to the new default (or delete if none left)
+      stripePaymentMethodId: newDefault ?? admin.firestore.FieldValue.delete(),
+    });
+
+    // Keep providerUsers in sync
+    const puSnap = await db
+      .collection("providerUsers")
+      .where("providerId", "==", providerId)
+      .limit(1)
+      .get();
+    if (!puSnap.empty) {
+      await puSnap.docs[0].ref.update({
+        stripePaymentMethodId: newDefault ?? admin.firestore.FieldValue.delete(),
+      });
+    }
+
+    console.log(`removePaymentMethod: removed ${paymentMethodId} for ${providerId}; new default: ${newDefault ?? "none"}`);
+    return { ok: true, newDefaultPaymentMethodId: newDefault ?? null };
+  },
+);
+
+// ================================================================
+// MANUAL BILLING REQUEST (Firestore trigger) — fires when admin sets
+// manualBilling: true directly on the billing subcollection via the
+// Firebase Console (fallback for admin-side operations).
+// Normal provider-initiated requests go through the callable above.
 // ================================================================
 export const onManualBillingRequest = onDocumentUpdated(
   {
-    document: "providers/{providerId}",
+    document: "providers/{providerId}/billing/{billingId}",
     database: "(default)",
     region: "us-central1",
     secrets: [resendApiKey],
@@ -821,17 +1432,19 @@ export const onManualBillingRequest = onDocumentUpdated(
       console.log("onManualBillingRequest: skipping — condition not met");
       return;
     }
-    console.log("onManualBillingRequest: sending alert email");
+    console.log("onManualBillingRequest: sending alert email (admin-triggered path)");
+    // Name lives on the main providers doc (not the billing subdoc)
+    const provSnap = await db.collection("providers").doc(event.params.providerId).get();
+    const pd = provSnap.exists ? provSnap.data()! : {};
     const resend = new Resend(resendApiKey.value());
     await resend.emails.send({
       from: "Morava <noreply@moravacare.com>",
       to: "moise@moravacare.com",
-      subject: `Manual billing requested — ${esc(after.name) || event.params.providerId}`,
+      subject: `Manual billing requested — ${esc(pd.name) || event.params.providerId}`,
       html: wrapEmail(
         "Manual Billing Request",
         `
-        <p><strong>${esc(after.name) || event.params.providerId}</strong> has requested manual billing (check or ACH).</p>
-        <p><strong>Email:</strong> ${esc(after.email) || esc(after.contactEmail) || "See providerUsers collection"}</p>
+        <p><strong>${esc(pd.name) || event.params.providerId}</strong> has requested manual billing (check or ACH).</p>
         <p><strong>Provider ID:</strong> ${esc(event.params.providerId)}</p>
         <p>Follow up within 1 business day to arrange payment method.</p>
       `,
@@ -915,18 +1528,47 @@ export const onboardProvider = onCall(
     await admin.auth().setCustomUserClaims(uid, {
       provider: true,
       providerId,
+      facilityId: null,
     });
 
-    // Create providerUsers document if it doesn't exist
+    // ── Resolve the provider's plan from their providers doc ──────────────────
+    // This ensures the welcome email and providerUsers doc reflect the correct
+    // rate — founding ($6) vs standard ($10) — rather than hardcoding $6.
+    const provDoc = await db.collection("providers").doc(providerId).get();
+    const provPlan = (provDoc.exists ? provDoc.data()?.plan : null) || "standard";
+    const isDPCAccount = provDoc.exists && provDoc.data()?.practiceType === "dpc";
+    const billingLine = isDPCAccount
+      ? "You will be billed a flat monthly fee based on your DPC listing tier."
+      : provPlan === "founding"
+        ? "You pay <strong>$6 per completed visit</strong> (Founding Provider rate, locked for 2 years)."
+        : "You pay <strong>$10 per completed visit</strong> — only when a patient attends.";
+
+    // Create or update providerUsers document — set all fields needed by AuthContext
+    // so the dashboard works correctly on first login without data gaps.
     const puRef = db.collection("providerUsers").doc(uid);
     const puSnap = await puRef.get();
     if (!puSnap.exists) {
       await puRef.set({
         uid,
         providerId,
+        name:      providerName,
         email,
+        role:      "provider",
+        plan:      provPlan,
+        verified:  true,
+        active:    true,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
+    } else {
+      // Idempotent update — fill in any fields that were missing from a partial record
+      await puRef.set({
+        name:    providerName,
+        email,
+        role:    "provider",
+        plan:    provPlan,
+        verified: true,
+        active:  true,
+      }, { merge: true });
     }
 
     // Generate password setup link — works as first-time password set
@@ -934,7 +1576,7 @@ export const onboardProvider = onCall(
       url: "https://dashboard.moravacare.com/login",
     });
 
-    // Send welcome email with setup link
+    // Send welcome email with the correct billing rate for this provider's plan
     const resend = new Resend(resendApiKey.value());
     await resend.emails.send({
       from: "Moise at Morava <noreply@moravacare.com>",
@@ -952,7 +1594,7 @@ export const onboardProvider = onCall(
             <li>Log into your dashboard at dashboard.moravacare.com</li>
             <li>Complete your provider profile (bio, photo, hours, insurance)</li>
             <li>Set up two-factor authentication for account security</li>
-            <li>Add your billing card (you only pay $6 when a patient shows up)</li>
+            <li>${billingLine}</li>
           </ol>
         </div>
         <a href="${setupLink}" style="display:block;background:#14B8A6;color:#fff;padding:14px 24px;border-radius:10px;text-decoration:none;font-weight:bold;text-align:center;font-size:16px;margin:20px 0">

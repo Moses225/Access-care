@@ -1,4 +1,8 @@
-import { sendEmailVerification } from 'firebase/auth';
+import {
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  sendEmailVerification,
+} from 'firebase/auth';
 import { useState } from 'react';
 import { auth } from '../firebase';
 import { useAuth } from '../context/AuthContext';
@@ -6,6 +10,12 @@ import { useAuth } from '../context/AuthContext';
 // ─── MFA Enrollment Modal ──────────────────────────────────────────────────
 // Shown inside the dashboard when a provider hasn't set up 2FA yet.
 // Two-step: enter phone → enter SMS code → enrolled.
+//
+// Extra steps that may appear:
+//   reauth       — Firebase requires a recent login before MFA enrollment.
+//                  Prompts for password, reauthenticates, then retries.
+//   verify-email — Firebase requires email verification before MFA enrollment.
+//                  Shows "send confirmation email" flow.
 
 interface MFASetupProps {
   onClose: () => void;
@@ -14,14 +24,19 @@ interface MFASetupProps {
   required?: boolean;
 }
 
+type Step = 'phone' | 'reauth' | 'code' | 'loading' | 'done' | 'verify-email';
+
 export default function MFASetup({ onClose, onEnrolled, required = false }: MFASetupProps) {
   const { startMFAEnrollment, completeMFAEnrollment, cancelMFAEnrollment } = useAuth();
 
-  const [step,     setStep]     = useState<'phone' | 'code' | 'loading' | 'done' | 'verify-email'>('phone');
-  const [phone,    setPhone]    = useState('');
-  const [code,     setCode]     = useState('');
-  const [errorMsg, setErrorMsg] = useState('');
-  const [verifyEmailSent, setVerifyEmailSent] = useState(false);
+  const [step,             setStep]             = useState<Step>('phone');
+  const [phone,            setPhone]            = useState('');
+  const [code,             setCode]             = useState('');
+  const [password,         setPassword]         = useState('');
+  const [showPass,         setShowPass]         = useState(false);
+  const [reauthLoading,    setReauthLoading]    = useState(false);
+  const [errorMsg,         setErrorMsg]         = useState('');
+  const [verifyEmailSent,  setVerifyEmailSent]  = useState(false);
 
   const formatPhone = (val: string) => {
     const digits = val.replace(/\D/g, '').slice(0, 10);
@@ -30,11 +45,9 @@ export default function MFASetup({ onClose, onEnrolled, required = false }: MFAS
     return `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
   };
 
-  const e164 = (formatted: string) => {
-    const digits = formatted.replace(/\D/g, '');
-    return `+1${digits}`;
-  };
+  const e164 = (formatted: string) => `+1${formatted.replace(/\D/g, '')}`;
 
+  // ── Step 1a: Send SMS code ──────────────────────────────────────────────
   const handleSendCode = async () => {
     const digits = phone.replace(/\D/g, '');
     if (digits.length !== 10) {
@@ -47,11 +60,14 @@ export default function MFASetup({ onClose, onEnrolled, required = false }: MFAS
       await startMFAEnrollment(e164(phone));
       setStep('code');
     } catch (err: unknown) {
-      const code = (err as { code?: string })?.code || '';
-      if (code === 'auth/unverified-email') {
+      const errCode = (err as { code?: string })?.code || '';
+      if (errCode === 'auth/unverified-email') {
         // Firebase requires email verification before MFA enrollment.
-        // Show the verify-email step so the provider can get the link.
         setStep('verify-email');
+      } else if (errCode === 'auth/requires-recent-login') {
+        // Session is stale — Firebase requires a fresh login for sensitive operations.
+        // Show reauth step so the provider can re-enter their password without logging out.
+        setStep('reauth');
       } else {
         setErrorMsg(err instanceof Error ? err.message : 'Failed to send code. Try again.');
         setStep('phone');
@@ -59,6 +75,42 @@ export default function MFASetup({ onClose, onEnrolled, required = false }: MFAS
     }
   };
 
+  // ── Reauth: re-enter password, then retry enrollment ───────────────────
+  const handleReauth = async () => {
+    const user = auth.currentUser;
+    if (!user?.email) {
+      setErrorMsg('Could not identify your account. Please sign out and sign back in.');
+      return;
+    }
+    if (!password) {
+      setErrorMsg('Please enter your password.');
+      return;
+    }
+    setReauthLoading(true);
+    setErrorMsg('');
+    try {
+      const credential = EmailAuthProvider.credential(user.email, password);
+      await reauthenticateWithCredential(user, credential);
+      // Successfully reauthenticated — now retry the enrollment
+      setPassword('');
+      setStep('loading');
+      await startMFAEnrollment(e164(phone));
+      setStep('code');
+    } catch (err: unknown) {
+      const errCode = (err as { code?: string })?.code || '';
+      if (errCode === 'auth/wrong-password' || errCode === 'auth/invalid-credential') {
+        setErrorMsg('Incorrect password. Please try again.');
+      } else if (errCode === 'auth/too-many-requests') {
+        setErrorMsg('Too many attempts. Please wait a few minutes.');
+      } else {
+        setErrorMsg('Verification failed. Please sign out and sign back in.');
+      }
+    } finally {
+      setReauthLoading(false);
+    }
+  };
+
+  // ── Verify email step ──────────────────────────────────────────────────
   const handleSendVerificationEmail = async () => {
     try {
       const user = auth.currentUser;
@@ -69,6 +121,7 @@ export default function MFASetup({ onClose, onEnrolled, required = false }: MFAS
     }
   };
 
+  // ── Step 2: Verify SMS code ────────────────────────────────────────────
   const handleVerifyCode = async () => {
     if (code.length !== 6) return;
     setStep('loading');
@@ -115,17 +168,90 @@ export default function MFASetup({ onClose, onEnrolled, required = false }: MFAS
           </div>
         </div>
 
-        {/* Step: verify-email (shown when Firebase rejects MFA because email is unverified) */}
+        {/* ── Step: reauth ─────────────────────────────────────────────────────
+             Firebase requires a recent sign-in before allowing MFA enrollment.
+             This can happen when the session has been open for a while, or after
+             following an email verification link. The provider re-enters their
+             password here — no sign-out/sign-in loop required. */}
+        {step === 'reauth' && (
+          <div className="space-y-5">
+            <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 flex gap-3">
+              <span className="text-2xl mt-0.5">🔑</span>
+              <div>
+                <p className="text-amber-900 text-sm font-semibold mb-1">Confirm your password to continue</p>
+                <p className="text-amber-700 text-sm leading-relaxed">
+                  For security, please re-enter your password before adding
+                  phone verification to your account.
+                </p>
+              </div>
+            </div>
+
+            {errorMsg && (
+              <div className="bg-red-50 border border-red-100 text-red-600 text-sm px-4 py-3 rounded-lg">
+                {errorMsg}
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showPass ? 'text' : 'password'}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="Your current password"
+                  autoFocus
+                  className="w-full border border-slate-200 rounded-lg px-4 py-3 pr-16 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  onKeyDown={e => { if (e.key === 'Enter') handleReauth(); }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPass(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-medium transition-colors"
+                >
+                  {showPass ? 'Hide' : 'Show'}
+                </button>
+              </div>
+            </div>
+
+            <button
+              onClick={handleReauth}
+              disabled={reauthLoading || !password}
+              className="w-full bg-teal-500 hover:bg-teal-600 disabled:opacity-50 text-white font-semibold py-3 rounded-xl text-sm transition-colors"
+            >
+              {reauthLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Confirming…
+                </span>
+              ) : 'Confirm & continue →'}
+            </button>
+
+            <button
+              onClick={() => { setStep('phone'); setErrorMsg(''); setPassword(''); }}
+              className="w-full py-3 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:border-slate-300 transition-colors"
+            >
+              ← Back to phone number
+            </button>
+          </div>
+        )}
+
+        {/* ── Step: verify-email ───────────────────────────────────────────────
+             This step appears only if the provider account was created without
+             email verification. All new Morava accounts are pre-verified —
+             this is a safety net for legacy or manually created accounts. */}
         {step === 'verify-email' && (
           <div className="space-y-5">
             <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 flex gap-3">
-              <span className="text-amber-500 text-xl mt-0.5">✉️</span>
+              <span className="text-2xl mt-0.5">📬</span>
               <div>
-                <p className="text-amber-900 text-sm font-semibold mb-1">Email verification required</p>
+                <p className="text-amber-900 text-sm font-semibold mb-1">One more step — confirm your email</p>
                 <p className="text-amber-700 text-sm leading-relaxed">
-                  Firebase requires your email address to be verified before
-                  you can add phone 2FA. Click below to receive a verification
-                  link, then come back and try again.
+                  Your email address hasn't been confirmed yet. We need to
+                  verify it before adding phone authentication. Click below
+                  and we'll send a confirmation link to your inbox.
                 </p>
               </div>
             </div>
@@ -137,29 +263,38 @@ export default function MFASetup({ onClose, onEnrolled, required = false }: MFAS
             )}
 
             {verifyEmailSent ? (
-              <div className="bg-teal-50 border border-teal-100 text-teal-700 text-sm px-4 py-3 rounded-lg text-center">
-                ✅ Verification email sent — check your inbox, then reload this page.
+              <div className="bg-teal-50 border border-teal-100 text-teal-700 text-sm px-4 py-3 rounded-lg space-y-2">
+                <p className="font-semibold text-center">✅ Confirmation email sent</p>
+                <p className="text-xs text-center">
+                  Check your inbox and click the link. Once confirmed,
+                  come back here and click <strong>Back</strong> to retry.
+                </p>
+                <p className="text-xs text-teal-600 text-center">
+                  Can't find it? Check your spam folder or contact{' '}
+                  <a href="mailto:support@moravacare.com" className="underline">
+                    support@moravacare.com
+                  </a>
+                </p>
               </div>
             ) : (
               <button
                 onClick={handleSendVerificationEmail}
-                className="w-full py-3 rounded-xl text-white font-semibold text-sm"
-                style={{ background: '#14B8A6' }}
+                className="w-full py-3 rounded-xl text-white font-semibold text-sm bg-teal-500 hover:bg-teal-600 transition-colors"
               >
-                Send verification email
+                Send confirmation email
               </button>
             )}
 
             <button
               onClick={() => { setStep('phone'); setErrorMsg(''); }}
-              className="w-full py-3 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium"
+              className="w-full py-3 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:border-slate-300 transition-colors"
             >
               ← Back to phone number
             </button>
           </div>
         )}
 
-        {/* Step: phone */}
+        {/* ── Step: phone ──────────────────────────────────────────────────── */}
         {(step === 'phone' || (step === 'loading' && code === '')) && (
           <div className="space-y-5">
             <p className="text-slate-600 text-sm leading-relaxed">
@@ -219,7 +354,7 @@ export default function MFASetup({ onClose, onEnrolled, required = false }: MFAS
           </div>
         )}
 
-        {/* Step: code */}
+        {/* ── Step: code ───────────────────────────────────────────────────── */}
         {(step === 'code' || (step === 'loading' && code !== '')) && (
           <div className="space-y-5">
             <p className="text-slate-600 text-sm leading-relaxed">
@@ -273,7 +408,7 @@ export default function MFASetup({ onClose, onEnrolled, required = false }: MFAS
           </div>
         )}
 
-        {/* Step: done */}
+        {/* ── Step: done ───────────────────────────────────────────────────── */}
         {step === 'done' && (
           <div className="text-center py-4">
             <div className="text-5xl mb-4">✅</div>

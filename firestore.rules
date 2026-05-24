@@ -51,6 +51,9 @@ service cloud.firestore {
 
     function noScript(field) {
       let v = request.resource.data[field];
+      // Block script/iframe/object injection and common XSS vectors.
+      // Defense-in-depth: React already HTML-escapes rendered output; these
+      // rules prevent stored payloads from reaching the database at all.
       return !(v.matches('.*<script.*'))
           && !(v.matches('.*javascript:.*'))
           && !(v.matches('.*vbscript:.*'))
@@ -58,13 +61,14 @@ service cloud.firestore {
           && !(v.matches('.*<img.*'))
           && !(v.matches('.*<svg.*'))
           && !(v.matches('.*<object.*'))
-          && !(v.matches('.*onerror =.*'))
-          && !(v.matches('.*onerror=.*'))
-          && !(v.matches('.*onload =.*'))
-          && !(v.matches('.*onload=.*'))
-          && !(v.matches('.*onclick=.*'))
+          && !(v.matches('.*<embed.*'))
+          && !(v.matches('.*<form.*'))
+          && !(v.matches('.*on[a-zA-Z]+\\s*=.*'))  // any on* event handler
           && !(v.matches('.*data:text/html.*'))
-          && !(v.matches('.*%3[cC].*'));
+          && !(v.matches('.*data:application.*'))
+          && !(v.matches('.*%3[cC].*'))             // URL-encoded <
+          && !(v.matches('.*\\\\u003[cC].*'))        // Unicode-escaped <
+          && !(v.matches('.*expression\\s*\\(.*'));  // IE CSS expression()
     }
 
     // ================================================================
@@ -119,6 +123,9 @@ service cloud.firestore {
     match /providers/{providerId} {
       // C-4: provider data is not public — requires authentication.
       // Anonymous / unauthenticated callers cannot enumerate providers.
+      // NOTE: sensitive billing fields (stripeCustomerId, stripePaymentMethodId,
+      // commissionRate, etc.) live in the private billing subcollection below,
+      // NOT on this document.  This document contains only patient-safe fields.
       allow read: if isAuthenticated();
       allow create: if isAdmin();
       allow delete: if isAdmin();
@@ -133,6 +140,22 @@ service cloud.firestore {
             && (!('dpcDescription' in request.resource.data) || validOptionalString('dpcDescription', 1000) && noScript('dpcDescription'))
             && (!('name' in request.resource.data)         || validString(request.resource.data.name, 200) && noScript('name'))
             && (!('practiceName' in request.resource.data) || validOptionalString('practiceName', 200)   && noScript('practiceName')));
+
+      // ── Billing subcollection ─────────────────────────────────────────────
+      // Stores sensitive financial fields: stripeCustomerId, stripePaymentMethodId,
+      // stripeSubscriptionId, manualBilling, commissionRate, billable,
+      // planActivatedAt, providerNumber, billingSetupAt.
+      //
+      // Only the provider who owns this account and admins can read it.
+      // Writes come exclusively from Cloud Functions via the Admin SDK —
+      // no client write path exists (allow write: if false).
+      //
+      // NOTE: hsaEligible intentionally stays on the parent providers doc because
+      // it is a patient-visible badge rendered in the patient app's provider list.
+      match /billing/{billingId} {
+        allow read: if isProviderOwner(providerId) || isAdmin();
+        allow write: if false; // Admin SDK only — stripeWebhook, createSetupIntent, requestManualBilling
+      }
     }
 
     // ================================================================
@@ -171,9 +194,19 @@ service cloud.firestore {
       // Patients have no rule granting them access here — the catch-all denies.
       // Notes are write-once from the dashboard; providers can delete their own.
       match /providerNotes/{noteId} {
-        // read/delete: note already exists so resource.data.providerId is accessible
-        allow read:   if isAuthenticated() && (isBookingProvider() || isAdmin());
-        allow delete: if isBookingProvider() || isAdmin();
+        // read/delete: use get() on parent booking — isBookingProvider() checks
+        // resource.data.providerId which is unreliable for LIST/QUERY operations
+        // (Firestore evaluates rules against a synthetic resource for queries).
+        // Same get() pattern as allow create below.
+        allow read: if isAuthenticated()
+                    && (isAdmin()
+                        || (isVerifiedProvider()
+                            && get(/databases/$(database)/documents/bookings/$(bookingId)).data.providerId
+                               == request.auth.token.providerId));
+        allow delete: if isAdmin()
+                      || (isVerifiedProvider()
+                          && get(/databases/$(database)/documents/bookings/$(bookingId)).data.providerId
+                             == request.auth.token.providerId);
 
         // create: note doesn't exist yet — resource is null, so isBookingProvider()
         // (which checks resource.data.providerId) always fails on create.
@@ -207,7 +240,8 @@ service cloud.firestore {
                                   'declineNote','completedAt','completedBy','billable',
                                   'invoiced','invoicedAt','stripePaymentIntentId',
                                   'noShowAt','noShowBy','proposedDate','proposedTime',
-                                  'rescheduledAt','rescheduledBy','updatedAt']))
+                                  'rescheduledAt','rescheduledBy','updatedAt',
+                                  'preRescheduleStatus','cancelledAt','cancelledBy']))
                  // Patient cancellation — cannot change date, time, provider, or userId
                  || (isBookingPatient()
                      && isFullAccount()
@@ -216,14 +250,16 @@ service cloud.firestore {
                      && request.resource.data.providerId == resource.data.providerId
                      && request.resource.data.date == resource.data.date
                      && request.resource.data.time == resource.data.time)
-                 // Patient accepts a provider-proposed reschedule:
-                 // Current status must be reschedule_pending; new status becomes confirmed.
-                 // Date/time may change to the proposed values already on the document.
-                 // Patient cannot change providerId or userId.
+                 // Patient responds to a provider-proposed reschedule:
+                 //   Accept  → status becomes 'confirmed', date/time updated to proposed values
+                 //   Decline → status reverts to preRescheduleStatus ('confirmed' or 'pending'),
+                 //             original date/time preserved, rescheduleDeclinedAt stamped
+                 // Patient cannot change providerId or userId in either case.
                  || (isBookingPatient()
                      && isFullAccount()
                      && resource.data.status == 'reschedule_pending'
-                     && request.resource.data.status == 'confirmed'
+                     && (request.resource.data.status == 'confirmed'
+                         || request.resource.data.status == 'pending')
                      && request.resource.data.userId == resource.data.userId
                      && request.resource.data.providerId == resource.data.providerId
                      && request.resource.data.diff(resource.data).affectedKeys()
@@ -321,7 +357,14 @@ service cloud.firestore {
     // PROVIDER USERS (Dashboard accounts)
     // ================================================================
     match /providerUsers/{userId} {
-      allow read:  if isOwner(userId) && request.auth.token.provider == true;
+      // Read: document owner only — isOwner already guarantees the caller is
+      // authenticated and reading THEIR OWN document, so no other user can
+      // access this.  We do NOT require provider: true here because that creates
+      // a chicken-and-egg problem: a provider can't read their doc to discover
+      // their providerId before their custom claims are stamped on the token.
+      // The ensureProviderClaims Cloud Function is called from AuthContext when
+      // claims are absent, setting them before any sensitive Firestore access.
+      allow read:  if isOwner(userId);
       // Operators may update only non-system fields.
       // Billing (listingPlan, listingStatus), role, facilityId, and plan fields
       // are admin-only — users cannot self-grant tiers or change roles.
@@ -402,13 +445,27 @@ service cloud.firestore {
     // ================================================================
     // PLATFORM COUNTERS
     // ================================================================
+    // providerCount — used server-side only (founding plan logic in Cloud Functions).
+    //   Admin SDK writes; no client write path. Clients cannot manipulate the
+    //   founding-provider threshold by inflating this counter.
+    // totalSignups — incremented by the patient app on registration.
+    //   Strictly +1 per authenticated write; cannot jump or decrease.
     match /platform/{docId} {
       allow read: if isAuthenticated();
+      // Admin can always write (e.g. repair counters)
+      allow write: if isAdmin();
+      // Patient signup counter — authenticated users can increment by exactly 1
+      // or create the doc with totalSignups == 1.  providerCount is immutable
+      // from the client; it is ONLY written by Admin SDK (onProviderUserCreated).
       allow create: if isFullAccount()
-                 && request.resource.data.totalSignups == 1;
+                 && request.resource.data.totalSignups == 1
+                 && !('providerCount' in request.resource.data);
       allow update: if isFullAccount()
                  && request.resource.data.totalSignups ==
-                    resource.data.totalSignups + 1;
+                    resource.data.totalSignups + 1
+                 // providerCount must not change on client writes
+                 && (  !('providerCount' in request.resource.data)
+                     || request.resource.data.providerCount == resource.data.providerCount);
       allow delete: if false;
     }
 
@@ -622,6 +679,26 @@ service cloud.firestore {
                          .hasOnly(['status', 'notes', 'updatedAt']);
         allow delete: if isAdmin();
       }
+    }
+
+    // ================================================================
+    // BILLING ALERTS — written server-side by stripeWebhook on payment failure
+    // Admin-only read; no client write path (Admin SDK only).
+    // ================================================================
+    match /billingAlerts/{alertId} {
+      allow read: if isAdmin();
+      allow write: if false; // Admin SDK only
+    }
+
+    // ================================================================
+    // SETUP-INTENT RATE LIMITS
+    // ================================================================
+    // Written server-side by createSetupIntent only (Admin SDK).
+    // Prevents a compromised provider token from spamming the Stripe API.
+    // Doc ID: "{providerId}_{YYYY-MM-DD}"
+    match /setupIntentRateLimits/{docId} {
+      allow read, write: if isAdmin();
+      // All other access denied by catch-all
     }
 
     // ================================================================

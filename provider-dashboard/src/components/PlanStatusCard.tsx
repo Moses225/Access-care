@@ -5,10 +5,74 @@ interface Props {
   visitsThisMonth: number;
 }
 
+// DPC tier lookup — mirrors DPC_TIERS in Billing.tsx
+const DPC_TIER_INFO: Record<string, { label: string; price: string; color: string }> = {
+  founding: { label: "Founding",  price: "$25", color: "teal"   },
+  growth:   { label: "Growth",    price: "$49", color: "purple" },
+  pro:      { label: "Practice",  price: "$79", color: "slate"  },
+};
+
 export default function PlanStatusCard({ visitsThisMonth }: Props) {
   const navigate = useNavigate();
   const { providerProfile } = useAuth();
   const plan = providerProfile?.plan ?? "founding";
+  const isDPC = providerProfile?.practiceType === "dpc";
+
+  // ── DPC variant ─────────────────────────────────────────────────────────────
+  // DPC providers pay a flat monthly listing fee — no per-visit billing.
+  // Show tier + monthly fee; never show per-visit math or "Upgrade to Pro".
+  if (isDPC) {
+    const tier = DPC_TIER_INFO[plan] ?? DPC_TIER_INFO.founding;
+    const colorMap: Record<string, string> = {
+      teal:   "border-l-teal-500 text-teal-700 bg-teal-50",
+      purple: "border-l-purple-500 text-purple-700 bg-purple-50",
+      slate:  "border-l-slate-400 text-slate-600 bg-slate-50",
+    };
+    const badgeClass = colorMap[tier.color] ?? colorMap.teal;
+
+    return (
+      <div className="bg-white rounded-2xl border border-slate-200 border-l-4 border-l-purple-500 p-5 mb-8 flex flex-col sm:flex-row sm:items-center gap-4">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <span className={`text-xs font-bold px-3 py-1 rounded-full ${badgeClass}`}>
+              🏥 DPC {tier.label}
+            </span>
+            <span className="bg-purple-50 text-purple-600 text-xs font-medium px-2 py-0.5 rounded-full">
+              Direct Primary Care
+            </span>
+          </div>
+          <div className="text-xl font-bold text-slate-900">
+            {tier.price}{" "}
+            <span className="text-sm font-normal text-slate-400">
+              / month · listing fee
+            </span>
+          </div>
+          <div className="text-xs text-slate-400 mt-0.5">
+            Morava charges your practice a flat monthly fee — separate from membership fees you collect from patients.
+          </div>
+        </div>
+        <div className="flex gap-6">
+          <div>
+            <div className="text-xs text-slate-400 uppercase tracking-wide mb-0.5">
+              Members seen
+            </div>
+            <div className="text-2xl font-bold text-slate-900">
+              {visitsThisMonth}
+            </div>
+            <div className="text-xs text-purple-600">This month</div>
+          </div>
+        </div>
+        <button
+          onClick={() => navigate("/billing")}
+          className="text-xs font-semibold text-slate-500 hover:text-slate-700 border border-slate-200 hover:border-slate-300 px-3 py-2 rounded-lg transition-colors whitespace-nowrap"
+        >
+          Manage listing tier
+        </button>
+      </div>
+    );
+  }
+
+  // ── Regular (fee-for-service) variant ────────────────────────────────────────
   const rate = plan === "founding" ? 6 : plan === "standard" ? 10 : null;
   const breakeven = rate ? Math.ceil(99 / rate) : null;
   const pct = breakeven

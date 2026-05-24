@@ -1,8 +1,24 @@
-import { useState } from "react";
+import { collection, doc, onSnapshot } from "firebase/firestore";
+import { getFunctions, httpsCallable } from "firebase/functions";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { db } from "../firebase";
 import BillingSetup from "./BillingSetup";
 import NavBar from "../components/NavBar";
+
+interface SavedPaymentMethod {
+  id: string;
+  type: "card" | "us_bank_account";
+  last4?: string;
+  brand?: string;
+  expMonth?: number;
+  expYear?: number;
+  bankName?: string;
+  accountType?: string;
+  isDefault: boolean;
+  addedAt?: { toDate?: () => Date } | null;
+}
 
 const PLAN_FEATURES = {
   founding: [
@@ -18,6 +34,15 @@ const PLAN_FEATURES = {
     "📋 EHR-ready patient summary with every booking",
     "📧 Instant email alert on every new booking",
   ],
+  // DPC Growth tier (id: "growth" in Firestore)
+  growth: [
+    "🏥 'Direct Primary Care' badge on listing",
+    "🔝 Priority placement in DPC filter results",
+    "✓ 'Accepting New Members' badge on listing",
+    "📱 Telehealth indicator on your listing",
+    "📊 Analytics — views, clicks, membership requests",
+    "📧 Instant email on every new membership inquiry",
+  ],
   pro: [
     "⭐ Unlimited completed visits — flat $99/month",
     "🔍 Priority placement in patient search results",
@@ -27,6 +52,60 @@ const PLAN_FEATURES = {
     "📊 Analytics dashboard — first access when it launches",
   ],
 };
+
+// Regular provider tier comparison grid (non-DPC)
+const REGULAR_TIERS = [
+  {
+    id: "founding",
+    label: "Founding",
+    price: "$6",
+    period: "/ completed visit",
+    badge: "🏅 Founding rate",
+    highlight: true,
+    color: "teal",
+    features: [
+      "Rate locked for 2 years from activation",
+      "Only pay for attended appointments",
+      "No-shows & cancellations never charged",
+      "EHR-ready patient summary per booking",
+      "Instant email alert on every new booking",
+      "No monthly fees or subscription",
+    ],
+  },
+  {
+    id: "standard",
+    label: "Standard",
+    price: "$10",
+    period: "/ completed visit",
+    badge: null,
+    highlight: false,
+    color: "slate",
+    features: [
+      "Pay only for attended appointments",
+      "No-shows & cancellations never charged",
+      "EHR-ready patient summary per booking",
+      "Instant email alert on every new booking",
+      "No monthly fees or subscription",
+    ],
+  },
+  {
+    id: "pro",
+    label: "Pro",
+    price: "$99",
+    period: "/ month",
+    badge: "Coming soon",
+    highlight: false,
+    color: "purple",
+    features: [
+      "Unlimited completed visits — flat rate",
+      "Priority placement in patient search",
+      "Verified Pro badge on your profile",
+      "Extended profile with telehealth link",
+      "Analytics dashboard — early access",
+      "Dedicated support channel",
+    ],
+  },
+];
 
 // DPC tier definitions — maps to the existing plan field
 const DPC_TIERS = [
@@ -46,7 +125,7 @@ const DPC_TIERS = [
     ],
   },
   {
-    id: "standard",
+    id: "growth",
     label: "Growth",
     price: "$49",
     period: "/ month",
@@ -78,19 +157,92 @@ const DPC_TIERS = [
   },
 ];
 
+// ── Card brand → display label ─────────────────────────────────────────────
+const BRAND_LABELS: Record<string, string> = {
+  visa: "Visa", mastercard: "Mastercard", amex: "Amex",
+  discover: "Discover", jcb: "JCB", diners: "Diners",
+  unionpay: "UnionPay", unknown: "Card",
+};
+const brandLabel = (b?: string) => BRAND_LABELS[b ?? "unknown"] ?? "Card";
+
 export default function Billing() {
   const navigate = useNavigate();
-  const { providerProfile } = useAuth();
+  const { providerProfile, refreshProfile } = useAuth();
   const [showBillingSetup, setShowBillingSetup] = useState(false);
   const [showProInfo, setShowProInfo] = useState(false);
 
+  // Live payment methods from the private billing subcollection
+  const [paymentMethods, setPaymentMethods] = useState<SavedPaymentMethod[]>([]);
+  const [billingLoading, setBillingLoading] = useState(true);
+  const [defaultingId, setDefaultingId] = useState<string | null>(null);
+  const [removingId, setRemovingId]     = useState<string | null>(null);
+  const [pmError, setPmError]           = useState("");
+
   const plan = providerProfile?.plan ?? "founding";
   const isDPC = providerProfile?.practiceType === "dpc";
-  const hasPaymentMethod = !!(
-    providerProfile?.stripeCustomerId ||
-    providerProfile?.stripePaymentMethodId ||
-    providerProfile?.manualBilling
-  );
+  const hasPaymentMethod = paymentMethods.length > 0 || !!providerProfile?.manualBilling;
+
+  // Subscribe to the billing subcollection for live payment method state
+  useEffect(() => {
+    if (!providerProfile?.providerId) {
+      setBillingLoading(false);
+      return;
+    }
+    const billingDoc = doc(
+      collection(doc(db, "providers", providerProfile.providerId), "billing"),
+      "main",
+    );
+    const unsub = onSnapshot(
+      billingDoc,
+      (snap) => {
+        const data = snap.data();
+        const methods = (data?.paymentMethods as SavedPaymentMethod[]) || [];
+        setPaymentMethods(methods);
+        setBillingLoading(false);
+      },
+      (err) => {
+        console.warn("Billing.tsx: billing snapshot error:", err.code);
+        setBillingLoading(false);
+      },
+    );
+    return unsub;
+  }, [providerProfile?.providerId]);
+
+  const handleSetDefault = async (pmId: string) => {
+    if (!providerProfile?.providerId) return;
+    setDefaultingId(pmId);
+    setPmError("");
+    try {
+      const fns = getFunctions();
+      const setDefault = httpsCallable<{ providerId: string; paymentMethodId: string }, { ok: boolean }>(
+        fns, "setDefaultPaymentMethod",
+      );
+      await setDefault({ providerId: providerProfile.providerId, paymentMethodId: pmId });
+      // Snapshot will update the list automatically
+    } catch (err: unknown) {
+      setPmError(err instanceof Error ? err.message : "Failed to update default.");
+    } finally {
+      setDefaultingId(null);
+    }
+  };
+
+  const handleRemove = async (pmId: string) => {
+    if (!providerProfile?.providerId) return;
+    setRemovingId(pmId);
+    setPmError("");
+    try {
+      const fns = getFunctions();
+      const remove = httpsCallable<{ providerId: string; paymentMethodId: string }, { ok: boolean }>(
+        fns, "removePaymentMethod",
+      );
+      await remove({ providerId: providerProfile.providerId, paymentMethodId: pmId });
+      await refreshProfile();
+    } catch (err: unknown) {
+      setPmError(err instanceof Error ? err.message : "Failed to remove method.");
+    } finally {
+      setRemovingId(null);
+    }
+  };
 
   const features =
     PLAN_FEATURES[plan as keyof typeof PLAN_FEATURES] ??
@@ -206,15 +358,23 @@ export default function Billing() {
                         </div>
                       ))}
                     </div>
-                    {!isActive && tier.id !== "pro" && (
+                    {!isActive && (
                       <button
                         onClick={() => {
-                          const subject = encodeURIComponent(`DPC tier upgrade — ${tier.label}`);
+                          const subject = encodeURIComponent(
+                            tier.id === "pro"
+                              ? `DPC Practice tier — early access request`
+                              : `DPC tier upgrade — ${tier.label}`
+                          );
                           window.open(`mailto:support@moravacare.com?subject=${subject}`, "_blank");
                         }}
-                        className="mt-4 w-full bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 rounded-lg transition-colors"
+                        className={`mt-4 w-full text-xs font-bold py-2 rounded-lg transition-colors ${
+                          tier.id === "pro"
+                            ? "bg-slate-200 hover:bg-slate-300 text-slate-700"
+                            : "bg-purple-600 hover:bg-purple-700 text-white"
+                        }`}
                       >
-                        Upgrade to {tier.label}
+                        {tier.id === "pro" ? "Request early access" : `Upgrade to ${tier.label}`}
                       </button>
                     )}
                   </div>
@@ -230,6 +390,93 @@ export default function Billing() {
               <p>• Morava charges you a flat monthly listing fee based on your tier above.</p>
               <p>• To change tiers or discuss billing, email <a href="mailto:support@moravacare.com" className="underline">support@moravacare.com</a>.</p>
             </div>
+          </div>
+        )}
+
+        {/* ── Regular provider tier comparison grid (non-DPC only) ──────────── */}
+        {!isDPC && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-5">
+              <span className="text-xl">💳</span>
+              <h2 className="text-lg font-semibold text-slate-900">Plan Comparison</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              {REGULAR_TIERS.map((tier) => {
+                const isActive = tier.id === plan;
+                const borderClass = isActive
+                  ? tier.color === "teal" ? "border-teal-500 bg-teal-50"
+                  : tier.color === "purple" ? "border-purple-500 bg-purple-50"
+                  : "border-slate-400 bg-slate-50"
+                  : "border-slate-200 bg-white";
+                const priceClass = isActive
+                  ? tier.color === "teal" ? "text-teal-700"
+                  : tier.color === "purple" ? "text-purple-700"
+                  : "text-slate-700"
+                  : "text-slate-500";
+                const isCurrent = isActive;
+                const isLocked = tier.id === "founding" && plan === "founding";
+                return (
+                  <div
+                    key={tier.id}
+                    className={`rounded-2xl border-2 p-5 transition-all ${borderClass} ${tier.id === "pro" ? "opacity-70" : ""}`}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="font-bold text-slate-900 text-base">{tier.label}</span>
+                      {isCurrent ? (
+                        <span className="text-xs bg-white text-slate-700 border border-slate-200 font-semibold px-2 py-0.5 rounded-full">✓ Your plan</span>
+                      ) : tier.badge ? (
+                        <span className="text-xs bg-slate-100 text-slate-500 font-medium px-2 py-0.5 rounded-full">{tier.badge}</span>
+                      ) : null}
+                    </div>
+                    <div className="mb-4">
+                      <span className={`text-2xl font-extrabold ${priceClass}`}>{tier.price}</span>
+                      <span className="text-slate-400 text-sm ml-1">{tier.period}</span>
+                    </div>
+                    <div className="space-y-1.5 mb-4">
+                      {tier.features.map((f) => (
+                        <div key={f} className="flex items-start gap-1.5 text-xs text-slate-600">
+                          <span className="flex-shrink-0 mt-0.5 text-teal-500">✓</span>
+                          <span>{f}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {!isCurrent && tier.id !== "pro" && !isLocked && (
+                      <button
+                        onClick={() => {
+                          window.open(
+                            `mailto:support@moravacare.com?subject=${encodeURIComponent(`Plan change request — ${tier.label}`)}`,
+                            "_blank",
+                          );
+                        }}
+                        className="w-full text-xs font-bold py-2 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 transition-colors"
+                      >
+                        Contact us to switch
+                      </button>
+                    )}
+                    {tier.id === "pro" && !isCurrent && (
+                      <button
+                        onClick={() => {
+                          window.open(
+                            "mailto:support@moravacare.com?subject=Pro%20upgrade%20request",
+                            "_blank",
+                          );
+                        }}
+                        className="w-full text-xs font-bold py-2 rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-700 transition-colors"
+                      >
+                        Request early access
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-xs text-slate-400 text-center">
+              To change plans, email{" "}
+              <a href="mailto:support@moravacare.com" className="text-teal-600 hover:text-teal-800 underline">
+                support@moravacare.com
+              </a>
+              {" "}— we'll confirm and activate within 1 business day.
+            </p>
           </div>
         )}
 
@@ -249,7 +496,9 @@ export default function Billing() {
                           ? "Founding Provider"
                           : plan === "pro"
                             ? "Pro"
-                            : "Standard"}
+                            : plan === "growth"
+                              ? "Growth"
+                              : "Standard"}
                     </span>
                     {plan === "founding" && (
                       <span className="bg-teal-50 text-teal-700 text-xs font-bold px-2 py-0.5 rounded-full">
@@ -297,7 +546,7 @@ export default function Billing() {
                 </div>
               </div>
 
-              {plan !== "pro" && (
+              {plan !== "pro" && !isDPC && (
                 <div className="border-t border-slate-100 pt-4 mt-4">
                   <div className="bg-teal-50 rounded-xl p-4 flex items-center justify-between gap-4">
                     <div>
@@ -332,45 +581,49 @@ export default function Billing() {
             </div>
 
             <div className="bg-white rounded-2xl border border-slate-200 p-6">
-              <div className="text-xs text-slate-400 uppercase tracking-wide mb-4">
-                Payment method
-              </div>
-              {hasPaymentMethod ? (
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-7 bg-slate-100 rounded border border-slate-200 flex items-center justify-center text-xs font-bold text-slate-500">
-                      CARD
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium text-slate-700">
-                        Payment method on file
-                      </div>
-                      <div className="text-xs text-slate-400">
-                        Billed on the 1st of each month for completed visits
-                      </div>
-                    </div>
-                  </div>
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-xs text-slate-400 uppercase tracking-wide">
+                  Payment methods
+                </div>
+                {hasPaymentMethod && (
                   <button
                     onClick={() => setShowBillingSetup(true)}
-                    className="text-xs text-teal-600 hover:text-teal-800 font-medium"
+                    className="text-xs font-bold text-teal-600 hover:text-teal-800 flex items-center gap-1"
                   >
-                    Update
+                    + Add method
                   </button>
+                )}
+              </div>
+
+              {pmError && (
+                <div className="mb-3 bg-red-50 border border-red-100 text-red-600 text-xs px-3 py-2 rounded-lg">
+                  {pmError}
                 </div>
-              ) : (
+              )}
+
+              {providerProfile?.manualBilling ? (
+                <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-100 rounded-xl">
+                  <span className="text-xl">🏦</span>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-blue-800">Manual billing active</div>
+                    <div className="text-xs text-blue-600">Invoiced by check or ACH — Morava team handles billing</div>
+                  </div>
+                </div>
+              ) : billingLoading ? (
+                <div className="flex justify-center py-6">
+                  <div className="w-5 h-5 border-2 border-teal-400 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : paymentMethods.length === 0 ? (
                 <div>
                   <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3 mb-4">
-                    <span className="text-amber-500 text-lg flex-shrink-0">
-                      💳
-                    </span>
+                    <span className="text-amber-500 text-lg flex-shrink-0">⚠️</span>
                     <div>
                       <div className="text-sm font-semibold text-amber-800 mb-1">
                         No payment method on file
                       </div>
                       <div className="text-xs text-amber-700">
-                        Add a card before your first completed visit is billed.
-                        You won't be charged until a patient attends an
-                        appointment.
+                        Add a card or bank account. You won't be charged
+                        until a patient attends an appointment.
                       </div>
                     </div>
                   </div>
@@ -380,6 +633,78 @@ export default function Billing() {
                   >
                     Add payment method
                   </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {paymentMethods.map((pm) => {
+                    const isCard = pm.type === "card";
+                    const label  = isCard
+                      ? `${brandLabel(pm.brand)} ···· ${pm.last4 ?? "????"}`
+                      : `${pm.bankName ?? "Bank"} ···· ${pm.last4 ?? "????"}`;
+                    const sub = isCard
+                      ? pm.expMonth && pm.expYear
+                        ? `Expires ${pm.expMonth}/${String(pm.expYear).slice(-2)}`
+                        : "Credit / debit card"
+                      : pm.accountType
+                        ? `${pm.accountType.charAt(0).toUpperCase() + pm.accountType.slice(1)} account · ACH`
+                        : "Bank account · ACH";
+                    const isRemoving   = removingId  === pm.id;
+                    const isDefaulting = defaultingId === pm.id;
+
+                    return (
+                      <div
+                        key={pm.id}
+                        className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${
+                          pm.isDefault
+                            ? "border-teal-300 bg-teal-50"
+                            : "border-slate-200 bg-white"
+                        }`}
+                      >
+                        {/* Icon */}
+                        <div className={`w-10 h-7 rounded border flex items-center justify-center text-base flex-shrink-0 ${
+                          pm.isDefault ? "border-teal-200 bg-white" : "border-slate-200 bg-slate-50"
+                        }`}>
+                          {isCard ? "💳" : "🏦"}
+                        </div>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-semibold text-slate-800 truncate">{label}</div>
+                          <div className="text-xs text-slate-400">{sub}</div>
+                        </div>
+
+                        {/* Default badge / set-default button */}
+                        {pm.isDefault ? (
+                          <span className="text-xs bg-teal-600 text-white font-bold px-2 py-0.5 rounded-full flex-shrink-0">
+                            ✓ Default
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handleSetDefault(pm.id)}
+                            disabled={isDefaulting || !!removingId}
+                            className="text-xs text-slate-400 hover:text-teal-600 font-medium transition-colors disabled:opacity-40 flex-shrink-0"
+                          >
+                            {isDefaulting ? "…" : "Set default"}
+                          </button>
+                        )}
+
+                        {/* Remove button — only show if >1 method or ask confirmation */}
+                        <button
+                          onClick={() => handleRemove(pm.id)}
+                          disabled={isRemoving || !!defaultingId}
+                          className="text-xs text-slate-300 hover:text-red-500 font-medium transition-colors disabled:opacity-40 flex-shrink-0"
+                          title="Remove this payment method"
+                        >
+                          {isRemoving ? "…" : "Remove"}
+                        </button>
+                      </div>
+                    );
+                  })}
+
+                  <p className="text-xs text-slate-400 pt-1">
+                    The <strong>default</strong> method is charged on the 1st of each month.
+                    You can add multiple methods and switch anytime.
+                  </p>
                 </div>
               )}
             </div>
@@ -454,14 +779,44 @@ export default function Billing() {
         </div>
       </div>
 
-      {showBillingSetup && providerProfile && (
-        <BillingSetup
-          providerId={providerProfile.providerId}
-          providerName={providerProfile.name}
-          isFoundingProvider={plan === "founding"}
-          onClose={() => setShowBillingSetup(false)}
-          onSuccess={() => setShowBillingSetup(false)}
-        />
+      {showBillingSetup && (
+        providerProfile?.providerId ? (
+          <BillingSetup
+            providerId={providerProfile.providerId}
+            providerName={providerProfile.name}
+            isFoundingProvider={plan === "founding"}
+            isDPC={isDPC}
+            dpcPlan={plan}
+            onClose={() => setShowBillingSetup(false)}
+            onSuccess={() => {
+              setShowBillingSetup(false);
+              refreshProfile();
+            }}
+          />
+        ) : (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+            <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl text-center">
+              <div className="text-4xl mb-4">⚙️</div>
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Account setup incomplete</h3>
+              <p className="text-slate-500 text-sm mb-4 leading-relaxed">
+                Your provider account hasn't been fully linked yet. Contact us
+                to complete your setup before adding a payment method.
+              </p>
+              <p className="text-xs text-slate-400 mb-5">
+                <a href="mailto:support@moravacare.com" className="text-teal-600 underline">
+                  support@moravacare.com
+                </a>
+                {" "}· (855) 812-6996
+              </p>
+              <button
+                onClick={() => setShowBillingSetup(false)}
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-6 py-2.5 rounded-xl text-sm transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )
       )}
     </div>
   );

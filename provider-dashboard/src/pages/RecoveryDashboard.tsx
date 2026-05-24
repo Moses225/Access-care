@@ -76,6 +76,25 @@ export default function RecoveryDashboard() {
   const listingPlan = providerProfile?.listingPlan || "free";
   const isFreePlan  = listingPlan === "free";
 
+  // Billing countdown — only shown when on a paid plan and no card on file.
+  // Free-tier facilities: no payment ever required, no banner shown.
+  const hasPaymentMethod = !!(
+    providerProfile?.stripeCustomerId ||
+    providerProfile?.stripePaymentMethodId ||
+    providerProfile?.manualBilling
+  );
+  const recoveryBillingDaysRemaining = (() => {
+    if (isFreePlan) return null; // free tier — no payment needed
+    const raw = providerProfile?.createdAt as any;
+    if (!raw) return 0;
+    const ms = typeof raw?.toDate === "function"
+      ? raw.toDate().getTime()
+      : new Date(raw).getTime();
+    if (isNaN(ms)) return 0;
+    return Math.max(0, 7 - Math.floor((Date.now() - ms) / 86_400_000));
+  })();
+  const showRecoveryBillingBanner = !isFreePlan && !hasPaymentMethod;
+
   const [facility, setFacility]             = useState<FacilityData | null>(null);
   const [loading, setLoading]               = useState(true);
   const [saving, setSaving]                 = useState(false);
@@ -261,7 +280,7 @@ export default function RecoveryDashboard() {
       <NavBar />
 
       {/* ── Pending intake banner — shown immediately, above the fold ────────── */}
-      {pendingCount > 0 && !isFreePlan && (
+      {pendingCount > 0 && (
         <div className="bg-amber-500 text-white px-4 py-3">
           <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
@@ -280,6 +299,48 @@ export default function RecoveryDashboard() {
             >
               Review now ↓
             </a>
+          </div>
+        </div>
+      )}
+
+      {/* ── Billing setup banner — paid plans only, no payment method on file ─── */}
+      {showRecoveryBillingBanner && (
+        <div className={`px-4 py-3 border-b ${
+          recoveryBillingDaysRemaining! > 0
+            ? "bg-amber-50 border-amber-200"
+            : "bg-red-50 border-red-300"
+        }`}>
+          <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="text-xl flex-shrink-0">
+                {recoveryBillingDaysRemaining! > 0 ? "⏰" : "🚨"}
+              </span>
+              <div>
+                <p className={`text-sm font-semibold ${
+                  recoveryBillingDaysRemaining! > 0 ? "text-amber-800" : "text-red-800"
+                }`}>
+                  {recoveryBillingDaysRemaining! > 0
+                    ? `${recoveryBillingDaysRemaining} day${recoveryBillingDaysRemaining !== 1 ? "s" : ""} left — add a payment method`
+                    : "Action required — add a payment method to stay active"}
+                </p>
+                <p className={`text-xs mt-0.5 ${
+                  recoveryBillingDaysRemaining! > 0 ? "text-amber-700" : "text-red-700"
+                }`}>
+                  Your {listingPlan === "growth" ? "Growth" : "Standard"} listing
+                  is billed monthly. Add a card to keep your facility visible to those in need.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate("/billing")}
+              className={`flex-shrink-0 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
+                recoveryBillingDaysRemaining! > 0
+                  ? "bg-amber-600 hover:bg-amber-700"
+                  : "bg-red-600 hover:bg-red-700"
+              }`}
+            >
+              Set up now
+            </button>
           </div>
         </div>
       )}

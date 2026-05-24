@@ -49,6 +49,7 @@ interface Booking {
   billable?: boolean;
   proposedDate?: string;
   proposedTime?: string;
+  preRescheduleStatus?: string;
   patientIntakeSummary?: {
     medications?: string | string[];
     allergies?: string | string[];
@@ -416,7 +417,7 @@ function formatDateLong(dateStr: string) {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { user, providerProfile, logout, isMFAEnrolled } = useAuth();
+  const { user, providerProfile, profileLoading, logout, isMFAEnrolled, refreshProfile } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"upcoming" | "all" | "past">("upcoming");
@@ -532,34 +533,74 @@ export default function Dashboard() {
     }
   };
 
+  // If profile loaded but providerId is missing the account isn't fully set up yet
+  const accountIncomplete = providerProfile !== null && !providerProfile.providerId;
+
   useEffect(() => {
-    if (!providerProfile?.providerId) return;
+    // Profile finished loading but no valid provider account — stop spinner now.
+    // Without this guard, providerProfile === null causes loading to spin forever
+    // because the onSnapshot block is never reached (providerProfile?.providerId is undefined).
+    if (!profileLoading && (providerProfile === null || !providerProfile.providerId)) {
+      setLoading(false);
+      return;
+    }
+    if (!providerProfile?.providerId) return; // profile still in-flight
     const q = query(
       collection(db, "bookings"),
       where("providerId", "==", providerProfile.providerId),
     );
-    const unsub = onSnapshot(q, (snap) => {
-      const list: Booking[] = snap.docs.map((d) => ({
-        id: d.id,
-        ...(d.data() as Omit<Booking, "id">),
-      }));
-      list.sort((a, b) => {
-        if (a.status === "pending" && b.status !== "pending") return -1;
-        if (a.status !== "pending" && b.status === "pending") return 1;
-        return (a.date + a.time).localeCompare(b.date + b.time);
-      });
-      setBookings(list);
-      setLoading(false);
-    });
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const list: Booking[] = snap.docs.map((d) => ({
+          id: d.id,
+          ...(d.data() as Omit<Booking, "id">),
+        }));
+        list.sort((a, b) => {
+          if (a.status === "pending" && b.status !== "pending") return -1;
+          if (a.status !== "pending" && b.status === "pending") return 1;
+          return (a.date + a.time).localeCompare(b.date + b.time);
+        });
+        setBookings(list);
+        setLoading(false);
+      },
+      (err) => {
+        // Permission-denied errors here usually mean the auth token doesn't yet
+        // contain the provider custom claims (token refresh is async). The page
+        // will re-query automatically when providerProfile reloads, but we clear
+        // the loading state so the UI doesn't spin forever.
+        console.error("Bookings query error:", err.code, err.message);
+        setLoading(false);
+      },
+    );
     return unsub;
-  }, [providerProfile?.providerId]);
+  }, [providerProfile?.providerId, profileLoading]);
 
   const today = new Date().toISOString().split("T")[0];
+  // stripeCustomerId = Stripe customer record exists, NOT a saved card.
+  // Card is confirmed only when the webhook writes stripePaymentMethodId.
   const hasStripe = !!(
-    providerProfile?.stripeCustomerId ||
     providerProfile?.stripePaymentMethodId ||
     providerProfile?.manualBilling
   );
+
+  // Billing countdown — always show when no payment method is on file.
+  // Days 1-7: amber countdown banner (dismissible), so they know exactly how
+  // long they have. Day 8+: red urgent banner that cannot be dismissed.
+  const billingDaysRemaining = (() => {
+    const raw = providerProfile?.createdAt as any;
+    if (!raw) return 0; // no timestamp = old account, overdue
+    const ms = typeof raw?.toDate === "function"
+      ? raw.toDate().getTime()
+      : new Date(raw).getTime();
+    if (isNaN(ms)) return 0;
+    return Math.max(0, 7 - Math.floor((Date.now() - ms) / 86_400_000));
+  })();
+  // Only show the billing warning when a real provider account is fully loaded.
+  // If providerProfile is null (account not in Firestore) or providerId is
+  // empty (account incomplete), clicking "Set up now" would silently do nothing
+  // because the modal guard requires providerProfile to be truthy.
+  const showBillingWarning = !hasStripe && !!providerProfile?.providerId;
 
   const filtered = bookings.filter((b) => {
     if (filter === "upcoming")
@@ -675,6 +716,9 @@ export default function Dashboard() {
     try {
       await updateDoc(doc(db, "bookings", rescheduleId), {
         status: "reschedule_pending",
+        // Save current status so patient decline can revert correctly:
+        // pending → patient declines → reverts to pending (not confirmed)
+        preRescheduleStatus: booking.status,
         proposedDate: rescheduleDate,
         proposedTime: rescheduleTime,
         rescheduledAt: serverTimestamp(),
@@ -835,6 +879,30 @@ export default function Dashboard() {
 
       <NavBar />
 
+      {/* ── Prominent pending appointment banner — full-width, above the fold ── */}
+      {!loading && pendingCount > 0 && (
+        <div className="bg-amber-500 text-white px-6 py-3">
+          <div className="max-w-5xl mx-auto flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="flex-shrink-0 w-8 h-8 bg-white/25 rounded-full flex items-center justify-center font-bold text-sm">
+                {pendingCount}
+              </span>
+              <p className="text-sm font-semibold leading-tight">
+                {pendingCount === 1
+                  ? "1 new appointment request is waiting for your confirmation"
+                  : `${pendingCount} new appointment requests are waiting for your confirmation`}
+              </p>
+            </div>
+            <button
+              onClick={() => setFilter("upcoming")}
+              className="flex-shrink-0 bg-white text-amber-600 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-amber-50 transition-colors whitespace-nowrap"
+            >
+              Review now ↓
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-5xl mx-auto px-6 py-8">
         {/* ── 2FA setup banner ────────────────────────────────────────────── */}
         {!isMFAEnrolled && !mfaBannerDismissed && (
@@ -866,34 +934,73 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ── Billing setup banner ────────────────────────────────────────── */}
-        {!hasStripe && showBillingBanner && (
-          <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-            <span className="text-amber-500 text-xl flex-shrink-0">💳</span>
+        {/* ── Billing setup banner ─────────────────────────────────────────
+             Always visible when no payment method on file.
+             Days 1–7: amber countdown, dismissible.
+             Day 8+:   red urgent, NOT dismissible.
+             DPC and regular providers get matching but type-specific copy. */}
+        {showBillingWarning && showBillingBanner && (
+          <div className={`mb-4 border rounded-xl p-4 flex items-start gap-3 ${
+            billingDaysRemaining > 0
+              ? "bg-amber-50 border-amber-200"
+              : "bg-red-50 border-red-300"
+          }`}>
+            <span className={`text-xl flex-shrink-0 ${
+              billingDaysRemaining > 0 ? "text-amber-500" : "text-red-500"
+            }`}>
+              {billingDaysRemaining > 0 ? "⏰" : "🚨"}
+            </span>
             <div className="flex-1">
-              <div className="font-semibold text-amber-800 text-sm mb-1">
-                Set up billing to stay active on Morava
+              <div className={`font-semibold text-sm mb-1 ${
+                billingDaysRemaining > 0 ? "text-amber-800" : "text-red-800"
+              }`}>
+                {billingDaysRemaining > 0
+                  ? `${billingDaysRemaining} day${billingDaysRemaining !== 1 ? "s" : ""} left — add a payment method`
+                  : "Action required — add a payment method to stay active"}
               </div>
-              <div className="text-amber-700 text-xs">
-                As a Founding Provider, your rate is locked at{" "}
-                <strong>$6 per completed visit</strong> — for 2 years. Standard
-                rate is $10/visit. You only pay when a patient shows up. Add a
-                card on file before billing begins.
+              <div className={`text-xs ${
+                billingDaysRemaining > 0 ? "text-amber-700" : "text-red-700"
+              }`}>
+                {isDPCProvider ? (
+                  <>
+                    Your DPC listing is billed a flat monthly fee based on your
+                    tier. Add a card so your listing stays visible to patients
+                    searching for direct primary care.
+                  </>
+                ) : providerProfile?.plan === "founding" ? (
+                  <>
+                    Your Founding rate is locked at{" "}
+                    <strong>$6 per completed visit</strong> for 2 years.
+                    Add a card before your first completed visit is billed.
+                  </>
+                ) : (
+                  <>
+                    You pay <strong>$10 per completed visit</strong>. Add a card
+                    before your first completed visit is billed.
+                  </>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <button
                 onClick={() => setShowBillingModal(true)}
-                className="text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg transition-colors"
+                className={`text-xs font-bold text-white px-3 py-1.5 rounded-lg transition-colors ${
+                  billingDaysRemaining > 0
+                    ? "bg-amber-600 hover:bg-amber-700"
+                    : "bg-red-600 hover:bg-red-700"
+                }`}
               >
                 Set up now
               </button>
-              <button
-                onClick={() => setShowBillingBanner(false)}
-                className="text-amber-400 hover:text-amber-600 text-lg"
-              >
-                ✕
-              </button>
+              {/* Only dismissible during the grace window */}
+              {billingDaysRemaining > 0 && (
+                <button
+                  onClick={() => setShowBillingBanner(false)}
+                  className="text-amber-400 hover:text-amber-600 text-lg"
+                >
+                  ✕
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -1024,7 +1131,19 @@ export default function Dashboard() {
         </div>
 
         {/* ── Bookings list ────────────────────────────────────────────────── */}
-        {loading ? (
+        {accountIncomplete ? (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-10 text-center">
+            <div className="text-5xl mb-4">⚙️</div>
+            <h3 className="font-semibold text-xl text-amber-900 mb-2">Account setup in progress</h3>
+            <p className="text-amber-700 text-sm max-w-sm mx-auto">
+              Your provider profile hasn't been fully linked yet. Contact{" "}
+              <a href="mailto:support@moravacare.com" className="underline font-medium">
+                support@moravacare.com
+              </a>{" "}
+              and we'll complete your setup within one business day.
+            </p>
+          </div>
+        ) : loading ? (
           <div className="flex items-center justify-center py-24">
             <div className="w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
           </div>
@@ -1112,7 +1231,7 @@ export default function Dashboard() {
                       </div>
                     )}
 
-                    {/* Reschedule proposal */}
+                    {/* Reschedule proposal — awaiting patient response */}
                     {booking.status === "reschedule_pending" &&
                       booking.proposedDate && (
                         <div className="mt-2 text-xs bg-purple-50 text-purple-700 px-3 py-2 rounded-lg border border-purple-100">
@@ -1120,10 +1239,11 @@ export default function Dashboard() {
                           {formatDateLong(booking.proposedDate)} at{" "}
                           {booking.proposedTime}
                           <span className="text-purple-400 ml-1">
-                            — awaiting patient approval
+                            — awaiting patient response
                           </span>
                         </div>
                       )}
+
 
                     {/* Patient health summary */}
                     {booking.patientIntakeSummary ? (
@@ -1495,20 +1615,48 @@ export default function Dashboard() {
       )}
 
       {/* ── Billing setup modal ────────────────────────────────────────────── */}
-      {showBillingModal && providerProfile && (
-        <BillingSetup
-          providerId={providerProfile.providerId}
-          providerName={providerProfile.name}
-          isFoundingProvider={
-            providerProfile?.plan !== "standard" &&
-            providerProfile?.plan !== "pro"
-          }
-          onClose={() => setShowBillingModal(false)}
-          onSuccess={() => {
-            setShowBillingModal(false);
-            setShowBillingBanner(false);
-          }}
-        />
+      {showBillingModal && (
+        providerProfile?.providerId ? (
+          <BillingSetup
+            providerId={providerProfile.providerId}
+            providerName={providerProfile.name}
+            isFoundingProvider={providerProfile?.plan === "founding"}
+            isDPC={isDPCProvider}
+            dpcPlan={providerProfile?.plan}
+            onClose={() => setShowBillingModal(false)}
+            onSuccess={() => {
+              setShowBillingModal(false);
+              setShowBillingBanner(false);
+              refreshProfile();
+            }}
+          />
+        ) : (
+          // Fallback: account not fully provisioned
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+            <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl text-center">
+              <div className="text-4xl mb-4">⚙️</div>
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Account setup incomplete</h3>
+              <p className="text-slate-500 text-sm mb-4 leading-relaxed">
+                Your provider account hasn't been fully linked yet. Billing setup
+                will be available once the Morava team activates your account —
+                usually within 1 business day.
+              </p>
+              <p className="text-xs text-slate-400 mb-5">
+                Email{" "}
+                <a href="mailto:support@moravacare.com" className="text-teal-600 underline">
+                  support@moravacare.com
+                </a>
+                {" "}to complete setup.
+              </p>
+              <button
+                onClick={() => setShowBillingModal(false)}
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-6 py-2.5 rounded-xl text-sm transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )
       )}
       {/* ── 2FA Setup Modal ──────────────────────────────────────────────── */}
       {showMFASetup && (

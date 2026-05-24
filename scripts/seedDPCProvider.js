@@ -98,12 +98,12 @@ const providerDoc = {
   ],
 
   // ── Plan / billing metadata (admin-managed) ───────────────────────────────
-  plan:                 "growth",
+  plan:                 "founding",      // DPC founding tier — $25/month
   verified:             true,
   active:               true,
   billable:             true,
   manualBilling:        false,
-  isFoundingProvider:   false,
+  isFoundingProvider:   true,
   commissionRate:       0.1,
   providerNumber:       "DPC-TEST-001",
 
@@ -168,10 +168,11 @@ async function main() {
     name:        providerDoc.name,
     providerId:  PROVIDER_ID,
     role:        "provider",
-    plan:        "growth",
-    practiceType: "dpc",
-    listingStatus: "active",
-    createdAt:   admin.firestore.FieldValue.serverTimestamp(),
+    plan:             "founding",   // DPC founding tier — $25/month
+    practiceType:     "dpc",
+    listingStatus:    "active",
+    isFoundingProvider: true,
+    createdAt:        admin.firestore.FieldValue.serverTimestamp(),
   };
   await db.collection("providerUsers").doc(uid).set(providerUserDoc, { merge: true });
   console.log(`✅  providerUsers/${uid} written\n`);
