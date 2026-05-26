@@ -32,7 +32,7 @@
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png"
       },
-      "package": "com.accesscare.app",
+      "package": "com.moravacare.app",
       "networkSecurityConfig": "./android/app/src/main/res/xml/network_security_config.xml",
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
