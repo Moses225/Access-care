@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { collection, doc, onSnapshot, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
 import React, { useEffect, useRef, useState } from 'react';
+import { useScreenSecurity } from '../../hooks/useScreenSecurity';
 import {
   ActivityIndicator, Alert, FlatList, StyleSheet,
   Text, TouchableOpacity, View,
@@ -52,6 +53,7 @@ function formatDateParts(dateStr: string): { weekday: string; monthDay: string }
 }
 
 export default function AppointmentsScreen() {
+  useScreenSecurity(); // prevent screenshots of appointment records (PHI)
   const router = useRouter();
   const { colors } = useTheme();
   const { isGuest } = useAuth();

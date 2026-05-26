@@ -53,7 +53,12 @@ export function showVerificationPrompt(onResend?: () => void): void {
           try {
             const user = auth.currentUser;
             if (user) {
-              await sendEmailVerification(user);
+              // Always include actionCodeSettings so the link goes to the
+              // patient-facing app-verified page, not the provider dashboard.
+              await sendEmailVerification(user, {
+                url: "https://moravacare.com/app-verified",
+                handleCodeInApp: false,
+              });
               Alert.alert('Sent', 'Verification email sent. Check your inbox.');
             }
           } catch (error: any) {

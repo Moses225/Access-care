@@ -97,11 +97,14 @@ export default function LoginScreen() {
 
       if (error.code === "auth/invalid-email") {
         errorMessage = "Invalid email address format";
-      } else if (error.code === "auth/user-not-found") {
-        errorMessage = "No account found with this email";
-      } else if (error.code === "auth/wrong-password") {
-        errorMessage = "Incorrect password";
-      } else if (error.code === "auth/invalid-credential") {
+      } else if (
+        // Merged intentionally — never distinguish "user not found" from "wrong password"
+        // to prevent email enumeration attacks (HIPAA access control §164.312(d))
+        error.code === "auth/user-not-found" ||
+        error.code === "auth/wrong-password" ||
+        error.code === "auth/invalid-credential" ||
+        error.code === "auth/invalid-login-credentials"
+      ) {
         errorMessage = "Invalid email or password";
       } else if (error.code === "auth/too-many-requests") {
         errorMessage = "Too many failed attempts. Please try again later.";

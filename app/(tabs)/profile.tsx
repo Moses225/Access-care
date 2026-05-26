@@ -1,6 +1,7 @@
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { signOut } from "firebase/auth";
+import { useScreenSecurity } from "../../hooks/useScreenSecurity";
 import { doc, getDoc } from "firebase/firestore";
 import React, { useState } from "react";
 import {
@@ -18,6 +19,7 @@ import { useTheme } from "../../context/ThemeContext";
 import { auth, db } from "../../firebase";
 
 export default function ProfileScreen() {
+  useScreenSecurity(); // prevent screenshots of user PII (name, email, profile photo)
   const router = useRouter();
   const { colors } = useTheme();
   const [userEmail, setUserEmail] = useState("");

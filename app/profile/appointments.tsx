@@ -1,5 +1,6 @@
 import { collection, doc, onSnapshot, query, updateDoc, where } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
+import { useScreenSecurity } from '../../hooks/useScreenSecurity';
 import {
   ActivityIndicator, Alert, FlatList, StyleSheet,
   Text, TouchableOpacity, View,
@@ -26,6 +27,7 @@ type BookingRecord = {
 export type Booking = BookingRecord & { id: string };
 
 export default function AppointmentsScreen() {
+  useScreenSecurity(); // prevent screenshots of appointment history (PHI)
   const { colors } = useTheme();
   const { isGuest } = useAuth();
 

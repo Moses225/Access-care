@@ -4,6 +4,7 @@ import {
   doc, getDocs, updateDoc, serverTimestamp,
 } from 'firebase/firestore';
 import React, { useCallback, useState } from 'react';
+import { useScreenSecurity } from '../../hooks/useScreenSecurity';
 import {
   ActivityIndicator, Alert, Modal, ScrollView,
   StyleSheet, Text, TouchableOpacity, View,
@@ -413,6 +414,7 @@ const DependentCard = ({
 
 // ─── Main Screen ───────────────────────────────────────────────────────────────
 export default function FamilyScreen() {
+  useScreenSecurity(); // prevent screenshots of family member / dependent data (PHI)
   const router = useRouter();
   const { colors } = useTheme();
   const [dependents, setDependents] = useState<Dependent[]>([]);

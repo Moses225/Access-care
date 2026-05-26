@@ -211,7 +211,7 @@ export default function SignupScreen() {
         });
         await assignVoucherIfEligible(user.uid);
         await sendEmailVerification(user, {
-          url: "https://moravacare.com/",  // redirect back to landing — NOT the provider dashboard
+          url: "https://moravacare.com/app-verified", // patient page with deep link back to app
           handleCodeInApp: false,
         });
         setVerificationSent(true);
@@ -279,7 +279,7 @@ export default function SignupScreen() {
               if (currentUser) {
                 try {
                   await sendEmailVerification(currentUser, {
-                    url: "https://moravacare.com/",
+                    url: "https://moravacare.com/app-verified",
                     handleCodeInApp: false,
                   });
                   Alert.alert("Sent", "Verification email resent.");

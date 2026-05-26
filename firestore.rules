@@ -298,7 +298,22 @@ service cloud.firestore {
     // ================================================================
     match /insurance/{userId} {
       allow read:  if isOwner(userId);
-      allow write: if isOwner(userId) && isFullAccount();
+      // noScript on free-text fields that render in the patient app.
+      // policy/provider fields intentionally not validated beyond size caps
+      // because insurance IDs contain special chars (hyphens, digits, etc.).
+      allow write: if isOwner(userId)
+                && isFullAccount()
+                && validOptionalString('provider', 200)
+                && validOptionalString('medical', 200)
+                && validOptionalString('policy', 100)
+                && validOptionalString('dental', 200)
+                && validOptionalString('vision', 200)
+                && validOptionalString('paymentOption', 50)
+                && validOptionalString('insuranceType', 20)
+                && (!('provider' in request.resource.data) || request.resource.data.provider == null || noScript('provider'))
+                && (!('medical' in request.resource.data)  || request.resource.data.medical == null  || noScript('medical'))
+                && (!('dental' in request.resource.data)   || request.resource.data.dental == null   || noScript('dental'))
+                && (!('vision' in request.resource.data)   || request.resource.data.vision == null   || noScript('vision'));
     }
 
     // ================================================================
@@ -379,8 +394,14 @@ service cloud.firestore {
     // ================================================================
     match /auditLog/{entryId} {
       allow create: if isFullAccount()
+                 // Caller can only log actions under their own UID — prevents
+                 // one user from forging audit entries attributed to another user
+                 && request.resource.data.actorUid == request.auth.uid
                  && validOptionalString('action', 100)
-                 && validOptionalString('targetId', 200);
+                 && validOptionalString('targetId', 200)
+                 && validOptionalString('actorUid', 128)
+                 && validOptionalString('actorType', 20)
+                 && validOptionalString('targetCollection', 100);
       allow read:   if isAdmin();
       allow update: if false;
       allow delete: if false;
@@ -432,14 +453,20 @@ service cloud.firestore {
                   (request.auth.uid == resource.data.userId || isAdmin());
       allow create, update: if isFullAccount()
                 && request.resource.data.userId == request.auth.uid
-                // patientId must match either the user's own UID or a dependent
                 && validOptionalString('bloodType',            10)
                 && validOptionalString('heightFeet',            5)
                 && validOptionalString('heightInches',          5)
                 && validOptionalString('height',               20)
                 && validOptionalString('weight',               20)
                 && validOptionalString('primaryCareProvider', 200)
-                && validOptionalString('pregnancyStatus',      50);
+                && validOptionalString('pregnancyStatus',      50)
+                // noScript on free-text PHI fields — injection prevention
+                && (!('primaryCareProvider' in request.resource.data)
+                    || request.resource.data.primaryCareProvider == null
+                    || noScript('primaryCareProvider'))
+                && (!('pregnancyStatus' in request.resource.data)
+                    || request.resource.data.pregnancyStatus == null
+                    || noScript('pregnancyStatus'));
       allow delete: if false;
     }
     // ================================================================

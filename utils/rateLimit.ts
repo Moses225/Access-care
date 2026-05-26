@@ -1,19 +1,41 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
-// ─── Booking rate limit ────────────────────────────────────────────────────
+// ─── Booking rate limit ────────────────────────────────────────────────────────
 // Max bookings a patient can create per rolling 24-hour window.
-// This is client-side enforcement — a Cloud Function should enforce
-// the same limit server-side before public launch.
+// Client-side enforcement using SecureStore (encrypted) — mirrors the
+// server-side limit enforced by the Cloud Function before Firestore write.
+// Using SecureStore instead of AsyncStorage because rate-limit keys are
+// tied to user identity — we don't want them visible in plaintext on disk.
 const MAX_BOOKINGS_PER_DAY = 5;
 const WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 function getRateLimitKey(uid: string): string {
+  // Prefix keeps SecureStore namespace clean; uid is already opaque
   return `rateLimit_bookings_${uid}`;
 }
 
 type RateLimitRecord = {
   timestamps: number[]; // Unix ms of each booking creation
 };
+
+async function readRecord(key: string): Promise<RateLimitRecord> {
+  try {
+    const raw = await SecureStore.getItemAsync(key);
+    return raw ? (JSON.parse(raw) as RateLimitRecord) : { timestamps: [] };
+  } catch {
+    return { timestamps: [] };
+  }
+}
+
+async function writeRecord(key: string, record: RateLimitRecord): Promise<void> {
+  try {
+    await SecureStore.setItemAsync(key, JSON.stringify(record), {
+      keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK,
+    });
+  } catch {
+    if (__DEV__) console.warn('[RateLimit] SecureStore write failed');
+  }
+}
 
 // Returns true if the user is allowed to create a booking.
 // Returns false and a reason string if they are rate-limited.
@@ -24,10 +46,8 @@ export async function checkBookingRateLimit(uid: string): Promise<{
 }> {
   try {
     const key = getRateLimitKey(uid);
-    const raw = await AsyncStorage.getItem(key);
     const now = Date.now();
-
-    let record: RateLimitRecord = raw ? JSON.parse(raw) : { timestamps: [] };
+    const record = await readRecord(key);
 
     // Drop timestamps outside the rolling window
     record.timestamps = record.timestamps.filter(t => now - t < WINDOW_MS);
@@ -49,7 +69,8 @@ export async function checkBookingRateLimit(uid: string): Promise<{
       remaining: MAX_BOOKINGS_PER_DAY - record.timestamps.length,
     };
   } catch {
-    // If AsyncStorage fails, allow the booking (fail open on client-side only)
+    // If SecureStore fails (e.g. simulator without keychain), allow the
+    // booking — fail open on client-side only (server-side enforces anyway)
     return { allowed: true };
   }
 }
@@ -58,18 +79,16 @@ export async function checkBookingRateLimit(uid: string): Promise<{
 export async function recordBookingCreation(uid: string): Promise<void> {
   try {
     const key = getRateLimitKey(uid);
-    const raw = await AsyncStorage.getItem(key);
     const now = Date.now();
-
-    let record: RateLimitRecord = raw ? JSON.parse(raw) : { timestamps: [] };
+    const record = await readRecord(key);
 
     // Drop old timestamps and add new one
     record.timestamps = record.timestamps.filter(t => now - t < WINDOW_MS);
     record.timestamps.push(now);
 
-    await AsyncStorage.setItem(key, JSON.stringify(record));
+    await writeRecord(key, record);
   } catch {
     // Non-critical — rate limit record failed to save
-    if (__DEV__) console.warn('Rate limit record failed to save');
+    if (__DEV__) console.warn('[RateLimit] Failed to record booking creation');
   }
 }

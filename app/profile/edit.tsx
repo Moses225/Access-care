@@ -1,6 +1,7 @@
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, useRouter } from 'expo-router';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { useScreenSecurity } from '../../hooks/useScreenSecurity';
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import React, { useEffect, useState } from 'react';
 import {
@@ -21,6 +22,7 @@ const GENDER_IDENTITY_OPTIONS = [
 ];
 
 export default function EditProfileScreen() {
+  useScreenSecurity(); // prevent screenshots of PII (name, email, phone, DOB, gender)
   const router = useRouter();
   const { colors } = useTheme();
   const { isGuest } = useAuth();

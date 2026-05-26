@@ -2,6 +2,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc, serverTimestamp, setDoc, collection, addDoc } from "firebase/firestore";
 import React, { useCallback, useEffect, useState } from "react";
+import { useScreenSecurity } from "../hooks/useScreenSecurity";
 import {
   ActivityIndicator,
   Alert,
@@ -1061,6 +1062,7 @@ const WeightPicker = React.memo(function WeightPicker({
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function IntakeScreen() {
+  useScreenSecurity(); // prevent screenshots of health intake data (most sensitive PHI in app)
   const router = useRouter();
   const params = useLocalSearchParams();
   const { colors } = useTheme();
