@@ -81,6 +81,10 @@
       ],
       "rewrites": [
         {
+          "source": "/app-verified",
+          "destination": "/app-verified.html"
+        },
+        {
           "source": "/reset-password",
           "destination": "/reset-password.html"
         },

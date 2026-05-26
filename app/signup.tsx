@@ -180,7 +180,7 @@ export default function SignupScreen() {
           if (!currentUser.emailVerified) {
             setIsVerifying(true); // ← set BEFORE sending verification
             await sendEmailVerification(currentUser, {
-              url: "https://moravacare.com/",   // redirect back to landing — NOT the provider dashboard
+              url: "https://moravacare.com/app-verified", // patient-facing page with deep link back to app
               handleCodeInApp: false,
             });
             setVerificationSent(true);
