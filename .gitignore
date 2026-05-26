@@ -110,3 +110,7 @@ update_*.js
 # Firebase private config
 firebase-debug.log
 firestore-debug.log
+
+# Google service files — contain API keys, never commit
+GoogleService-Info.plist
+google-services.json
