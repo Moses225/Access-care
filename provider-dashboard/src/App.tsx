@@ -49,17 +49,48 @@ function MFAEnforcementGate({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ── Protected route — requires auth + full profile load ──────────────────
+// ── Protected route — requires auth + verified provider profile ───────────
 // Checks BOTH loading (Firebase auth) and profileLoading (Firestore profile
 // fetch) so no child ever renders with stale or null providerProfile data.
-// This is the second line of defense against the profile flash bug —
-// the first is resetting providerProfile at the top of onAuthStateChanged.
+// SECURITY: also blocks non-provider Firebase users (patients, general public)
+// who land here via email links or direct navigation. If a logged-in user has
+// no providerUsers doc (providerProfile === null after loading), they are NOT
+// a provider — sign them out immediately so they can't trigger MFA enrollment
+// or see any provider UI.
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading, profileLoading, mfaResolver } = useAuth();
+  const { user, loading, profileLoading, mfaResolver, providerProfile, logout } = useAuth();
   if (loading || profileLoading) return <Spinner />;
   // Mid-login MFA challenge — don't let them into dashboard yet
   if (mfaResolver) return <MFAChallenge />;
   if (!user) return <Navigate to="/login" replace />;
+
+  // Non-provider signed in (patient, unregistered user, etc.)
+  // providerProfile === null means no providerUsers doc found after full load.
+  if (providerProfile === null) {
+    logout(); // sign them out so they can't interact with anything
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+        <div className="w-full max-w-md text-center bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
+          <div className="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-7 h-7 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-slate-900 mb-2">Provider access only</h2>
+          <p className="text-slate-500 text-sm mb-6">
+            This dashboard is for registered Morava providers only. If you're a patient, please use the Morava mobile app.
+          </p>
+          <a
+            href="https://moravacare.com"
+            className="inline-block bg-teal-500 hover:bg-teal-600 text-white font-semibold px-6 py-3 rounded-xl text-sm transition-colors"
+          >
+            Go to moravacare.com
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   return <MFAEnforcementGate>{children}</MFAEnforcementGate>;
 }
 

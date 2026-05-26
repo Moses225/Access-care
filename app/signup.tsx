@@ -179,7 +179,10 @@ export default function SignupScreen() {
 
           if (!currentUser.emailVerified) {
             setIsVerifying(true); // ← set BEFORE sending verification
-            await sendEmailVerification(currentUser);
+            await sendEmailVerification(currentUser, {
+              url: "https://moravacare.com/",   // redirect back to landing — NOT the provider dashboard
+              handleCodeInApp: false,
+            });
             setVerificationSent(true);
           }
         }
@@ -207,7 +210,10 @@ export default function SignupScreen() {
           displayName: `${firstNameClean} ${lastNameClean}`,
         });
         await assignVoucherIfEligible(user.uid);
-        await sendEmailVerification(user);
+        await sendEmailVerification(user, {
+          url: "https://moravacare.com/",  // redirect back to landing — NOT the provider dashboard
+          handleCodeInApp: false,
+        });
         setVerificationSent(true);
       }
     } catch (error: any) {
@@ -272,7 +278,10 @@ export default function SignupScreen() {
               const currentUser = auth.currentUser;
               if (currentUser) {
                 try {
-                  await sendEmailVerification(currentUser);
+                  await sendEmailVerification(currentUser, {
+                    url: "https://moravacare.com/",
+                    handleCodeInApp: false,
+                  });
                   Alert.alert("Sent", "Verification email resent.");
                 } catch {
                   Alert.alert(
