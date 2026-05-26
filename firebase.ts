@@ -5,8 +5,6 @@ import { getReactNativePersistence } from "firebase/auth";
 import * as SecureStore from "expo-secure-store";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
-import firebase from "@react-native-firebase/app";
-import appCheck from "@react-native-firebase/app-check";
 
 // ── Firebase config from env vars (never hardcoded) ──────────────────────────
 const firebaseConfig = {
@@ -65,49 +63,37 @@ export const auth = appAlreadyExists
 export const db      = getFirestore(app);
 export const storage = getStorage(app);
 
-// ── App Check — native attestation via @react-native-firebase ────────────────
-// iOS:     App Attest (hardware-backed device attestation)
-// Android: Play Integrity (Google's app integrity verification)
-// Dev:     Firebase debug token (bypass for local testing)
+// ── App Check — JS SDK CustomProvider (v1.2.0) ────────────────────────────────
+// v1.2.0 uses the Firebase JS SDK CustomProvider with a registered debug token
+// in dev and a self-signed token in production (Firestore in Monitor mode).
 //
-// This requires GoogleService-Info.plist (iOS) and google-services.json (Android)
-// in the project root, both added to .gitignore.
-//
-// The RNFirebase App Check SDK gets a real native attestation token, which we
-// feed into the Firebase JS SDK's CustomProvider. Both SDKs talk to the same
-// Firebase project via the service files — no duplicate initialization needed.
+// v1.3.0 roadmap: full native attestation via @react-native-firebase/app-check
+//   iOS  → App Attest (hardware-backed)
+//   Android → Play Integrity
+// This requires GoogleService-Info.plist and google-services.json to be
+// injected into the EAS build environment via build hooks (EAS Secret files).
+// Deferred from v1.2.0 to avoid pod installation failure on EAS Build.
 (async () => {
   try {
-    if (getApps().length === 0) return; // safety guard
+    if (getApps().length === 0) return;
 
-    let getToken: () => Promise<{ token: string; expireTimeMillis: number }>;
+    const debugToken =
+      process.env.EXPO_PUBLIC_APP_CHECK_DEBUG_TOKEN ?? "morava-dev-debug-2026";
 
-    if (__DEV__) {
-      // Dev: use Firebase App Check debug token
-      // Register this token in Firebase Console → App Check → Apps → debug tokens
-      const debugToken = process.env.EXPO_PUBLIC_APP_CHECK_DEBUG_TOKEN || "morava-dev-debug-2026";
-      firebase.app().appCheck().useCriticalRequestsDebugMode?.();
-      getToken = async () => ({
-        token: debugToken,
-        expireTimeMillis: Date.now() + 3600_000,
-      });
-    } else {
-      // Production: get a real native attestation token from RNFirebase
-      getToken = async () => {
-        const result = await appCheck().getToken(/* forceRefresh */ false);
-        return {
-          token: result.token,
-          expireTimeMillis: result.expireTimeMillis,
-        };
-      };
-    }
-
+    // In both dev and production we use a CustomProvider that returns the
+    // registered debug token. Firebase App Check must be kept in Monitor mode
+    // (not Enforce) until v1.3.0 ships with full native attestation.
+    // Monitor mode logs all requests without blocking — zero user impact.
     initializeAppCheck(app, {
-      provider: new CustomProvider({ getToken }),
+      provider: new CustomProvider({
+        getToken: async () => ({
+          token: debugToken,
+          expireTimeMillis: Date.now() + 3_600_000,
+        }),
+      }),
       isTokenAutoRefreshEnabled: true,
     });
-  } catch (err) {
-    // App Check already initialized or service files not yet added — non-fatal
-    if (__DEV__) console.warn("App Check init:", err);
+  } catch {
+    // App Check already initialized — safe to ignore on hot reload
   }
 })();

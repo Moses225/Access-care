@@ -18,10 +18,6 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.accesscare.app",
-      "googleServicesFile": "./GoogleService-Info.plist",
-      "entitlements": {
-        "com.apple.developer.devicecheck.appattest-environment": "production"
-      },
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Morava needs your location to show nearby healthcare providers.",
         "NSCameraUsageDescription": "Morava needs access to your camera to take profile pictures.",
@@ -37,7 +33,6 @@
         "backgroundImage": "./assets/images/android-icon-background.png"
       },
       "package": "com.accesscare.app",
-      "googleServicesFile": "./google-services.json",
       "networkSecurityConfig": "./android/app/src/main/res/xml/network_security_config.xml",
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
@@ -87,15 +82,7 @@
           "project": "react-native"
         }
       ],
-      "@react-native-firebase/app",
-      [
-        "@react-native-firebase/app-check",
-        {
-          "iOSProvider": "appAttest",
-          "androidProvider": "playIntegrity",
-          "isTokenAutoRefreshEnabled": true
-        }
-      ]
+      "expo-screen-capture"
     ],
     "extra": {
       "router": {
