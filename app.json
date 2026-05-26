@@ -82,7 +82,7 @@
           "project": "react-native"
         }
       ],
-      "expo-screen-capture"
+      "expo-secure-store"
     ],
     "extra": {
       "router": {
