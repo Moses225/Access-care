@@ -11,6 +11,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { GuestUpgradePrompt } from '../../components/GuestUpgradePrompt';
 import { db } from '../../firebase';
+import { useScreenSecurity } from '../../hooks/useScreenSecurity';
 
 // ─── Coverage types ───────────────────────────────────────────────────────────
 const COVERAGE_TYPES = [
@@ -210,6 +211,7 @@ const CoverageCard = ({
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function CoverageScreen() {
+  useScreenSecurity(); // prevent screenshots of insurance information
   const { colors } = useTheme();
   const { user, isGuest, isFullAccount } = useAuth();
   const router = useRouter();

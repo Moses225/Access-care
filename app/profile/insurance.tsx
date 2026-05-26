@@ -1,5 +1,6 @@
 import { Stack, useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
+import { useScreenSecurity } from '../../hooks/useScreenSecurity';
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
@@ -173,6 +174,7 @@ const InsuranceSearchModal = ({
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function InsuranceScreen() {
+  useScreenSecurity(); // prevent screenshots of insurance information
   const router = useRouter();
   const { colors } = useTheme();
   const { user, isGuest, isFullAccount } = useAuth();

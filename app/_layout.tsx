@@ -1,14 +1,16 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Sentry from "@sentry/react-native";
 import { Stack, usePathname, useRouter, useSegments } from "expo-router";
-import { useEffect, useRef } from "react";
-import { ActivityIndicator, Text, View } from "react-native";
+import { useEffect, useRef, useCallback } from "react";
+import { ActivityIndicator, Alert, AppState, AppStateStatus, Text, View } from "react-native";
+import * as Device from "expo-device";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { ThemeProvider } from "../context/ThemeContext";
 import { registerForPushNotifications } from "../utils/notifications";
-
 import { scrubPII } from "../utils/crashReporting";
+import { signOut } from "firebase/auth";
+import { auth } from "../firebase";
 
 Sentry.init({
   dsn: "https://057034210ab85bab34ada8bbe4de9420@o4511057790042112.ingest.us.sentry.io/4511057791746048",
@@ -21,25 +23,93 @@ Sentry.init({
   },
 });
 
+// ── Security: Root / jailbreak detection ─────────────────────────────────────
+// Runs once on launch. If the device is rooted (Android) or jailbroken (iOS),
+// Firebase tokens stored in SecureStore may be accessible to other processes.
+// We warn and sign the user out — we don't hard-exit since expo-device's check
+// is heuristic and may produce false positives on emulators.
+async function checkDeviceIntegrity(): Promise<void> {
+  if (__DEV__) return; // Skip in development (emulators always flag as "rooted")
+  try {
+    const isRooted = await Device.isRootedExperimentalAsync();
+    if (isRooted) {
+      // Sign out to clear tokens from this compromised environment
+      await signOut(auth).catch(() => {});
+      Alert.alert(
+        "Security Warning",
+        "This device appears to be rooted or jailbroken. For your security, Morava cannot run on modified devices. Please use a standard device to protect your health information.",
+        [{ text: "OK" }],
+        { cancelable: false }
+      );
+    }
+  } catch {
+    // Detection failed — non-fatal, continue normally
+  }
+}
+
+// ── Session timeout ───────────────────────────────────────────────────────────
+// Signs the user out after 30 minutes of the app being backgrounded.
+// Resets the timer whenever the app comes back to the foreground.
+const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+
+function useSessionTimeout(user: ReturnType<typeof useAuth>["user"]) {
+  const backgroundedAt = useRef<number | null>(null);
+  const appState = useRef<AppStateStatus>(AppState.currentState);
+
+  const handleAppStateChange = useCallback(
+    async (nextState: AppStateStatus) => {
+      const prev = appState.current;
+      appState.current = nextState;
+
+      if (prev === "active" && nextState === "background") {
+        backgroundedAt.current = Date.now();
+      }
+
+      if (nextState === "active" && backgroundedAt.current !== null) {
+        const elapsed = Date.now() - backgroundedAt.current;
+        backgroundedAt.current = null;
+        if (elapsed >= SESSION_TIMEOUT_MS && user && !user.isAnonymous) {
+          await signOut(auth).catch(() => {});
+          Alert.alert(
+            "Session expired",
+            "You've been signed out after 30 minutes of inactivity.",
+            [{ text: "OK" }]
+          );
+        }
+      }
+    },
+    [user]
+  );
+
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", handleAppStateChange);
+    return () => sub.remove();
+  }, [handleAppStateChange]);
+}
+
 function RootNavigator() {
   const router = useRouter();
   const segments = useSegments();
   const pathname = usePathname();
   const { user, initializing, isVerifying } = useAuth();
   const isNavigating = useRef(false);
-  // Track which UID we've already registered for — prevents re-registering
-  // on every render or auth state refresh
   const registeredUidRef = useRef<string | null>(null);
+
+  // ── Session timeout ───────────────────────────────────────────────────────
+  useSessionTimeout(user);
+
+  // ── Root/jailbreak detection on first launch ──────────────────────────────
+  useEffect(() => {
+    checkDeviceIntegrity();
+  }, []);
 
   // ── Register for push notifications when a real user is signed in ─────────
   useEffect(() => {
     if (!user || user.isAnonymous) return;
     if (registeredUidRef.current === user.uid) return;
     registeredUidRef.current = user.uid;
-    // Fire and forget — registration failure should never block the UI
     registerForPushNotifications(user.uid).catch((error) => {
-      if (__DEV__)
-        console.warn("Push registration failed (non-critical):", error);
+      if (__DEV__) console.warn("Push registration failed (non-critical):", error);
     });
   }, [user]);
 
@@ -50,8 +120,7 @@ function RootNavigator() {
     }
 
     if (isVerifying) {
-      if (__DEV__)
-        console.log("📧 Verification in progress, skipping navigation");
+      if (__DEV__) console.log("📧 Verification in progress, skipping navigation");
       return;
     }
 
@@ -69,8 +138,7 @@ function RootNavigator() {
     if (isNavigating.current) return;
 
     const isOnWelcome = currentSegment === "welcome";
-    const isOnSignupOrLogin =
-      currentSegment === "signup" || currentSegment === "login";
+    const isOnSignupOrLogin = currentSegment === "signup" || currentSegment === "login";
     const isOnAuthRoute = isOnWelcome || isOnSignupOrLogin;
     const isOnOnboarding = currentSegment === "onboarding";
     const isOnProtectedRoute =
@@ -85,16 +153,13 @@ function RootNavigator() {
       if (isOnAuthRoute) {
         if (user.isAnonymous && isOnSignupOrLogin) return;
 
-        if (__DEV__)
-          console.log("📍 User on auth page, checking onboarding status...");
+        if (__DEV__) console.log("📍 User on auth page, checking onboarding status...");
         isNavigating.current = true;
 
         if (user.isAnonymous) {
           if (__DEV__) console.log("👤 Guest user, skipping onboarding");
           router.replace("/(tabs)");
-          setTimeout(() => {
-            isNavigating.current = false;
-          }, 500);
+          setTimeout(() => { isNavigating.current = false; }, 500);
           return;
         }
 
@@ -102,53 +167,32 @@ function RootNavigator() {
         AsyncStorage.getItem(onboardingKey)
           .then((completed) => {
             if (completed === "true") {
-              if (__DEV__)
-                console.log("✅ Onboarding already done, going to tabs");
+              if (__DEV__) console.log("✅ Onboarding already done, going to tabs");
               router.replace("/(tabs)");
             } else {
               if (__DEV__) console.log("🎉 New user, showing onboarding");
               router.replace("/onboarding" as any);
             }
           })
-          .catch(() => {
-            router.replace("/(tabs)");
-          })
-          .finally(() => {
-            setTimeout(() => {
-              isNavigating.current = false;
-            }, 500);
-          });
+          .catch(() => { router.replace("/(tabs)"); })
+          .finally(() => { setTimeout(() => { isNavigating.current = false; }, 500); });
       }
       return;
     }
 
     if (isOnProtectedRoute) {
-      if (__DEV__)
-        console.log(
-          "📍 User logged out on protected route, navigating to welcome",
-        );
+      if (__DEV__) console.log("📍 User logged out on protected route, navigating to welcome");
       isNavigating.current = true;
       router.replace("/welcome");
-      setTimeout(() => {
-        isNavigating.current = false;
-      }, 500);
+      setTimeout(() => { isNavigating.current = false; }, 500);
     }
   }, [user, segments, pathname, initializing, isVerifying, router]);
 
   if (initializing) {
     return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-          backgroundColor: "#F5F7FA",
-        }}
-      >
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#F5F7FA" }}>
         <ActivityIndicator size="large" color="#2E75B6" />
-        <Text style={{ marginTop: 16, color: "#666", fontSize: 14 }}>
-          Loading...
-        </Text>
+        <Text style={{ marginTop: 16, color: "#666", fontSize: 14 }}>Loading...</Text>
       </View>
     );
   }
@@ -163,91 +207,18 @@ function RootNavigator() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="provider/[id]" />
       <Stack.Screen name="booking/[id]" />
-      <Stack.Screen
-        name="profile/appointments"
-        options={{
-          headerShown: true,
-          title: "My Appointments",
-          headerBackTitle: "Profile",
-        }}
-      />
-      <Stack.Screen
-        name="profile/saved"
-        options={{
-          headerShown: true,
-          title: "Saved Providers",
-          headerBackTitle: "Profile",
-        }}
-      />
-      <Stack.Screen
-        name="profile/family"
-        options={{
-          headerShown: true,
-          title: "My Family",
-          headerBackTitle: "Profile",
-        }}
-      />
-      <Stack.Screen
-        name="profile/insurance"
-        options={{
-          headerShown: true,
-          title: "Insurance",
-          headerBackTitle: "Profile",
-        }}
-      />
-      <Stack.Screen
-        name="profile/payments"
-        options={{
-          headerShown: true,
-          title: "Payments",
-          headerBackTitle: "Profile",
-        }}
-      />
-      <Stack.Screen
-        name="profile/notifications"
-        options={{
-          headerShown: true,
-          title: "Notifications",
-          headerBackTitle: "Profile",
-        }}
-      />
-      <Stack.Screen
-        name="profile/privacy"
-        options={{
-          headerShown: true,
-          title: "Privacy",
-          headerBackTitle: "Profile",
-        }}
-      />
-      <Stack.Screen
-        name="profile/help"
-        options={{
-          headerShown: true,
-          title: "Help",
-          headerBackTitle: "Profile",
-        }}
-      />
-      <Stack.Screen
-        name="profile/edit"
-        options={{
-          headerShown: true,
-          title: "Edit Profile",
-          headerBackTitle: "Profile",
-        }}
-      />
-      <Stack.Screen
-        name="profile/theme"
-        options={{
-          headerShown: true,
-          title: "Theme Settings",
-          headerBackTitle: "Profile",
-        }}
-      />
+      <Stack.Screen name="profile/appointments" options={{ headerShown: true, title: "My Appointments", headerBackTitle: "Profile" }} />
+      <Stack.Screen name="profile/saved" options={{ headerShown: true, title: "Saved Providers", headerBackTitle: "Profile" }} />
+      <Stack.Screen name="profile/family" options={{ headerShown: true, title: "My Family", headerBackTitle: "Profile" }} />
+      <Stack.Screen name="profile/insurance" options={{ headerShown: true, title: "Insurance", headerBackTitle: "Profile" }} />
+      <Stack.Screen name="profile/payments" options={{ headerShown: true, title: "Payments", headerBackTitle: "Profile" }} />
+      <Stack.Screen name="profile/notifications" options={{ headerShown: true, title: "Notifications", headerBackTitle: "Profile" }} />
+      <Stack.Screen name="profile/privacy" options={{ headerShown: true, title: "Privacy", headerBackTitle: "Profile" }} />
+      <Stack.Screen name="profile/help" options={{ headerShown: true, title: "Help", headerBackTitle: "Profile" }} />
+      <Stack.Screen name="profile/edit" options={{ headerShown: true, title: "Edit Profile", headerBackTitle: "Profile" }} />
+      <Stack.Screen name="profile/theme" options={{ headerShown: true, title: "Theme Settings", headerBackTitle: "Profile" }} />
       <Stack.Screen name="qa/index" />
-      <Stack.Screen
-        name="admin/qa"
-        options={{ headerShown: true, title: "Admin Q&A" }}
-      />
+      <Stack.Screen name="admin/qa" options={{ headerShown: true, title: "Admin Q&A" }} />
       <Stack.Screen name="about" />
     </Stack>
   );

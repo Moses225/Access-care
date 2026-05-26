@@ -2,8 +2,10 @@ import { Stack, useRouter } from "expo-router";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useTheme } from "../../context/ThemeContext";
+import { useScreenSecurity } from "../../hooks/useScreenSecurity";
 
 export default function PaymentsScreen() {
+  useScreenSecurity(); // prevent screenshots of payment information
   const router = useRouter();
   const { colors } = useTheme();
 

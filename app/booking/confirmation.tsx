@@ -1,5 +1,6 @@
 import { logBookingCancelledByPatient } from '../../utils/auditLog';
 import { logAnalyticsEvent } from '../../utils/analytics';
+import { useScreenSecurity } from '../../hooks/useScreenSecurity';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { doc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore';
 import React, { useEffect, useRef, useState } from 'react';
@@ -164,6 +165,7 @@ const CancelReasonModal = ({
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function BookingConfirmationScreen() {
+  useScreenSecurity(); // prevent screenshots of appointment details
   const router = useRouter();
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
   const { colors } = useTheme();
