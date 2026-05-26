@@ -1,6 +1,7 @@
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, useRouter } from 'expo-router';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { useScreenSecurity } from '../../hooks/useScreenSecurity';
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import React, { useEffect, useState } from 'react';
@@ -87,7 +88,34 @@ export default function EditProfileScreen() {
         updatedAt: new Date().toISOString(),
       };
 
-      if (phone.trim()) updateData.phone = phone.trim();
+      // ── Phone uniqueness check ─────────────────────────────────────────
+      // Before saving, verify this phone number isn't linked to another
+      // account. The server-side function queries across all users (which
+      // the client cannot do due to Firestore rules).
+      const cleanedPhone = phone.replace(/\D/g, '');
+      if (cleanedPhone && cleanedPhone.length >= 10) {
+        try {
+          const functions = getFunctions();
+          const checkPhone = httpsCallable(functions, 'checkPhoneAvailability');
+          await checkPhone({ phone: cleanedPhone });
+          // { available: true } means no conflict — proceed
+          updateData.phone = cleanedPhone;
+        } catch (phoneErr: any) {
+          if (phoneErr?.code === 'functions/already-exists') {
+            Alert.alert(
+              'Phone Number In Use',
+              'This phone number is already linked to another Morava account. Please use a different number or sign in to your existing account.'
+            );
+            return;
+          }
+          // Other errors (network, rate limit) — skip phone save but don't block profile save
+          if (__DEV__) console.warn('Phone check failed, skipping phone update:', phoneErr?.message);
+        }
+      } else if (phone.trim()) {
+        // Non-empty but too short — save as-is (validation already shown in UI)
+        updateData.phone = phone.trim();
+      }
+
       if (biologicalSex) updateData.biologicalSex = biologicalSex;
       if (genderIdentity) updateData.genderIdentity = genderIdentity;
 

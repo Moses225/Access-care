@@ -750,6 +750,14 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    // ================================================================
+    // PHONE CHECK RATE LIMIT — written by checkPhoneAvailability function
+    // Only Admin SDK writes here; clients cannot read or manipulate.
+    // ================================================================
+    match /phoneCheckRateLimit/{docId} {
+      allow read, write: if isAdmin();
+    }
+
     // CATCH-ALL — deny everything not explicitly allowed
     // ================================================================
     match /{document=**} {

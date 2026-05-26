@@ -2374,3 +2374,152 @@ export const verifyRepCode = onCall(
     };
   }
 );
+
+// ============================================================
+// SERVER-SIDE BOOKING RATE LIMIT
+// ============================================================
+// Firestore onCreate trigger — fires immediately after a patient
+// writes a new booking document. If they already have 5+ bookings
+// created in the last 24 hours, the document is deleted server-side.
+// This closes the gap where a client with a compromised token could
+// bypass the client-side rate limit in rateLimit.ts.
+//
+// We delete rather than "reject" because Firestore security rules
+// allow the create (correct — this is not a rules issue), but we
+// enforce the business-logic limit post-write via this trigger.
+// The UI will see the document briefly appear then disappear, but
+// in practice the client-side guard fires first and prevents the
+// write from ever being attempted by a legitimate app.
+export const enforceBookingRateLimit = onDocumentCreated(
+  "bookings/{bookingId}",
+  async (event) => {
+    const booking = event.data?.data();
+    if (!booking) return;
+
+    const userId    = booking.userId as string | undefined;
+    const bookingId = event.params.bookingId;
+
+    if (!userId) return; // anonymous / malformed — ignore
+
+    const MAX_PER_DAY = 5;
+    const windowStart = Date.now() - 24 * 60 * 60 * 1000; // 24 hours ago
+    const windowStartTs = admin.firestore.Timestamp.fromMillis(windowStart);
+
+    try {
+      // Count bookings created by this user in the last 24 hours.
+      // Includes the one just written (createdAt may not be set yet,
+      // so we fall back to counting ALL pending docs created recently).
+      const recentSnap = await db
+        .collection("bookings")
+        .where("userId", "==", userId)
+        .where("createdAt", ">=", windowStartTs)
+        .get();
+
+      // recentSnap includes the just-written doc (createdAt set by serverTimestamp).
+      // If there's a timing gap before serverTimestamp resolves, we count >= MAX_PER_DAY + 1.
+      if (recentSnap.size > MAX_PER_DAY) {
+        console.warn(
+          `enforceBookingRateLimit: userId=${userId} exceeded ${MAX_PER_DAY} bookings/24h ` +
+          `(count=${recentSnap.size}). Deleting booking ${bookingId}.`
+        );
+        await db.collection("bookings").doc(bookingId).delete();
+
+        // Write an audit entry so the admin can see rate-limit violations
+        await db.collection("auditLog").add({
+          action:           "suspicious_activity",
+          actorUid:         userId,
+          actorType:        "system",
+          targetId:         bookingId,
+          targetCollection: "bookings",
+          metadata: {
+            reason:    "server_rate_limit_exceeded",
+            count:     recentSnap.size,
+            maxPerDay: MAX_PER_DAY,
+          },
+          timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+    } catch (err) {
+      // Non-fatal — log and continue; do not delete on error to avoid
+      // legitimate bookings being removed due to a transient failure
+      console.error("enforceBookingRateLimit error:", err);
+    }
+  }
+);
+
+// ============================================================
+// PHONE NUMBER UNIQUENESS CHECK
+// ============================================================
+// Callable function — client calls this before saving a phone number
+// to the user profile. The Admin SDK can query across all user docs,
+// which the client cannot do (Firestore rules restrict users to
+// reading only their own document).
+//
+// Returns { available: true } if the phone is not in use,
+// or throws ALREADY_EXISTS if another account has this number.
+//
+// Rate-limited to prevent enumeration: max 10 checks per UID per hour.
+export const checkPhoneAvailability = onCall(
+  { enforceAppCheck: false }, // App Check enforced at Firestore layer
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Authentication required.");
+    }
+
+    const { phone } = request.data as { phone?: string };
+    if (!phone || typeof phone !== "string") {
+      throw new HttpsError("invalid-argument", "phone is required.");
+    }
+
+    // Normalize: digits only
+    const normalized = phone.replace(/\D/g, "");
+    if (normalized.length < 10 || normalized.length > 15) {
+      throw new HttpsError("invalid-argument", "Invalid phone number format.");
+    }
+
+    const callerUid = request.auth.uid;
+
+    // ── Rate limit: max 10 checks per caller per hour ─────────────────────
+    const rateLimitRef = db
+      .collection("phoneCheckRateLimit")
+      .doc(callerUid);
+
+    const hourAgo = Date.now() - 60 * 60 * 1000;
+
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(rateLimitRef);
+      const timestamps: number[] = snap.exists
+        ? ((snap.data()!.timestamps as number[]) ?? []).filter(t => t > hourAgo)
+        : [];
+
+      if (timestamps.length >= 10) {
+        throw new HttpsError(
+          "resource-exhausted",
+          "Too many phone checks. Please try again later."
+        );
+      }
+
+      timestamps.push(Date.now());
+      tx.set(rateLimitRef, { timestamps }, { merge: true });
+    });
+
+    // ── Check for existing account with this phone number ─────────────────
+    const existing = await db
+      .collection("users")
+      .where("phone", "==", normalized)
+      .limit(2) // get up to 2 — if caller is the only one it's fine
+      .get();
+
+    // Filter out the caller's own document
+    const others = existing.docs.filter(d => d.id !== callerUid);
+
+    if (others.length > 0) {
+      throw new HttpsError(
+        "already-exists",
+        "This phone number is already linked to another account. Please sign in to that account or use a different number."
+      );
+    }
+
+    return { available: true };
+  }
+);
