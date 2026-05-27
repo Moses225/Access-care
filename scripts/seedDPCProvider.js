@@ -16,14 +16,17 @@
 // the existing doc rather than duplicating it.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const admin = require("firebase-admin");
-const serviceAccount = require("../serviceAccountKey.json");
+const admin  = require("firebase-admin");
+const crypto = require("crypto");
 
+// SECURITY: use GOOGLE_APPLICATION_CREDENTIALS env var, never hardcode keys.
+// Example: GOOGLE_APPLICATION_CREDENTIALS=./scripts/serviceAccountKey.json node scripts/seedDPCProvider.js
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
+  credential: admin.credential.applicationDefault(),
+  projectId: "accesscare-app",
 });
 
-const db = admin.firestore();
+const db   = admin.firestore();
 const auth = admin.auth();
 
 // ── Config ───────────────────────────────────────────────────────────────────
@@ -32,9 +35,11 @@ const WITH_DASHBOARD = process.argv.includes("--with-dashboard");
 // Fixed ID so re-runs are idempotent — change if you want a second test provider
 const PROVIDER_ID = "test-dpc-provider-001";
 
-// Dashboard login credentials (only used with --with-dashboard)
+// SECURITY: Never hardcode passwords in source code.
+// Password is generated at runtime and printed once — save it immediately.
 const DASHBOARD_EMAIL    = "dpc-test@moravacare.com";
-const DASHBOARD_PASSWORD = "REDACTED_ROTATED";   // change before sharing
+const DASHBOARD_PASSWORD = crypto.randomBytes(18).toString("base64")
+  .replace(/[^a-zA-Z0-9]/g, "").substring(0, 18) + "X!4";
 
 // ── Provider document (patient-facing) ───────────────────────────────────────
 const providerDoc = {
