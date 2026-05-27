@@ -24,6 +24,10 @@ type AuthContextType = {
   setIsVerifying: (v: boolean) => void;
   signInAsGuest: () => Promise<void>;
   upgradeGuest: (email: string, password: string) => Promise<void>;
+  // Custom claim flags — loaded async after auth state changes
+  isRep: boolean;
+  isAdmin: boolean;
+  claimsLoaded: boolean;
 };
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -36,6 +40,9 @@ const AuthContext = createContext<AuthContextType>({
   setIsVerifying: () => {},
   signInAsGuest: async () => {},
   upgradeGuest: async () => {},
+  isRep: false,
+  isAdmin: false,
+  claimsLoaded: false,
 });
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
@@ -43,11 +50,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [initializing, setInitializing] = useState(true);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isRep, setIsRep] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [claimsLoaded, setClaimsLoaded] = useState(false);
 
   useEffect(() => {
     if (__DEV__) console.log("👂 Setting up auth listener...");
 
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (__DEV__) {
         console.log(
           "🔐 Auth state changed:",
@@ -60,6 +70,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setUser(currentUser);
       setInitializing(false);
+
+      // Load custom claims (rep, admin) for non-anonymous users
+      if (currentUser && !currentUser.isAnonymous) {
+        try {
+          const token = await currentUser.getIdTokenResult();
+          setIsRep(token.claims.rep === true);
+          setIsAdmin(token.claims.admin === true);
+          if (__DEV__) console.log("🎫 Claims loaded — rep:", token.claims.rep, "admin:", token.claims.admin);
+        } catch {
+          setIsRep(false);
+          setIsAdmin(false);
+        }
+      } else {
+        setIsRep(false);
+        setIsAdmin(false);
+      }
+      setClaimsLoaded(true);
     });
 
     return unsubscribe;
@@ -104,6 +131,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsVerifying,
         signInAsGuest,
         upgradeGuest,
+        isRep,
+        isAdmin,
+        claimsLoaded,
       }}
     >
       {children}

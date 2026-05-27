@@ -594,8 +594,13 @@ service cloud.firestore {
     // ================================================================
     match /providerSubmissions/{docId} {
       allow create: if
-        // Required fields
-        validString(request.resource.data.providerName, 200)
+        // Must be a verified rep (claim set by Cloud Functions, not self-grantable)
+        isFullAccount()
+        && request.auth.token.rep == true
+        // Rep can only submit under their own email — cannot forge another rep
+        && request.resource.data.repEmail == request.auth.token.email
+        // Required fields present and valid
+        && validString(request.resource.data.providerName, 200)
         && validString(request.resource.data.repEmail, 200)
         && noScript('providerName')
         && noScript('repEmail')
@@ -620,8 +625,17 @@ service cloud.firestore {
         && validOptionalString('source', 100)
         && validOptionalString('claimedBy', 200);
 
-      // Reps can read their own submissions for the status tracker
-      allow read: if isAdmin();
+      // Reps can read their own submissions for the status tracker.
+      // The rep claim is stamped server-side by Cloud Functions — cannot be self-granted.
+      allow read: if isAdmin()
+                  || (isFullAccount()
+                      && request.auth.token.rep == true
+                      && resource.data.repEmail == request.auth.token.email);
+
+      // Create is allowed for verified reps (rep claim required)
+      // Enforces that repEmail matches the caller's actual email
+      // so reps can't submit under another rep's name.
+      // The create rule above handles all field validation.
 
       // Only admin can update status, commission, notes
       allow update: if isAdmin();
