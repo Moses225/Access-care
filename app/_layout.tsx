@@ -91,7 +91,7 @@ function RootNavigator() {
   const router = useRouter();
   const segments = useSegments();
   const pathname = usePathname();
-  const { user, initializing, isVerifying, isRep, claimsLoaded } = useAuth();
+  const { user, initializing, isVerifying } = useAuth();
   const isNavigating = useRef(false);
   const registeredUidRef = useRef<string | null>(null);
 
@@ -145,8 +145,7 @@ function RootNavigator() {
       currentSegment === "(tabs)" ||
       currentSegment === "provider" ||
       currentSegment === "booking" ||
-      currentSegment === "profile" ||
-      currentSegment === "rep";
+      currentSegment === "profile";
 
     if (user) {
       if (isOnOnboarding) return;
@@ -154,23 +153,12 @@ function RootNavigator() {
       if (isOnAuthRoute) {
         if (user.isAnonymous && isOnSignupOrLogin) return;
 
-        // Wait for custom claims before routing — prevents flash to wrong portal
-        if (!claimsLoaded) return;
-
-        if (__DEV__) console.log("📍 User on auth page, checking role...");
+        if (__DEV__) console.log("📍 User on auth page, checking onboarding status...");
         isNavigating.current = true;
 
         if (user.isAnonymous) {
           if (__DEV__) console.log("👤 Guest user, skipping onboarding");
           router.replace("/(tabs)");
-          setTimeout(() => { isNavigating.current = false; }, 500);
-          return;
-        }
-
-        // Reps get their own portal, not the patient app
-        if (isRep) {
-          if (__DEV__) console.log("🤝 Rep user, routing to rep portal");
-          router.replace("/rep" as any);
           setTimeout(() => { isNavigating.current = false; }, 500);
           return;
         }
@@ -198,7 +186,7 @@ function RootNavigator() {
       router.replace("/welcome");
       setTimeout(() => { isNavigating.current = false; }, 500);
     }
-  }, [user, segments, pathname, initializing, isVerifying, isRep, claimsLoaded, router]);
+  }, [user, segments, pathname, initializing, isVerifying, router]);
 
   if (initializing) {
     return (
@@ -232,7 +220,6 @@ function RootNavigator() {
       <Stack.Screen name="qa/index" />
       <Stack.Screen name="admin/qa" options={{ headerShown: true, title: "Admin Q&A" }} />
       <Stack.Screen name="about" />
-      <Stack.Screen name="rep" options={{ headerShown: false }} />
     </Stack>
   );
 }

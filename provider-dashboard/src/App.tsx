@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import Analytics from "./pages/Analytics";
 import AuthAction from "./pages/AuthAction";
+import Demo from "./pages/Demo";
 import RecoveryDashboard from "./pages/RecoveryDashboard";
 import RecoveryProfile from "./pages/RecoveryProfile";
 import RecoveryBilling from "./pages/RecoveryBilling";
@@ -211,6 +212,8 @@ export default function App() {
           />
           {/* Firebase auth action handler — email verification & password reset links */}
           <Route path="/auth-action" element={<AuthAction />} />
+          {/* Public demo — no login required, no real data */}
+          <Route path="/demo" element={<Demo />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
