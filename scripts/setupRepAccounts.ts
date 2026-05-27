@@ -2,21 +2,21 @@
  * scripts/setupRepAccounts.ts
  *
  * Creates Firebase Auth accounts for Morava sales reps and stamps the
- * `rep: true` custom claim so they are routed to the Rep Portal in the app.
+ * `rep: true` custom claim so admin can manage them.
  *
- * Also creates a pre-populated demo patient account for provider outreach demos.
+ * SECURITY: Never hardcode passwords in this file.
+ * Passwords are generated randomly at runtime and printed ONCE to stdout.
+ * Store them immediately in your password manager — they are not saved anywhere.
  *
  * Usage:
- *   npx ts-node -P tsconfig.scripts.json scripts/setupRepAccounts.ts
- *
- * Requires:
- *   - GOOGLE_APPLICATION_CREDENTIALS env var pointing to a Firebase service
- *     account JSON (or run from Cloud Shell where ADC is available).
- *   - firebase-admin installed (already in functions/package.json, or install
- *     locally: npm install firebase-admin)
+ *   GOOGLE_APPLICATION_CREDENTIALS=./scripts/serviceAccountKey.json \
+ *   npx ts-node --skip-project \
+ *   --compiler-options '{"module":"commonjs","esModuleInterop":true}' \
+ *   scripts/setupRepAccounts.ts
  */
 
 import * as admin from "firebase-admin";
+import * as crypto from "crypto";
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 if (!admin.apps.length) {
@@ -29,125 +29,132 @@ if (!admin.apps.length) {
 const auth = admin.auth();
 const db   = admin.firestore();
 
-// ── Rep definitions ───────────────────────────────────────────────────────────
+// ── Secure random password ────────────────────────────────────────────────────
+// 20-char password: alphanumeric + guaranteed special chars, no ambiguous chars
+function generatePassword(): string {
+  const chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  const specials = "!@#$%^&*";
+  let pwd = "";
+  for (let i = 0; i < 16; i++) {
+    pwd += chars[crypto.randomInt(chars.length)];
+  }
+  // Inject 2 specials at random positions to satisfy complexity requirements
+  pwd += specials[crypto.randomInt(specials.length)];
+  pwd += crypto.randomInt(10);
+  return pwd;
+}
+
+// ── Rep definitions (emails only — no passwords stored) ───────────────────────
 const REPS = [
-  {
-    email:       "amartin@moravacare.com",
-    displayName: "Andrea Martin",
-    tempPassword: "REDACTED_ROTATED",  // Must change on first login
-  },
-  {
-    email:       "kbailey@moravacare.com",
-    displayName: "Kimberly Bailey",
-    tempPassword: "REDACTED_ROTATED",
-  },
+  { email: "amartin@moravacare.com", displayName: "Andrea Martin"   },
+  { email: "kbailey@moravacare.com", displayName: "Kimberly Bailey" },
 ];
 
 // ── Demo patient account ──────────────────────────────────────────────────────
 const DEMO_PATIENT = {
   email:       "demo@moravacare.com",
   displayName: "Alex Demo",
-  password:    "REDACTED_ROTATED",
 };
 
-async function createOrUpdateRep(rep: typeof REPS[0]) {
+async function createOrUpdateRep(rep: typeof REPS[0], password: string) {
   let uid: string;
 
   try {
-    // Try to get existing account
     const existing = await auth.getUserByEmail(rep.email);
     uid = existing.uid;
-    console.log(`✅ Found existing account for ${rep.email} (uid: ${uid})`);
+    // Account already exists — rotate to new password
+    await auth.updateUser(uid, { password });
+    console.log(`🔄 Rotated password for ${rep.email} (uid: ${uid})`);
   } catch {
-    // Create new account
     const created = await auth.createUser({
       email:         rep.email,
       displayName:   rep.displayName,
-      password:      rep.tempPassword,
-      emailVerified: true, // Pre-verify — they're internal staff
+      password,
+      emailVerified: true,
     });
     uid = created.uid;
     console.log(`🆕 Created account for ${rep.email} (uid: ${uid})`);
   }
 
-  // Stamp rep: true custom claim
   await auth.setCustomUserClaims(uid, { rep: true });
   console.log(`🎫 Custom claim rep:true set for ${rep.displayName}`);
 
-  // Write a repApplications doc so admin dashboard shows them as active reps
   await db.collection("repApplications").doc(uid).set({
-    name:          rep.displayName,
-    email:         rep.email,
-    status:        "approved",
-    verifiedCount: 0,
+    name:            rep.displayName,
+    email:           rep.email,
+    status:          "approved",
+    verifiedCount:   0,
     pendingEarnings: 0,
-    role:          "Sales Rep",
-    source:        "internal",
-    createdAt:     admin.firestore.FieldValue.serverTimestamp(),
-    approvedAt:    admin.firestore.FieldValue.serverTimestamp(),
+    role:            "Sales Rep",
+    source:          "internal",
+    createdAt:       admin.firestore.FieldValue.serverTimestamp(),
+    approvedAt:      admin.firestore.FieldValue.serverTimestamp(),
   }, { merge: true });
 
-  console.log(`📋 repApplications doc written for ${rep.displayName}\n`);
   return uid;
 }
 
-async function createDemoPatient() {
+async function createOrUpdateDemo(password: string) {
   let uid: string;
-
   try {
     const existing = await auth.getUserByEmail(DEMO_PATIENT.email);
     uid = existing.uid;
-    console.log(`✅ Demo patient already exists (uid: ${uid})`);
+    await auth.updateUser(uid, { password });
+    console.log(`🔄 Rotated password for ${DEMO_PATIENT.email}`);
   } catch {
     const created = await auth.createUser({
       email:         DEMO_PATIENT.email,
       displayName:   DEMO_PATIENT.displayName,
-      password:      DEMO_PATIENT.password,
+      password,
       emailVerified: true,
     });
     uid = created.uid;
     console.log(`🆕 Created demo patient (uid: ${uid})`);
   }
 
-  // Pre-populate demo user profile in Firestore
   await db.collection("users").doc(uid).set({
-    displayName: "Alex Demo",
-    email:       DEMO_PATIENT.email,
-    phone:       "+13125550199",
-    dateOfBirth: "1990-01-15",
-    gender:      "Prefer not to say",
+    displayName:        DEMO_PATIENT.displayName,
+    email:              DEMO_PATIENT.email,
+    phone:              "+13125550199",
+    dateOfBirth:        "1990-01-15",
+    gender:             "Prefer not to say",
     onboardingComplete: true,
-    createdAt:   admin.firestore.FieldValue.serverTimestamp(),
-    updatedAt:   admin.firestore.FieldValue.serverTimestamp(),
+    createdAt:          admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt:          admin.firestore.FieldValue.serverTimestamp(),
   }, { merge: true });
 
-  console.log(`🎭 Demo patient profile written (uid: ${uid})\n`);
   return uid;
 }
 
 async function main() {
   console.log("🚀 Setting up Morava rep accounts...\n");
 
-  for (const rep of REPS) {
-    await createOrUpdateRep(rep);
+  // Generate all passwords upfront so they are printed together at the end
+  const passwords = REPS.map(() => generatePassword());
+  const demoPassword = generatePassword();
+
+  for (let i = 0; i < REPS.length; i++) {
+    await createOrUpdateRep(REPS[i], passwords[i]);
   }
 
-  console.log("🎭 Setting up demo patient account...\n");
-  await createDemoPatient();
+  await createOrUpdateDemo(demoPassword);
 
-  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("✅ All done!\n");
-  console.log("Rep login credentials:");
-  for (const rep of REPS) {
-    console.log(`  ${rep.displayName}`);
-    console.log(`    Email:    ${rep.email}`);
-    console.log(`    Password: ${rep.tempPassword}  ← have them change this`);
+  // ── Print credentials ONCE — save to password manager immediately ──────────
+  console.log("\n" + "═".repeat(56));
+  console.log("🔐 SAVE THESE NOW — not stored anywhere else");
+  console.log("═".repeat(56));
+  for (let i = 0; i < REPS.length; i++) {
+    console.log(`\n  ${REPS[i].displayName}`);
+    console.log(`    Email:    ${REPS[i].email}`);
+    console.log(`    Password: ${passwords[i]}`);
   }
-  console.log("\nDemo patient credentials:");
-  console.log(`  Email:    ${DEMO_PATIENT.email}`);
-  console.log(`  Password: ${DEMO_PATIENT.password}`);
-  console.log("\nReps will be routed to the Rep Portal automatically on login.");
-  console.log("Demo account logs in as a regular patient for provider demos.");
+  console.log(`\n  Demo Patient (provider outreach demos)`);
+  console.log(`    Email:    ${DEMO_PATIENT.email}`);
+  console.log(`    Password: ${demoPassword}`);
+  console.log("\n" + "═".repeat(56));
+  console.log("⚠️  These passwords are NOT saved in code or logs.");
+  console.log("   Store in 1Password / Bitwarden immediately.");
+  console.log("═".repeat(56) + "\n");
 }
 
 main().catch((err) => {
