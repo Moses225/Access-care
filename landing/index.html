@@ -515,6 +515,52 @@
         grid-template-columns: 1fr 1fr;
         gap: 6px;
       }
+      .pc-practice {
+        font-size: 11px;
+        color: var(--text-2);
+        margin-top: 1px;
+        font-weight: 600;
+      }
+      .pc-dpc {
+        font-size: 12px;
+        font-weight: 700;
+        color: #0d9488;
+        background: #f0fdfb;
+        border: 1px solid #99f6e4;
+        border-radius: 6px;
+        padding: 4px 10px;
+        margin: 6px 0 2px;
+        display: inline-block;
+      }
+      .extra-filters {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        padding: 0 24px 14px;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      .xchip {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 700;
+        border: 1.5px solid var(--border);
+        background: #fff;
+        color: var(--text-2);
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: inherit;
+      }
+      .xchip.active {
+        border-color: var(--teal);
+        background: var(--teal-xlight);
+        color: var(--teal-dark);
+      }
+      .xchip:hover:not(.active) { border-color: #94a3b8; }
       .btn-book {
         background: var(--teal);
         color: #fff;
@@ -1155,6 +1201,15 @@
           </button>
         </div>
       </div>
+
+      <!-- Extra toggle filters -->
+      <div class="extra-filters" id="extraFilters">
+        <button class="xchip" data-filter="soonercare" onclick="toggleFilter('soonercare', this)">🏥 SoonerCare / Medicaid</button>
+        <button class="xchip" data-filter="telehealth" onclick="toggleFilter('telehealth', this)">💻 Telehealth</button>
+        <button class="xchip" data-filter="accepting" onclick="toggleFilter('accepting', this)">✅ Accepting Patients</button>
+        <button class="xchip" data-filter="dpc" onclick="toggleFilter('dpc', this)">💳 Direct Primary Care</button>
+        <button class="xchip" data-filter="selfpay" onclick="toggleFilter('selfpay', this)">💰 Self-Pay / Uninsured</button>
+      </div>
     </section>
 
     <!-- TRUST BAR -->
@@ -1583,6 +1638,17 @@
       </div>
     </div>
 
+    <!-- PROVIDER DETAIL MODAL -->
+    <div class="modal-overlay" id="providerDetailModal" style="align-items:flex-start;padding-top:40px;">
+      <div class="modal" style="max-width:540px;width:100%;max-height:82vh;overflow-y:auto;padding:0;border-radius:20px;">
+        <div id="providerDetailContent" style="padding:28px 28px 0;"></div>
+        <div style="padding:20px 28px 28px;border-top:1px solid #e2e8f0;margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;">
+          <button onclick="openModal()" style="flex:1;padding:13px;background:#14b8a6;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;">📱 Book Appointment in App</button>
+          <button id="providerDetailClose" style="padding:13px 18px;background:#f1f5f9;color:#475569;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;">Close</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Google Maps global callback — must be before module script -->
     <script>
       // Pre-declare initMap so Google Maps callback works
@@ -1639,15 +1705,21 @@
           .substring(0, 20);
       }
 
+      // sanitizeURL — for Google Maps address query encoding
       function sanitizeURL(str) {
         if (!str || typeof str !== "string") return "";
-        // Only allow safe URL characters for address encoding
         return encodeURIComponent(
-          str
-            .replace(/[<>"'`]/g, "")
-            .trim()
-            .substring(0, 200),
+          str.replace(/[<>"'`]/g, "").trim().substring(0, 200),
         );
+      }
+
+      // sanitizeWebURL — for provider website links (must be http/https only)
+      function sanitizeWebURL(str) {
+        if (!str || typeof str !== "string") return "";
+        const cleaned = str.replace(/[<>"'`\s]/g, "").substring(0, 300);
+        // Only allow http:// or https:// — block javascript:, data:, etc.
+        if (!/^https?:\/\//i.test(cleaned)) return "";
+        return cleaned;
       }
 
       // ================================================================
@@ -1710,6 +1782,7 @@
       let currentPage = 1;
       let activeSpecialty = "";
       let activeSearch = "";
+      let activeFilters = { telehealth: false, soonercare: false, accepting: false, dpc: false, selfpay: false };
       let map,
         markers = [],
         infoWindow;
@@ -1737,6 +1810,16 @@
         psychiatrist: "Mental Health Provider",
         "licensed professional counselor": "Mental Health Provider",
         "licensed alcohol and drug counselor": "Mental Health Provider",
+        ladc: "Mental Health Provider",
+        "substance use": "Mental Health Provider",
+        "substance abuse": "Mental Health Provider",
+        addiction: "Mental Health Provider",
+        recovery: "Mental Health Provider",
+        "sober living": "Mental Health Provider",
+        "recovery housing": "Mental Health Provider",
+        "halfway house": "Mental Health Provider",
+        rehab: "Mental Health Provider",
+        rehabilitation: "Mental Health Provider",
         "internal medicine": "Internal Medicine",
         internist: "Internal Medicine",
         dermatology: "Dermatology",
@@ -1783,9 +1866,15 @@
         "Family Medicine": "🫀",
         "OB/GYN": "🤰",
         Pediatrician: "👶",
+        "Pediatric Dentistry": "🦷",
+        "General Dentistry": "🦷",
+        Dentistry: "🦷",
         "Mental Health Provider": "🧠",
+        "Substance Use Counseling": "💚",
+        "LADC": "💚",
         "Internal Medicine": "🩺",
         Dermatology: "💊",
+        "Medical Spa": "✨",
         "General Surgery": "✂️",
         "Physical Therapist": "🏃",
         Midwife: "🤱",
@@ -1811,16 +1900,23 @@
       }
 
       function insuranceTags(p) {
-        const ins = Array.isArray(p.insurance)
-          ? p.insurance.map((i) => (i || "").toLowerCase())
+        // Field is insuranceAccepted (not insurance) per Firestore schema
+        const ins = Array.isArray(p.insuranceAccepted)
+          ? p.insuranceAccepted.map((i) => (i || "").toLowerCase())
           : [];
         const t = [];
-        if (ins.some((i) => i.includes("soonercare") || i.includes("medicaid")))
+        if (p.soonerCareProvider || p.acceptsMedicaid ||
+            ins.some((i) => i.includes("soonercare") || i.includes("medicaid")))
           t.push('<span class="ptag ptag-teal">✓ SoonerCare</span>');
         if (ins.some((i) => i.includes("medicare")))
           t.push('<span class="ptag ptag-blue">✓ Medicare</span>');
-        if (ins.some((i) => i.includes("uninsured") || i.includes("self")))
-          t.push('<span class="ptag ptag-amber">✓ Uninsured OK</span>');
+        if (p.acceptsSelfPay || p.slidingScale ||
+            ins.some((i) => i.includes("self") || i.includes("uninsured")))
+          t.push('<span class="ptag ptag-amber">✓ Self-Pay OK</span>');
+        if (p.telehealth)
+          t.push('<span class="ptag" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">💻 Telehealth</span>');
+        if (p.acceptingNewPatients || p.acceptsNewPatients || p.acceptingNewMembers)
+          t.push('<span class="ptag" style="background:#f0fdf4;color:#15803d;border:1px solid #86efac;">✓ Accepting</span>');
         if (!t.length)
           t.push('<span class="ptag ptag-teal">✓ Accepting Patients</span>');
         return t.join("");
@@ -1828,24 +1924,40 @@
 
       function renderCard(p, idx) {
         // SECURITY: sanitize ALL provider data before inserting into DOM
-        const safeName = sanitizeHTML(p.name || "Unknown Provider");
-        const safeSpec = sanitizeHTML(p.specialty || "");
-        const safeAddr = sanitizeHTML(p.address || "");
-        const safePhone = sanitizePhone(p.phone || "");
-        const safeAddrURL = sanitizeURL(p.address || "");
-        const safeIdx = parseInt(idx, 10);
+        const safeName     = sanitizeHTML(p.name || "Unknown Provider");
+        const safeSpec     = sanitizeHTML(p.specialty || "");
+        const safePractice = sanitizeHTML(p.practiceName || "");
+        const safeCity     = sanitizeHTML(p.city || "");
+        const safeAddr     = sanitizeHTML(p.address || "");
+        const safePhone    = sanitizePhone(p.phone || "");
+        const safeAddrURL  = sanitizeURL((p.address ? p.address + (p.city ? ", " + p.city : "") : "") || "");
+        const safeIdx      = parseInt(idx, 10);
+        const locationLine = [safeAddr, safeCity].filter(Boolean).join(", ");
 
-        return `<div class="provider-card" data-idx="${safeIdx}" onclick="focusMarker(${safeIdx})">
+        const featuredBadge = p.featured
+          ? `<div style="display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,#fef3c7,#fde68a);color:#92400e;border:1px solid #f59e0b;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:800;letter-spacing:.03em;margin-bottom:8px;">⭐ Founding Provider</div>`
+          : "";
+        const featuredStyle = p.featured
+          ? `box-shadow:0 0 0 2px #f59e0b,0 4px 24px rgba(245,158,11,.15);`
+          : "";
+
+        return `<div class="provider-card" data-idx="${safeIdx}" onclick="openProviderDetail(${safeIdx})" style="${featuredStyle}">
+    ${featuredBadge}
     <div class="pc-top">
       <div class="pc-avatar">${emoji(p.specialty)}</div>
-      <div><div class="pc-name">${safeName}</div><div class="pc-spec">${safeSpec}</div></div>
+      <div style="flex:1;min-width:0;">
+        <div class="pc-name">${safeName}</div>
+        ${safePractice && safePractice !== safeName ? `<div class="pc-practice">${safePractice}</div>` : ""}
+        <div class="pc-spec">${safeSpec}</div>
+      </div>
     </div>
-    ${safeAddr ? `<div class="pc-addr">📍 ${safeAddr}</div>` : ""}
+    ${locationLine ? `<div class="pc-addr">📍 ${locationLine}</div>` : ""}
+    ${p.practiceType === "dpc" && p.dpcMonthlyFee ? `<div class="pc-dpc">💳 DPC — $${parseInt(p.dpcMonthlyFee, 10)}/mo membership</div>` : ""}
     <div class="pc-tags">${insuranceTags(p)}</div>
     ${safePhone ? `<div class="pc-phone">📞 <a href="tel:${safePhone}" onclick="event.stopPropagation()">${safePhone}</a></div>` : ""}
     <div class="pc-actions">
-      <button class="btn-book" onclick="event.stopPropagation();openModal()">📱 Book</button>
-      ${safeAddr ? `<button class="btn-map" onclick="event.stopPropagation();openGoogleMaps('${safeAddrURL}')">🗺 Directions</button>` : `<button class="btn-map" onclick="event.stopPropagation();focusMarker(${safeIdx})">📍 On Map</button>`}
+      <button class="btn-book" onclick="event.stopPropagation();openModal()">📱 Book in App</button>
+      <button class="btn-map" onclick="event.stopPropagation();openProviderDetail(${safeIdx})" style="background:#f1f5f9;color:#475569;border:none;">ℹ️ Details</button>
     </div>
   </div>`;
       }
@@ -1866,6 +1978,10 @@
           "Mental Health",
           "Licensed Professional Counselor",
           "Licensed Alcohol and Drug Counselor",
+          "Substance Use Counseling",
+          "LADC",
+          "Women's Sober Living",
+          "Recovery Housing",
           "Psychiatry",
           "Psychology",
           "Counseling",
@@ -1958,18 +2074,50 @@
           if (alias) resolvedSpecialty = alias;
         }
         return allProviders.filter((p) => {
+          // Match what the app shows: exclude providers explicitly deactivated
+          if (p.active === false) return false;
+
           const matchSp = specialtyMatches(p.specialty, resolvedSpecialty);
           const matchQ =
             !q ||
             (p.name || "").toLowerCase().includes(q) ||
+            (p.practiceName || "").toLowerCase().includes(q) ||
             (p.specialty || "").toLowerCase().includes(q) ||
             (p.address || "").toLowerCase().includes(q) ||
             (p.city || "").toLowerCase().includes(q) ||
+            (p.zip || "").toLowerCase().includes(q) ||
+            (p.state || "").toLowerCase().includes(q) ||
             Object.keys(SPECIALTY_ALIASES).some(
               (a) =>
                 a.includes(q) &&
                 specialtyMatches(p.specialty, SPECIALTY_ALIASES[a]),
             );
+
+          // Extra toggle filters — check both boolean flags AND insuranceAccepted array
+          const insLower = Array.isArray(p.insuranceAccepted)
+            ? p.insuranceAccepted.map((i) => (i || "").toLowerCase())
+            : [];
+
+          if (activeFilters.telehealth && !p.telehealth) return false;
+
+          if (activeFilters.soonercare) {
+            const ok = p.soonerCareProvider || p.acceptsMedicaid ||
+              insLower.some((i) => i.includes("soonercare") || i.includes("medicaid"));
+            if (!ok) return false;
+          }
+
+          if (activeFilters.accepting &&
+              !p.acceptingNewPatients && !p.acceptsNewPatients && !p.acceptingNewMembers)
+            return false;
+
+          if (activeFilters.dpc && p.practiceType !== "dpc") return false;
+
+          if (activeFilters.selfpay) {
+            const ok = p.acceptsSelfPay || p.slidingScale ||
+              insLower.some((i) => i.includes("self") || i.includes("uninsured") || i.includes("cash"));
+            if (!ok) return false;
+          }
+
           return matchSp && matchQ;
         });
       }
@@ -2097,11 +2245,16 @@
           });
 
           marker.addListener("click", () => {
+            // SECURITY: sanitize all fields before injecting into Google Maps infoWindow HTML
+            const mName  = sanitizeHTML(p.name || "Provider");
+            const mSpec  = sanitizeHTML(p.specialty || "");
+            const mAddr  = sanitizeHTML(p.address || "");
+            const mPhone = sanitizePhone(p.phone || "");
             infoWindow.setContent(`<div class="gm-info">
-        <strong>${p.name || "Provider"}</strong>
-        <small>${p.specialty || ""}</small>
-        <small>📍 ${p.address || ""}</small>
-        ${p.phone ? `<small>📞 ${p.phone}</small>` : ""}
+        <strong>${mName}</strong>
+        ${mSpec ? `<small>${mSpec}</small>` : ""}
+        ${mAddr ? `<small>📍 ${mAddr}</small>` : ""}
+        ${mPhone ? `<small>📞 ${mPhone}</small>` : ""}
         <a href="#" onclick="openModal();return false;">📱 Book in App</a>
       </div>`);
             infoWindow.open(map, marker);
@@ -2150,6 +2303,107 @@
 
       window.openModal = function () {
         document.getElementById("modal").classList.add("open");
+      };
+
+      // ── Extra toggle filters (Telehealth, SoonerCare, etc.) ───
+      window.toggleFilter = function (key, btn) {
+        activeFilters[key] = !activeFilters[key];
+        btn.classList.toggle("active", activeFilters[key]);
+        currentPage = 1;
+        render(1);
+      };
+
+      // ── Provider detail modal ─────────────────────────────────
+      window.openProviderDetail = function (idx) {
+        const p = allProviders[idx];
+        if (!p) return;
+        // Also pan map
+        focusMarker(idx);
+
+        const ins = Array.isArray(p.insuranceAccepted) ? p.insuranceAccepted : [];
+        const langs = Array.isArray(p.languages) ? p.languages.join(", ") : "";
+        const interests = Array.isArray(p.specialInterests) ? p.specialInterests.join(", ") : "";
+        const education = Array.isArray(p.education)
+          ? p.education.map(e => `${sanitizeHTML(e.degree || "")} — ${sanitizeHTML(e.school || "")}${e.year ? " (" + e.year + ")" : ""}`).join("<br>")
+          : "";
+
+        const badges = [];
+        if (p.telehealth)    badges.push('<span style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700;">💻 Telehealth</span>');
+        if (p.inPerson)      badges.push('<span style="background:#f0fdf4;color:#15803d;border:1px solid #86efac;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700;">🏥 In-Person</span>');
+        if (p.acceptingNewPatients || p.acceptsNewPatients || p.acceptingNewMembers)
+          badges.push('<span style="background:#f0fdf4;color:#15803d;border:1px solid #86efac;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700;">✅ Accepting New Patients</span>');
+        if (p.soonerCareProvider || p.acceptsMedicaid)
+          badges.push('<span style="background:#f0fdfb;color:#0d9488;border:1px solid #99f6e4;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700;">🏥 SoonerCare / Medicaid</span>');
+        if (p.acceptsSelfPay || p.slidingScale)
+          badges.push('<span style="background:#fefce8;color:#a16207;border:1px solid #fde68a;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700;">💰 Self-Pay OK</span>');
+        if (p.hsaEligible)
+          badges.push('<span style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700;">💳 HSA Eligible</span>');
+
+        const location = [p.address, p.city, p.state, p.zip].filter(Boolean).join(", ");
+        const safeName     = sanitizeHTML(p.name || "");
+        const safePractice = sanitizeHTML(p.practiceName || "");
+        const safeSpec     = sanitizeHTML(p.specialty || "");
+        const safeBio      = sanitizeHTML(p.bio || p.dpcDescription || "");
+        const safeWelcome  = sanitizeHTML(p.welcomeMessage || "");
+        const safePhone    = sanitizePhone(p.phone || "");
+        const safeWebsite  = sanitizeWebURL(p.website || "");
+
+        const highlights = Array.isArray(p.practiceHighlights) ? p.practiceHighlights : [];
+        const soonerCarePending = p.soonerCareStatus === "pending_credentialing";
+
+        document.getElementById("providerDetailContent").innerHTML = `
+          ${p.featured ? `<div style="display:inline-flex;align-items:center;gap:5px;background:linear-gradient(135deg,#fef3c7,#fde68a);color:#92400e;border:1px solid #f59e0b;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:800;margin-bottom:14px;">⭐ Founding Provider — First on Morava</div>` : ""}
+          <div style="display:flex;align-items:flex-start;gap:16px;margin-bottom:20px;">
+            <div style="width:56px;height:56px;border-radius:50%;background:#ccfbf1;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;">${emoji(p.specialty)}</div>
+            <div style="flex:1;">
+              <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:20px;color:#0f172a;">${safeName}</div>
+              ${safePractice && safePractice !== safeName ? `<div style="font-size:13px;color:#475569;font-weight:600;margin-top:2px;">${safePractice}</div>` : ""}
+              <div style="font-size:13px;color:#14b8a6;font-weight:700;margin-top:2px;">${safeSpec}</div>
+            </div>
+          </div>
+
+          ${badges.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;">${badges.join("")}</div>` : ""}
+
+          ${p.practiceType === "dpc" && p.dpcMonthlyFee ? `
+            <div style="background:#f0fdfb;border:1.5px solid #0d9488;border-radius:12px;padding:14px 16px;margin-bottom:16px;">
+              <div style="font-weight:700;color:#0d9488;font-size:13px;margin-bottom:4px;">💳 Direct Primary Care — $${parseInt(p.dpcMonthlyFee,10)}/month</div>
+              <div style="font-size:12px;color:#475569;line-height:1.5;">Unlimited primary care visits for a flat monthly fee. No copays, no insurance billing.${p.hsaEligible ? " HSA funds accepted." : ""}</div>
+            </div>` : ""}
+
+          ${safeBio ? `<div style="margin-bottom:16px;"><div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">About</div><div style="font-size:13px;color:#334155;line-height:1.65;">${safeBio}</div></div>` : ""}
+
+          ${safeWelcome ? `<div style="background:#f8fafc;border-left:3px solid #14b8a6;padding:10px 14px;border-radius:0 8px 8px 0;margin-bottom:16px;font-size:13px;color:#334155;font-style:italic;line-height:1.5;">"${safeWelcome}"</div>` : ""}
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+            ${location ? `<div><div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Location</div><div style="font-size:13px;color:#334155;">📍 ${sanitizeHTML(location)}</div></div>` : ""}
+            ${safePhone ? `<div><div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Phone</div><div style="font-size:13px;color:#334155;">📞 <a href="tel:${safePhone}" style="color:#14b8a6;font-weight:700;">${safePhone}</a></div></div>` : ""}
+            ${langs ? `<div><div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Languages</div><div style="font-size:13px;color:#334155;">${sanitizeHTML(langs)}</div></div>` : ""}
+            ${interests ? `<div><div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Special Interests</div><div style="font-size:13px;color:#334155;">${sanitizeHTML(interests)}</div></div>` : ""}
+          </div>
+
+          ${highlights.length ? `
+            <div style="margin-bottom:16px;">
+              <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Practice Highlights</div>
+              <div style="display:flex;flex-direction:column;gap:6px;">
+                ${highlights.map(h => `<div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#334155;"><span style="color:#14b8a6;font-weight:700;">✓</span> ${sanitizeHTML(h)}</div>`).join("")}
+              </div>
+            </div>` : ""}
+
+          ${ins.length ? `
+            <div style="margin-bottom:16px;">
+              <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Insurance & Payment</div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                ${ins.map(i => `<span style="background:#f1f5f9;color:#475569;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;">${sanitizeHTML(i)}</span>`).join("")}
+              </div>
+              ${soonerCarePending ? `<div style="margin-top:8px;font-size:12px;color:#b45309;background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:6px 10px;">⏳ SoonerCare credentialing in progress — check back soon</div>` : ""}
+            </div>` : ""}
+
+          ${education ? `<div style="margin-bottom:16px;"><div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Education & Training</div><div style="font-size:13px;color:#334155;line-height:1.8;">${education}</div></div>` : ""}
+
+          ${safeWebsite ? `<div style="margin-top:12px;"><a href="${safeWebsite}" target="_blank" rel="noopener" style="font-size:13px;color:#14b8a6;font-weight:700;">🌐 Visit Website →</a></div>` : ""}
+        `;
+
+        document.getElementById("providerDetailModal").classList.add("open");
       };
 
       window.setChip = function (specialty) {
@@ -2209,6 +2463,15 @@
           document.getElementById("modal").classList.remove("open");
       });
 
+      // Provider detail modal close
+      document.getElementById("providerDetailClose").addEventListener("click", () => {
+        document.getElementById("providerDetailModal").classList.remove("open");
+      });
+      document.getElementById("providerDetailModal").addEventListener("click", (e) => {
+        if (e.target === document.getElementById("providerDetailModal"))
+          document.getElementById("providerDetailModal").classList.remove("open");
+      });
+
       // FAQ accordion
       document.querySelectorAll(".faq-q").forEach((q) => {
         q.addEventListener("click", () => {
@@ -2230,18 +2493,21 @@
       }
 
       // Load Firebase data — rate limited
+      const CACHE_KEY = "morava_providers";
+      const CACHE_TTL = 10 * 60 * 1000; // 10 minutes — new providers appear within 10 min
       async function load() {
-        // Check sessionStorage cache first — avoids repeat Firestore reads
-        const cached = sessionStorage.getItem("morava_providers");
-        if (cached) {
-          try {
-            allProviders = JSON.parse(cached);
-            render(1);
-            return;
-          } catch {
-            /* cache miss — fall through */
+        // Check sessionStorage cache with TTL — avoids repeat Firestore reads
+        try {
+          const raw = sessionStorage.getItem(CACHE_KEY);
+          if (raw) {
+            const { data, ts } = JSON.parse(raw);
+            if (Date.now() - ts < CACHE_TTL && Array.isArray(data)) {
+              allProviders = data;
+              render(1);
+              return;
+            }
           }
-        }
+        } catch { /* cache miss or parse error — fall through */ }
         if (!rateLimiter.check()) {
           document.getElementById("providerGrid").innerHTML =
             `<div class="state-wrap"><div style="font-size:40px;margin-bottom:12px">⏳</div><div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:18px">Too many requests</div><div style="font-size:14px;color:var(--text-2)">Please wait a moment and refresh</div></div>`;
@@ -2254,8 +2520,8 @@
             .filter((p) => p.name && typeof p.name === "string") // filter malformed docs
             .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
           sessionStorage.setItem(
-            "morava_providers",
-            JSON.stringify(allProviders),
+            CACHE_KEY,
+            JSON.stringify({ data: allProviders, ts: Date.now() }),
           );
           render(1);
         } catch (err) {

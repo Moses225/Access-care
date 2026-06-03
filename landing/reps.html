@@ -685,17 +685,40 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   <!-- ── TAB 3: MY STATUS ────────────────────────────────── -->
   <div class="tab-panel" id="tab-status">
 
+    <!-- Step 1: Enter email -->
     <div class="status-lookup" id="statusLookup">
       <h3>My Submission Status</h3>
-      <p>Enter your rep email to see all your provider submissions, their verification status, and pending commission.</p>
+      <p>Enter your rep email to see your provider submissions, verification status, and pending commission.</p>
       <div class="status-lookup-row">
-        <input type="email" id="status-email" placeholder="your@email.com" onkeydown="if(event.key==='Enter'){event.preventDefault();loadStatus()}"/>
-        <button class="btn btn-sm" onclick="loadStatus()" id="statusBtn">View My Status →</button>
+        <input type="email" id="status-email" placeholder="your@moravacare.com" onkeydown="if(event.key==='Enter'){event.preventDefault();requestStatusAccess()}"/>
+        <button class="btn btn-sm" onclick="requestStatusAccess()" id="statusBtn">View My Status →</button>
       </div>
-      <div class="gate-error" id="statusError" style="margin-top:10px;display:none;">No submissions found for that email. Make sure you're using the same email you registered with.</div>
+      <div class="gate-error" id="statusError" style="margin-top:10px;display:none;"></div>
+    </div>
+
+    <!-- Step 2: OTP verification (shown after email submitted) -->
+    <div id="statusOtpGate" style="display:none;" class="status-lookup">
+      <h3>Verify Your Identity</h3>
+      <p>We sent a 6-digit code to <strong id="statusOtpEmailDisplay"></strong>. Enter it below to view your submissions.</p>
+      <div class="otp-row" style="display:flex;gap:10px;align-items:center;margin-top:14px;">
+        <input type="text" id="status-otp-code" maxlength="6" placeholder="000000"
+          style="font-size:22px;letter-spacing:6px;width:140px;text-align:center;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();submitStatusOtp()}"
+          oninput="this.value=this.value.replace(/\D/g,'')"/>
+        <button class="btn btn-sm" onclick="submitStatusOtp()" id="statusOtpBtn">Confirm →</button>
+      </div>
+      <div class="gate-error" id="statusOtpError" style="margin-top:10px;display:none;"></div>
+      <div style="margin-top:12px;font-size:13px;color:var(--text-2);">
+        Didn't get it? <button onclick="resendStatusCode()" id="statusResendBtn" style="background:none;border:none;color:var(--teal);font-size:13px;cursor:pointer;padding:0;font-family:inherit;">Resend code</button>
+        · <button onclick="resetStatusGate()" style="background:none;border:none;color:var(--text-3);font-size:13px;cursor:pointer;padding:0;font-family:inherit;">Use different email</button>
+      </div>
     </div>
 
     <div id="statusResults" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+        <span id="statusRepLabel" style="font-size:13px;color:var(--text-2);"></span>
+        <button onclick="signOutStatus()" style="background:none;border:none;color:var(--text-3);font-size:12px;cursor:pointer;padding:0;font-family:inherit;">Sign out</button>
+      </div>
       <!-- Summary stats injected here -->
       <div class="stats-grid" id="statsGrid"></div>
       <!-- Table injected here -->
@@ -817,13 +840,14 @@ window.submitRepCode = async function() {
     const result = await verify({ email, code });
     const rep = result.data.rep;
 
-    // Cache rep info and unlock form
+    // Cache rep info and session token for status tab
     window._verifiedRep = {
       name: rep.name || '',
       email: rep.email || email,
       payment: rep.payment || '',
       verifiedCount: rep.verifiedCount || 0,
     };
+    window._repSessionToken = result.data.sessionToken || null;
 
     if (rep.status === 'approved') {
       document.getElementById('repOtpGate').style.display = 'none';
@@ -1006,59 +1030,186 @@ document.getElementById('submitForm').addEventListener('submit', async (e) => {
   }
 });
 
-// ── Status tracker ────────────────────────────────────────
-window.loadStatus = async function() {
-  const email = sanEmail(document.getElementById('status-email').value);
-  if (!email) { document.getElementById('status-email').classList.add('input-error'); return; }
-  document.getElementById('status-email').classList.remove('input-error');
-  document.getElementById('statusError').style.display='none';
+// ── Status tracker — step 1: email entry ─────────────────
+window.requestStatusAccess = async function() {
+  const emailEl = document.getElementById('status-email');
+  const email = sanEmail(emailEl.value);
+  if (!email) { emailEl.classList.add('input-error'); return; }
+  emailEl.classList.remove('input-error');
+  showStatusError('');
+
+  // If already verified in this session for this email, skip OTP
+  if (window._repSessionToken &&
+      window._verifiedRep &&
+      (window._verifiedRep.email||'').toLowerCase() === email) {
+    loadStatusWithToken(email, window._repSessionToken);
+    return;
+  }
 
   const btn = document.getElementById('statusBtn');
-  btn.disabled=true; btn.textContent='Loading...';
-  document.getElementById('statusLoading').style.display='block';
-  document.getElementById('statusResults').style.display='none';
+  btn.disabled=true; btn.textContent='Sending code...';
 
   try {
-    const q = query(collection(db,'providerSubmissions'), where('repEmail','==',email));
-    const snap = await getDocs(q);
+    const sendCode = httpsCallable(fns, 'sendRepVerificationCode');
+    await sendCode({ email });
+    document.getElementById('statusLookup').style.display='none';
+    document.getElementById('statusOtpGate').style.display='block';
+    document.getElementById('statusOtpEmailDisplay').textContent = email;
+    document.getElementById('status-otp-code').focus();
+  } catch(err) {
+    const msgs = {
+      'functions/not-found':         "No rep account found for that email. Make sure you're using your registered rep email.",
+      'functions/resource-exhausted':'Too many code requests. Please wait 10 minutes.',
+      'functions/invalid-argument':  'Please enter a valid email address.',
+    };
+    showStatusError(msgs[err.code] || 'Could not send code. Please try again.');
+  }
+  btn.disabled=false; btn.textContent='View My Status →';
+};
+
+// ── Status tracker — step 2: verify OTP ──────────────────
+window.submitStatusOtp = async function() {
+  const email = sanEmail(document.getElementById('status-email').value);
+  const code  = document.getElementById('status-otp-code').value.trim();
+  if (!code || code.length !== 6) {
+    showStatusOtpError('Enter the 6-digit code from your email.');
+    return;
+  }
+  showStatusOtpError('');
+
+  const btn = document.getElementById('statusOtpBtn');
+  btn.disabled=true; btn.textContent='Verifying...';
+
+  try {
+    const verify = httpsCallable(fns, 'verifyRepCode');
+    const result = await verify({ email, code });
+    const sessionToken = result.data.sessionToken;
+    const rep = result.data.rep;
+
+    window._repSessionToken = sessionToken;
+    if (!window._verifiedRep) {
+      window._verifiedRep = {
+        name: rep.name || '',
+        email: rep.email || email,
+        payment: rep.payment || '',
+        verifiedCount: rep.verifiedCount || 0,
+      };
+    }
+
+    document.getElementById('statusOtpGate').style.display='none';
+    loadStatusWithToken(email, sessionToken);
+  } catch(err) {
+    const msgs = {
+      'functions/unauthenticated':   err.message || 'Incorrect code.',
+      'functions/deadline-exceeded': 'Code expired. Click "Resend code" to get a new one.',
+      'functions/resource-exhausted':'Too many failed attempts. Request a new code.',
+    };
+    showStatusOtpError(msgs[err.code] || 'Verification failed. Please try again.');
+  }
+  btn.disabled=false; btn.textContent='Confirm →';
+};
+
+// ── Resend code for status tab ────────────────────────────
+window.resendStatusCode = async function() {
+  const email = sanEmail(document.getElementById('status-email').value);
+  const btn = document.getElementById('statusResendBtn');
+  btn.disabled=true; btn.textContent='Sending...';
+  showStatusOtpError('');
+  try {
+    const sendCode = httpsCallable(fns, 'sendRepVerificationCode');
+    await sendCode({ email });
+    const el = document.getElementById('statusOtpError');
+    el.style.color='var(--teal)';
+    el.textContent='New code sent! Check your inbox.';
+    el.style.display='block';
+  } catch(err) {
+    showStatusOtpError('Could not resend. Please wait a moment and try again.');
+  }
+  btn.disabled=false; btn.textContent='Resend code';
+};
+
+// ── Reset status gate back to email step ──────────────────
+window.resetStatusGate = function() {
+  document.getElementById('statusOtpGate').style.display='none';
+  document.getElementById('status-otp-code').value='';
+  showStatusOtpError('');
+  document.getElementById('statusLookup').style.display='block';
+};
+
+// ── Sign out of status view ────────────────────────────────
+window.signOutStatus = function() {
+  window._repSessionToken = null;
+  document.getElementById('statusResults').style.display='none';
+  document.getElementById('statusLookup').style.display='block';
+  document.getElementById('status-email').value='';
+  showStatusError('');
+};
+
+// ── Fetch and display submissions via Cloud Function ──────
+async function loadStatusWithToken(email, sessionToken) {
+  document.getElementById('statusLoading').style.display='block';
+  document.getElementById('statusResults').style.display='none';
+  showStatusError('');
+
+  try {
+    const getSubmissions = httpsCallable(fns, 'getRepSubmissions');
+    const result = await getSubmissions({ email, sessionToken });
     document.getElementById('statusLoading').style.display='none';
 
-    if (snap.empty) {
-      // No submissions — check minimal status collection (no sensitive data)
-      try {
-        const appQ = query(collection(db,'repAppStatus'), where('email','==',email));
-        const appSnap = await getDocs(appQ);
-        if (!appSnap.empty) {
-          const app = appSnap.docs[0].data();
-          renderApplicationStatus(app, email);
-          document.getElementById('statusResults').style.display='block';
-        } else {
-          document.getElementById('statusError').style.display='block';
-        }
-      } catch(_) {
-        document.getElementById('statusError').style.display='block';
+    const { submissions, app } = result.data;
+
+    if (!submissions || submissions.length === 0) {
+      if (app) {
+        renderApplicationStatus(app, email);
+        const label = document.getElementById('statusRepLabel');
+        if (label) label.textContent = 'Signed in as ' + email;
+        document.getElementById('statusResults').style.display='block';
+      } else {
+        showStatusError("No submissions found. Make sure you're using the same email you registered with.");
       }
-      btn.disabled=false; btn.textContent='View My Status →';
       return;
     }
 
-    const submissions = snap.docs
-      .map(d => ({ id: d.id, ...d.data() }))
-      .sort((a,b) => {
-        const at = a.submittedAt?.toMillis?.() || 0;
-        const bt = b.submittedAt?.toMillis?.() || 0;
-        return bt - at;
-      });
+    // Normalize timestamps — CF returns millis (numbers), not Firestore Timestamps
+    const normalizedSubs = submissions.map(s => ({
+      ...s,
+      submittedAt: s.submittedAt
+        ? { toMillis: () => s.submittedAt, toDate: () => new Date(s.submittedAt) }
+        : null,
+    }));
 
-    renderStatus(submissions);
+    renderStatus(normalizedSubs);
+    const label = document.getElementById('statusRepLabel');
+    if (label) label.textContent = 'Signed in as ' + email;
     document.getElementById('statusResults').style.display='block';
   } catch(err) {
     console.error(err);
     document.getElementById('statusLoading').style.display='none';
-    document.getElementById('statusError').style.display='block';
+    if (err.code === 'functions/unauthenticated') {
+      window._repSessionToken = null;
+      resetStatusGate();
+      document.getElementById('statusLookup').style.display='block';
+      showStatusError('Your session has expired. Please verify your email again.');
+    } else {
+      showStatusError('Something went wrong loading your submissions. Please try again.');
+    }
   }
-  btn.disabled=false; btn.textContent='View My Status →';
-};
+}
+
+function showStatusError(msg) {
+  const el = document.getElementById('statusError');
+  if (!el) return;
+  if (msg) { el.textContent = msg; el.style.display='block'; }
+  else { el.style.display='none'; el.textContent=''; }
+}
+
+function showStatusOtpError(msg) {
+  const el = document.getElementById('statusOtpError');
+  if (!el) return;
+  el.style.color = 'var(--error, #dc2626)';
+  if (msg) { el.textContent = msg; el.style.display='block'; }
+  else { el.style.display='none'; el.textContent=''; }
+}
 
 function renderApplicationStatus(app, email) {
   const statusMap = {

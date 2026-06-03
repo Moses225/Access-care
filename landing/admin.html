@@ -680,6 +680,189 @@
         display: block;
       }
 
+      /* ── REP PERFORMANCE TAB ──────────────────────────────── */
+      .perf-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+        gap: 16px;
+        margin-bottom: 28px;
+      }
+      .perf-card {
+        background: var(--white);
+        border-radius: 16px;
+        border: 1.5px solid var(--border);
+        overflow: hidden;
+      }
+      .perf-card-header {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 20px 20px 16px;
+        border-bottom: 1px solid var(--border);
+      }
+      .perf-avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: var(--teal-light);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: "Nunito", sans-serif;
+        font-weight: 900;
+        font-size: 16px;
+        color: var(--teal-dark);
+        flex-shrink: 0;
+      }
+      .perf-name {
+        font-weight: 700;
+        font-size: 15px;
+        color: var(--navy);
+      }
+      .perf-email {
+        font-size: 12px;
+        color: var(--text-3);
+        margin-top: 2px;
+      }
+      .perf-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        border-bottom: 1px solid var(--border);
+      }
+      .perf-stat {
+        padding: 14px 16px;
+        border-right: 1px solid var(--border);
+        text-align: center;
+      }
+      .perf-stat:last-child {
+        border-right: none;
+      }
+      .perf-stat-val {
+        font-family: "Nunito", sans-serif;
+        font-weight: 900;
+        font-size: 22px;
+        color: var(--navy);
+      }
+      .perf-stat-val.teal { color: var(--teal-dark); }
+      .perf-stat-val.amber { color: var(--amber); }
+      .perf-stat-val.green { color: var(--green); }
+      .perf-stat-val.purple { color: var(--purple); }
+      .perf-stat-label {
+        font-size: 10px;
+        font-weight: 700;
+        color: var(--text-3);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-top: 2px;
+      }
+      .perf-commission {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 14px 18px;
+        border-bottom: 1px solid var(--border);
+        background: var(--green-bg);
+      }
+      .perf-commission-label {
+        font-size: 12px;
+        font-weight: 700;
+        color: #166534;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .perf-commission-vals {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+      }
+      .perf-commission-item {
+        text-align: right;
+      }
+      .perf-commission-amount {
+        font-family: "Nunito", sans-serif;
+        font-weight: 900;
+        font-size: 18px;
+        color: #166534;
+      }
+      .perf-commission-sub {
+        font-size: 10px;
+        color: #4ade80;
+        font-weight: 600;
+      }
+      .perf-commission-paid {
+        font-family: "Nunito", sans-serif;
+        font-weight: 700;
+        font-size: 14px;
+        color: #15803d;
+        opacity: 0.7;
+      }
+      .perf-bar-wrap {
+        padding: 14px 18px;
+        border-bottom: 1px solid var(--border);
+      }
+      .perf-bar-label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--text-3);
+        margin-bottom: 6px;
+      }
+      .perf-bar {
+        height: 8px;
+        background: var(--border);
+        border-radius: 99px;
+        overflow: hidden;
+      }
+      .perf-bar-fill {
+        height: 100%;
+        background: var(--teal);
+        border-radius: 99px;
+        transition: width 0.4s ease;
+      }
+      .perf-recents {
+        padding: 12px 18px 16px;
+      }
+      .perf-recents-title {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--text-3);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 8px;
+      }
+      .perf-recent-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 0;
+        border-bottom: 1px solid var(--border);
+        font-size: 12px;
+      }
+      .perf-recent-row:last-child {
+        border-bottom: none;
+      }
+      .perf-recent-name {
+        color: var(--text);
+        font-weight: 600;
+        max-width: 180px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .perf-recent-date {
+        color: var(--text-3);
+        font-size: 11px;
+        flex-shrink: 0;
+        margin-left: 8px;
+      }
+      .perf-empty {
+        padding: 32px;
+        text-align: center;
+        font-size: 13px;
+        color: var(--text-3);
+      }
+
       /* ── COMMISSION MODAL ──────────────────────────────────── */
       .modal-overlay {
         position: fixed;
@@ -851,6 +1034,299 @@
       }
       .toast.error {
         background: var(--red);
+      }
+
+      /* ── PAYROLL TAB ───────────────────────────────────────── */
+      .payroll-banner {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: var(--navy);
+        border-radius: 14px;
+        padding: 20px 24px;
+        margin-bottom: 24px;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+      .payroll-banner-title {
+        font-family: "Nunito", sans-serif;
+        font-weight: 900;
+        font-size: 16px;
+        color: white;
+      }
+      .payroll-banner-sub {
+        font-size: 12px;
+        color: rgba(255,255,255,0.55);
+        margin-top: 4px;
+      }
+      .payroll-banner-right {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 4px;
+      }
+      .payroll-banner-total {
+        font-family: "Nunito", sans-serif;
+        font-weight: 900;
+        font-size: 32px;
+        color: #4ade80;
+        line-height: 1;
+      }
+      .payroll-banner-label {
+        font-size: 11px;
+        color: rgba(255,255,255,0.45);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .payroll-cards {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        margin-bottom: 32px;
+      }
+      .pay-card {
+        background: var(--white);
+        border-radius: 16px;
+        border: 1.5px solid var(--border);
+        overflow: hidden;
+      }
+      .pay-card.passive {
+        border-color: var(--amber);
+      }
+      .pay-card-header {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 18px 20px;
+        background: var(--bg);
+        border-bottom: 1.5px solid var(--border);
+        flex-wrap: wrap;
+      }
+      .pay-card-avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background: var(--teal-light);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: "Nunito", sans-serif;
+        font-weight: 900;
+        font-size: 15px;
+        color: var(--teal-dark);
+        flex-shrink: 0;
+      }
+      .pay-card-name {
+        font-weight: 700;
+        font-size: 15px;
+        color: var(--navy);
+      }
+      .pay-card-email {
+        font-size: 12px;
+        color: var(--text-3);
+        margin-top: 1px;
+      }
+      .pay-method-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background: var(--teal-xlight);
+        border: 1px solid var(--teal-light);
+        color: var(--teal-dark);
+        font-size: 11px;
+        font-weight: 700;
+        padding: 3px 9px;
+        border-radius: 20px;
+      }
+      .pay-passive-chip {
+        display: inline-flex;
+        align-items: center;
+        background: var(--amber-bg);
+        border: 1px solid #fde68a;
+        color: #92400e;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 3px 9px;
+        border-radius: 20px;
+      }
+      .pay-section {
+        border-bottom: 1px solid var(--border);
+      }
+      .pay-section-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 20px 10px;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--text-3);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .pay-section-amt {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--navy);
+      }
+      .pay-line {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 9px 20px;
+        border-top: 1px solid var(--border);
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .pay-line-name {
+        font-size: 13px;
+        color: var(--text);
+        flex: 1;
+        min-width: 160px;
+      }
+      .pay-line-sub {
+        font-size: 11px;
+        color: var(--text-3);
+        margin-top: 1px;
+      }
+      .pay-line-right {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-shrink: 0;
+      }
+      .pay-line-amt {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--teal-dark);
+        min-width: 36px;
+        text-align: right;
+      }
+      .pay-line-amt.deduct {
+        color: var(--red);
+      }
+      .pay-line-paid {
+        font-size: 11px;
+        font-weight: 700;
+        color: #166534;
+        background: var(--green-bg);
+        padding: 2px 8px;
+        border-radius: 10px;
+      }
+      .pay-mark-btn {
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 700;
+        border: 1.5px solid var(--border);
+        background: var(--white);
+        color: var(--text-2);
+        cursor: pointer;
+        transition: all 0.15s;
+        white-space: nowrap;
+      }
+      .pay-mark-btn:hover {
+        border-color: var(--teal);
+        color: var(--teal);
+      }
+      .pay-residual-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 20px;
+        border-top: 1px solid var(--border);
+        flex-wrap: wrap;
+      }
+      .pay-residual-row label {
+        font-size: 13px;
+        color: var(--text);
+        flex: 1;
+      }
+      .pay-residual-input {
+        width: 80px;
+        padding: 6px 10px;
+        border: 1.5px solid var(--border);
+        border-radius: 8px;
+        font-size: 13px;
+        font-family: inherit;
+        font-weight: 700;
+        text-align: right;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      .pay-residual-input:focus {
+        border-color: var(--teal);
+      }
+      .pay-total-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px;
+        background: var(--bg);
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .pay-total-label {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--text-2);
+      }
+      .pay-total-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .pay-total-amt {
+        font-family: "Nunito", sans-serif;
+        font-weight: 900;
+        font-size: 26px;
+        color: var(--navy);
+      }
+      .pay-now-btn {
+        padding: 10px 20px;
+        background: var(--teal);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background 0.2s;
+        white-space: nowrap;
+      }
+      .pay-now-btn:hover { background: var(--teal-dark); }
+      .pay-now-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+      .payroll-history {
+        background: var(--white);
+        border-radius: 16px;
+        border: 1.5px solid var(--border);
+        overflow: hidden;
+        margin-bottom: 32px;
+      }
+      .payroll-history-title {
+        padding: 16px 20px;
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--text);
+        border-bottom: 1px solid var(--border);
+      }
+      .history-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 20px;
+        border-bottom: 1px solid var(--border);
+        font-size: 13px;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .history-row:last-child { border-bottom: none; }
+      .history-rep { font-weight: 600; color: var(--text); }
+      .history-meta { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+      .history-amt {
+        font-family: "Nunito", sans-serif;
+        font-weight: 900;
+        font-size: 18px;
+        color: var(--teal-dark);
       }
 
       @media (max-width: 900px) {
@@ -1035,6 +1511,12 @@
           <button class="tab" onclick="switchTab('applications', this)">
             🙋 Rep Applications
           </button>
+          <button class="tab" onclick="switchTab('performance', this)">
+            📊 Rep Performance
+          </button>
+          <button class="tab" onclick="switchTab('payroll', this)">
+            💰 Payroll
+          </button>
         </div>
 
         <!-- ── SUBMISSIONS TAB ──────────────────────────────── -->
@@ -1108,6 +1590,28 @@
           </div>
           <div class="data-table" id="applicationsTable">
             <div class="table-loading">Loading applications...</div>
+          </div>
+        </div>
+        <!-- ── PAYROLL TAB ──────────────────────────────────── -->
+        <div class="tab-panel" id="tab-payroll">
+          <div id="payrollBanner"></div>
+          <div class="payroll-cards" id="payrollCards">
+            <div class="perf-empty">Loading payroll data...</div>
+          </div>
+          <div class="payroll-history" id="payrollHistorySection" style="display:none;">
+            <div class="payroll-history-title">📋 Recent Payments</div>
+            <div id="payrollHistoryRows"></div>
+          </div>
+        </div>
+
+        <!-- ── PERFORMANCE TAB ─────────────────────────────── -->
+        <div class="tab-panel" id="tab-performance">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <div style="font-size:13px;color:var(--text-3);">Live stats pulled from Firestore — refresh to update.</div>
+            <button class="refresh-btn" onclick="loadAll()">↻ Refresh</button>
+          </div>
+          <div id="performanceGrid" class="perf-grid">
+            <div class="perf-empty">Loading performance data...</div>
           </div>
         </div>
       </div>
@@ -1240,9 +1744,13 @@
         getDocs,
         doc,
         updateDoc,
+        addDoc,
         serverTimestamp,
         query,
         where,
+        orderBy,
+        limit,
+        arrayUnion,
       } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
       import {
         getAuth,
@@ -1284,6 +1792,7 @@
       // ── State ─────────────────────────────────────────────────
       let allSubmissions = [];
       let allApplications = [];
+      let payrollHistory = [];
       let currentSubFilter = "all";
       let currentAppFilter = "all";
       let pendingLiveDocId = null;
@@ -1527,9 +2036,19 @@
                 (a.submittedAt?.toMillis?.() ?? 0),
             );
 
+          // Load payroll history (last 30 runs)
+          try {
+            const histSnap = await getDocs(
+              query(collection(db, "payrollRuns"), orderBy("paidAt", "desc"), limit(30))
+            );
+            payrollHistory = histSnap.docs.map(d => ({ _id: d.id, ...d.data() }));
+          } catch (_) { payrollHistory = []; }
+
           updateStats();
           renderSubmissions();
           renderApplications();
+          renderPerformance();
+          renderPayroll();
         } catch (err) {
           console.error(err);
           showToast("Failed to load data. Check console.", "error");
@@ -2060,6 +2579,765 @@
         } catch (err) {
           showToast("Save failed.", "error");
         }
+      };
+
+      // ── Payroll ───────────────────────────────────────────────
+
+      // Commission tiers per agreement Section 4.1
+      const TIERS = [
+        { max: 10,  fee: 15 },
+        { max: 25,  fee: 20 },
+        { max: Infinity, fee: 25 },
+      ];
+
+      // Milestone bonuses per Section 4.4(b)
+      const MILESTONES = [
+        { threshold: 10,  amount: 100,  label: "10-provider milestone" },
+        { threshold: 25,  amount: 250,  label: "25-provider milestone" },
+        { threshold: 50,  amount: 500,  label: "50-provider milestone + Senior Rep" },
+        { threshold: 100, amount: 1000, label: "100-provider milestone" },
+      ];
+
+      function calcRepPayroll(rep) {
+        const repSubs = allSubmissions.filter(s => s.repEmail === rep.email);
+        const now = Date.now();
+
+        // ── Unpaid enrollment fees ────────────────────────────
+        const unpaidEnrollment = repSubs.filter(s =>
+          s.status === "live" && !s.commissionPaid
+        );
+        const enrollmentTotal = unpaidEnrollment.reduce(
+          (a, s) => a + (s.commissionAmount || 0), 0
+        );
+
+        // ── Active live providers ──────────────────────────────
+        const liveProviders = repSubs.filter(s => s.status === "live");
+        const liveCount = liveProviders.length;
+
+        // ── Monthly flat residual: $2/std, $5/Pro (Section 4.3) ─
+        // Plan type stored on submission if present, else default to $2
+        const flatResidual = liveProviders.reduce((total, s) => {
+          return total + (s.providerPlan === "pro" ? 5 : 2);
+        }, 0);
+
+        // ── Fast Start bonus (Section 4.4a) ───────────────────
+        const approvedAt = rep.approvedAt?.toDate?.() || rep.createdAt?.toDate?.();
+        let fastStartBonus = 0;
+        let fastStartEarned = 0; // 0=not earned, 75=$75 earned, 150=$150 earned
+        if (!rep.fastStartPaid && approvedAt) {
+          const deadline = new Date(approvedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+          const inFirst30 = repSubs.filter(s => {
+            const liveAt = s.goLiveDate?.toDate?.() || s.updatedAt?.toDate?.();
+            return liveAt && liveAt <= deadline && s.status === "live";
+          });
+          if (inFirst30.length >= 5) { fastStartBonus = 150; fastStartEarned = 150; }
+          else if (inFirst30.length >= 3) { fastStartBonus = 75; fastStartEarned = 75; }
+        }
+
+        // ── Milestone bonuses owed (Section 4.4b) ─────────────
+        const milestonesPaid = rep.milestonesPaid || [];
+        const totalVerified = rep.verifiedCount || 0;
+        const milestonesOwed = MILESTONES.filter(m =>
+          totalVerified >= m.threshold && !milestonesPaid.includes(m.threshold)
+        );
+        const milestonesTotal = milestonesOwed.reduce((a, m) => a + m.amount, 0);
+
+        // ── Clawback risk (Section 4.5) ───────────────────────
+        // Providers paid-commission but live < 60 days — monitor
+        const clawbackRisk = liveProviders.filter(s => {
+          if (!s.commissionPaid) return false;
+          const goLive = s.goLiveDate?.toMillis?.() || 0;
+          const daysSinceLive = goLive > 0 ? (now - goLive) / (1000*60*60*24) : 999;
+          return daysSinceLive <= 60;
+        });
+
+        // Clawback deductions for providers that went not_verified after commission paid
+        const clawbackDeductions = repSubs.filter(s =>
+          s.status === "not_verified" && s.commissionPaid && !s.clawbackApplied
+        ).map(s => {
+          const goLive = s.goLiveDate?.toMillis?.() || 0;
+          const daysActive = goLive > 0 ? (now - goLive) / (1000*60*60*24) : 999;
+          const pct = daysActive <= 30 ? 1.0 : daysActive <= 60 ? 0.5 : 0;
+          return { ...s, clawbackAmt: Math.round((s.commissionAmount || 0) * pct) };
+        }).filter(s => s.clawbackAmt > 0);
+
+        const clawbackTotal = clawbackDeductions.reduce((a, s) => a + s.clawbackAmt, 0);
+
+        // ── Passive status (Section 4.6) ──────────────────────
+        // 2 consecutive quarters (180 days) with no new verified provider
+        const lastGoLive = liveProviders.length > 0
+          ? Math.max(...liveProviders.map(s => s.goLiveDate?.toMillis?.() || s.updatedAt?.toMillis?.() || 0))
+          : 0;
+        const daysSinceLast = lastGoLive > 0 ? (now - lastGoLive) / (1000*60*60*24) : 999;
+        const isPassive = daysSinceLast >= 180;
+        const flatResidualFinal = isPassive ? flatResidual * 0.5 : flatResidual;
+
+        const totalDue = enrollmentTotal + flatResidualFinal + fastStartBonus + milestonesTotal - clawbackTotal;
+
+        return {
+          unpaidEnrollment,
+          enrollmentTotal,
+          liveCount,
+          flatResidual: flatResidualFinal,
+          flatBase: flatResidual,
+          isPassive,
+          fastStartBonus,
+          fastStartEarned,
+          milestonesOwed,
+          milestonesTotal,
+          clawbackRisk,
+          clawbackDeductions,
+          clawbackTotal,
+          totalDue: Math.max(0, totalDue),
+        };
+      }
+
+      function buildPayrollCard(rep, d) {
+        const initials = (rep.name || "?").split(" ").map(w => w[0]).join("").substring(0, 2).toUpperCase();
+        const payHandle = esc(rep.paymentHandle || rep.paymentMethod || "—");
+        const repId = esc(rep._id);
+
+        // Enrollment fee lines
+        const enrollLines = d.unpaidEnrollment.length === 0
+          ? `<div class="pay-line"><div class="pay-line-name" style="color:var(--text-3)">All enrollment fees paid</div></div>`
+          : d.unpaidEnrollment.map(s => `
+            <div class="pay-line" id="enroll-line-${esc(s._id)}">
+              <div class="pay-line-name">
+                ${esc(s.providerName)}
+                <div class="pay-line-sub">${esc(s.practiceName)} · Tier ${
+                  (rep.verifiedCount || 0) <= 10 ? "1 ($15)" :
+                  (rep.verifiedCount || 0) <= 25 ? "2 ($20)" : "3 ($25)"
+                }</div>
+              </div>
+              <div class="pay-line-right">
+                <div class="pay-line-amt">$${s.commissionAmount || 0}</div>
+                <button class="pay-mark-btn" onclick="markEnrollmentPaid('${esc(s._id)}', '${repId}', '${esc(rep.email)}', '${esc(rep.name)}', ${s.commissionAmount || 0})">Mark Paid</button>
+              </div>
+            </div>`).join("");
+
+        // Residual line
+        const residualLine = `
+          <div class="pay-residual-row">
+            <label>
+              Flat residual — ${d.liveCount} active provider${d.liveCount !== 1 ? "s" : ""} × $2${d.isPassive ? " <span style='color:var(--amber);font-weight:700'>× 50% (Passive)</span>" : ""}
+            </label>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div class="pay-line-amt" style="font-size:14px;">$${d.flatResidual.toFixed(2)}</div>
+            </div>
+          </div>
+          <div class="pay-residual-row" style="background:var(--bg);">
+            <label>Per-booking residual (10%) — this month's completed visits</label>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <button onclick="autoCalcBookingResidual('${repId}','${esc(rep.email)}')"
+                id="auto-calc-btn-${repId}"
+                style="font-size:12px;padding:4px 10px;background:var(--teal);color:white;border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700;">
+                ⟳ Auto-calculate
+              </button>
+              <span style="font-size:12px;color:var(--text-3);">or enter manually $</span>
+              <input class="pay-residual-input" id="booking-input-${repId}" type="number" min="0" step="0.01" placeholder="0.00"
+                oninput="updateBookingCalc('${repId}')"/>
+              <span style="font-size:12px;color:var(--text-3);">→ Rep gets</span>
+              <span class="pay-line-amt" id="booking-calc-${repId}" style="font-size:14px;min-width:48px;">$0.00</span>
+            </div>
+            <div id="booking-auto-detail-${repId}" style="font-size:11px;color:var(--text-3);margin-top:4px;"></div>
+          </div>`;
+
+        // Fast Start bonus line
+        const fastStartLine = d.fastStartEarned && !rep.fastStartPaid ? `
+          <div class="pay-line">
+            <div class="pay-line-name">
+              Fast Start Bonus
+              <div class="pay-line-sub">${ d.fastStartEarned === 150 ? "5 providers in first 30 days" : "3 providers in first 30 days" }</div>
+            </div>
+            <div class="pay-line-right">
+              <div class="pay-line-amt">$${d.fastStartBonus}</div>
+              <button class="pay-mark-btn" onclick="markFastStartPaid('${repId}', '${esc(rep.email)}', '${esc(rep.name)}', ${d.fastStartBonus})">Mark Paid</button>
+            </div>
+          </div>` : "";
+
+        // Milestone bonus lines
+        const milestoneLines = d.milestonesOwed.map(m => `
+          <div class="pay-line" id="milestone-line-${repId}-${m.threshold}">
+            <div class="pay-line-name">
+              Milestone Bonus — ${m.label}
+              <div class="pay-line-sub">Cumulative ${m.threshold} verified providers reached</div>
+            </div>
+            <div class="pay-line-right">
+              <div class="pay-line-amt">$${m.amount}</div>
+              <button class="pay-mark-btn" onclick="markMilestonePaid('${repId}', '${esc(rep.email)}', '${esc(rep.name)}', ${m.threshold}, ${m.amount})">Mark Paid</button>
+            </div>
+          </div>`).join("");
+
+        // Clawback deduction lines
+        const clawbackLines = d.clawbackDeductions.map(s => `
+          <div class="pay-line">
+            <div class="pay-line-name">
+              Clawback — ${esc(s.providerName)}
+              <div class="pay-line-sub">Deactivated within 60 days · deducted from next payout</div>
+            </div>
+            <div class="pay-line-right">
+              <div class="pay-line-amt deduct">-$${s.clawbackAmt}</div>
+              <button class="pay-mark-btn" onclick="applyClawback('${esc(s._id)}', '${esc(rep.email)}', ${s.clawbackAmt})">Apply</button>
+            </div>
+          </div>`).join("");
+
+        // Clawback risk warning
+        const riskWarning = d.clawbackRisk.length > 0 ? `
+          <div style="background:var(--amber-bg);border-top:1px solid #fde68a;padding:10px 20px;font-size:12px;color:#92400e;">
+            ⚠️ ${d.clawbackRisk.length} provider${d.clawbackRisk.length>1?"s":""} still within 60-day clawback window:
+            ${d.clawbackRisk.map(s => esc(s.providerName)).join(", ")}
+          </div>` : "";
+
+        const hasAnything = d.totalDue > 0;
+
+        return `
+        <div class="pay-card${d.isPassive ? " passive" : ""}">
+          <div class="pay-card-header">
+            <div class="pay-card-avatar">${initials}</div>
+            <div style="flex:1;">
+              <div class="pay-card-name">${esc(rep.name)}</div>
+              <div class="pay-card-email">${esc(rep.email)}</div>
+            </div>
+            ${payHandle !== "—" ? `<div class="pay-method-chip">💸 ${payHandle}</div>` : ""}
+            ${d.isPassive ? `<div class="pay-passive-chip">⏸ Passive (50% residuals)</div>` : ""}
+          </div>
+
+          <!-- Enrollment Fees -->
+          <div class="pay-section">
+            <div class="pay-section-title">
+              <span>Enrollment Commissions</span>
+              ${d.enrollmentTotal > 0 ? `<span class="pay-section-amt">$${d.enrollmentTotal}</span>` : ""}
+            </div>
+            ${enrollLines}
+          </div>
+
+          <!-- Monthly Residuals -->
+          <div class="pay-section">
+            <div class="pay-section-title">
+              <span>Monthly Residuals — due 1st of month</span>
+              <span class="pay-section-amt">$${(d.flatResidual).toFixed(2)}+</span>
+            </div>
+            ${residualLine}
+          </div>
+
+          <!-- Bonuses -->
+          ${(d.fastStartEarned && !rep.fastStartPaid) || d.milestonesOwed.length > 0 ? `
+          <div class="pay-section">
+            <div class="pay-section-title">
+              <span>Bonuses Owed</span>
+              <span class="pay-section-amt">$${d.fastStartBonus + d.milestonesTotal}</span>
+            </div>
+            ${fastStartLine}
+            ${milestoneLines}
+          </div>` : ""}
+
+          <!-- Clawbacks -->
+          ${d.clawbackDeductions.length > 0 ? `
+          <div class="pay-section">
+            <div class="pay-section-title">
+              <span>Clawback Deductions</span>
+              <span class="pay-section-amt deduct" style="color:var(--red)">-$${d.clawbackTotal}</span>
+            </div>
+            ${clawbackLines}
+          </div>` : ""}
+
+          ${riskWarning}
+
+          <!-- Total + Pay button -->
+          <div class="pay-total-row">
+            <div>
+              <div class="pay-total-label">Total Due to ${esc(rep.name.split(" ")[0])}</div>
+              <div style="font-size:11px;color:var(--text-3);margin-top:2px;">Enrollment + flat residuals + bonuses - clawbacks</div>
+            </div>
+            <div class="pay-total-right">
+              <div class="pay-total-amt" id="total-display-${repId}">$${d.totalDue.toFixed(2)}</div>
+              <button class="pay-now-btn" id="pay-btn-${repId}"
+                onclick="markAllPaid('${repId}', '${esc(rep.email)}', '${esc(rep.name)}')"
+                ${!hasAnything ? "disabled" : ""}>
+                ${hasAnything ? "✓ Mark All Paid" : "Nothing owed"}
+              </button>
+            </div>
+          </div>
+        </div>`;
+      }
+
+      window.renderPayroll = function () {
+        const banner = document.getElementById("payrollBanner");
+        const cards  = document.getElementById("payrollCards");
+        if (!cards) return;
+
+        const approvedReps = allApplications.filter(a => a.status === "approved");
+
+        if (approvedReps.length === 0) {
+          if (banner) banner.innerHTML = "";
+          cards.innerHTML = `<div class="perf-empty">No approved reps yet.</div>`;
+          return;
+        }
+
+        // Next 1st of month
+        const now = new Date();
+        const nextFirst = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        const daysUntil = Math.ceil((nextFirst - now) / (1000*60*60*24));
+
+        let grandTotal = 0;
+        const cardHTMLs = approvedReps.map(rep => {
+          const d = calcRepPayroll(rep);
+          grandTotal += d.totalDue;
+          return buildPayrollCard(rep, d);
+        });
+
+        if (banner) {
+          const urgent = approvedReps.some(rep => {
+            const d = calcRepPayroll(rep);
+            return d.unpaidEnrollment.length > 0 && d.unpaidEnrollment.some(s => {
+              const goLive = s.goLiveDate?.toMillis?.() || 0;
+              return goLive > 0 && (Date.now() - goLive) / (1000*60*60*24) >= 6;
+            });
+          });
+          banner.innerHTML = `
+            <div class="payroll-banner">
+              <div>
+                <div class="payroll-banner-title">
+                  ${urgent ? "⚠️ Enrollment fees due within 7 business days" : "💳 Next monthly residual run: " + nextFirst.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                </div>
+                <div class="payroll-banner-sub">
+                  ${daysUntil} days until residual due date · ${approvedReps.length} active rep${approvedReps.length > 1 ? "s" : ""} · Relay transfer or Venmo/PayPal/Zelle
+                </div>
+              </div>
+              <div class="payroll-banner-right">
+                <div class="payroll-banner-total">$${grandTotal.toFixed(2)}</div>
+                <div class="payroll-banner-label">estimated total owed</div>
+              </div>
+            </div>`;
+        }
+
+        cards.innerHTML = cardHTMLs.join("");
+        renderPayrollHistory();
+      };
+
+      // ── Auto-calculate booking residual from Firestore ──────────────────────
+      // 1. Find all providerSubmissions where repEmail == email and status == 'live'
+      // 2. Match those NPIs to providers collection to get providerIds and plan
+      // 3. Query completed + billable bookings for those providers in current month
+      // 4. Calculate fee: founding=$6, standard=$10 per booking × 10% = rep residual
+      window.autoCalcBookingResidual = async function(repId, repEmail) {
+        const btn = document.getElementById('auto-calc-btn-' + repId);
+        const detail = document.getElementById('booking-auto-detail-' + repId);
+        const input = document.getElementById('booking-input-' + repId);
+        if (btn) { btn.disabled = true; btn.textContent = '⟳ Calculating...'; }
+
+        try {
+          // Get live submissions for this rep
+          const subSnap = await getDocs(query(
+            collection(db, 'providerSubmissions'),
+            where('repEmail', '==', repEmail),
+            where('status', '==', 'live')
+          ));
+
+          if (subSnap.empty) {
+            if (detail) detail.textContent = 'No live providers found for this rep.';
+            return;
+          }
+
+          // Get provider IDs by matching repEmail field on providers collection
+          const provSnap = await getDocs(query(
+            collection(db, 'providers'),
+            where('repEmail', '==', repEmail),
+            where('active', '==', true)
+          ));
+
+          if (provSnap.empty) {
+            if (detail) detail.textContent = 'Could not match providers — check repEmail field on provider docs.';
+            return;
+          }
+
+          const providerMap = {};
+          provSnap.forEach(d => { providerMap[d.id] = d.data().plan || 'standard'; });
+          const providerIds = Object.keys(providerMap);
+
+          // Get current month date range
+          const now = new Date();
+          const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+          const monthEnd   = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+
+          // Query completed bookings for those providers this month
+          // Firestore 'in' operator supports up to 30 items
+          const chunks = [];
+          for (let i = 0; i < providerIds.length; i += 30) chunks.push(providerIds.slice(i, i + 30));
+
+          let totalFee = 0;
+          let totalBookings = 0;
+          for (const chunk of chunks) {
+            const bSnap = await getDocs(query(
+              collection(db, 'bookings'),
+              where('providerId', 'in', chunk),
+              where('status', '==', 'completed'),
+              where('billable', '==', true),
+              where('date', '>=', monthStart),
+              where('date', '<=', monthEnd)
+            ));
+            bSnap.forEach(d => {
+              const plan = providerMap[d.data().providerId] || 'standard';
+              const fee = plan === 'founding' ? 6 : 10;
+              totalFee += fee;
+              totalBookings++;
+            });
+          }
+
+          if (input) {
+            input.value = totalFee.toFixed(2);
+            updateBookingCalc(repId);
+          }
+          if (detail) {
+            detail.textContent = `Auto-calculated: ${totalBookings} completed visit${totalBookings !== 1 ? 's' : ''} across ${providerIds.length} provider${providerIds.length !== 1 ? 's' : ''} in ${now.toLocaleDateString('en-US',{month:'long',year:'numeric'})} · Morava earned $${totalFee.toFixed(2)} → rep gets $${(totalFee * 0.10).toFixed(2)}`;
+          }
+        } catch(err) {
+          console.error(err);
+          if (detail) detail.textContent = 'Error calculating — check console. You can still enter manually.';
+        } finally {
+          if (btn) { btn.disabled = false; btn.textContent = '⟳ Auto-calculate'; }
+        }
+      };
+
+      window.updateBookingCalc = function (repId) {
+        const input = document.getElementById("booking-input-" + repId);
+        const display = document.getElementById("booking-calc-" + repId);
+        if (!input || !display) return;
+        const val = parseFloat(input.value) || 0;
+        display.textContent = "$" + (val * 0.10).toFixed(2);
+        // Update total display
+        updateTotalDisplay(repId);
+      };
+
+      function getBookingResidualForRep(repId) {
+        const input = document.getElementById("booking-input-" + repId);
+        const morava = parseFloat(input?.value) || 0;
+        return morava * 0.10;
+      }
+
+      function updateTotalDisplay(repId) {
+        const rep = allApplications.find(a => a._id === repId);
+        if (!rep) return;
+        const d = calcRepPayroll(rep);
+        const booking = getBookingResidualForRep(repId);
+        const newTotal = d.totalDue + booking;
+        const display = document.getElementById("total-display-" + repId);
+        if (display) display.textContent = "$" + newTotal.toFixed(2);
+      }
+
+      // ── Mark individual enrollment fee paid ───────────────────
+      window.markEnrollmentPaid = async function (subId, repId, repEmail, repName, amount) {
+        if (!confirm(`Mark $${amount} enrollment fee as paid to ${repName}?`)) return;
+        try {
+          await updateDoc(doc(db, "providerSubmissions", subId), {
+            commissionPaid: true,
+            paidAt: serverTimestamp(),
+          });
+          await addDoc(collection(db, "payrollRuns"), {
+            repEmail, repName, amount,
+            type: "enrollment",
+            subId,
+            paidAt: serverTimestamp(),
+            paidByEmail: ADMIN_EMAIL,
+          });
+          // Update local state
+          const sub = allSubmissions.find(s => s._id === subId);
+          if (sub) sub.commissionPaid = true;
+          // Update rep pendingEarnings
+          const rep = allApplications.find(a => a._id === repId);
+          if (rep) {
+            await updateDoc(doc(db, "repApplications", repId), {
+              pendingEarnings: Math.max(0, (rep.pendingEarnings || 0) - amount),
+              updatedAt: serverTimestamp(),
+            });
+            rep.pendingEarnings = Math.max(0, (rep.pendingEarnings || 0) - amount);
+          }
+          showToast(`✓ $${amount} enrollment fee marked paid to ${repName}`, "success");
+          renderPayroll();
+        } catch (err) {
+          showToast("Update failed.", "error");
+          console.error(err);
+        }
+      };
+
+      // ── Mark Fast Start bonus paid ────────────────────────────
+      window.markFastStartPaid = async function (repId, repEmail, repName, amount) {
+        if (!confirm(`Mark $${amount} Fast Start bonus as paid to ${repName}?`)) return;
+        try {
+          await updateDoc(doc(db, "repApplications", repId), {
+            fastStartPaid: true,
+            updatedAt: serverTimestamp(),
+          });
+          await addDoc(collection(db, "payrollRuns"), {
+            repEmail, repName, amount,
+            type: "fast_start_bonus",
+            paidAt: serverTimestamp(),
+            paidByEmail: ADMIN_EMAIL,
+          });
+          const rep = allApplications.find(a => a._id === repId);
+          if (rep) rep.fastStartPaid = true;
+          showToast(`✓ $${amount} Fast Start bonus marked paid to ${repName}`, "success");
+          renderPayroll();
+        } catch (err) {
+          showToast("Update failed.", "error");
+        }
+      };
+
+      // ── Mark Milestone bonus paid ─────────────────────────────
+      window.markMilestonePaid = async function (repId, repEmail, repName, threshold, amount) {
+        if (!confirm(`Mark $${amount} milestone bonus (${threshold} providers) as paid to ${repName}?`)) return;
+        try {
+          await updateDoc(doc(db, "repApplications", repId), {
+            milestonesPaid: arrayUnion(threshold),
+            updatedAt: serverTimestamp(),
+          });
+          await addDoc(collection(db, "payrollRuns"), {
+            repEmail, repName, amount,
+            type: "milestone_bonus",
+            milestone: threshold,
+            paidAt: serverTimestamp(),
+            paidByEmail: ADMIN_EMAIL,
+          });
+          const rep = allApplications.find(a => a._id === repId);
+          if (rep) rep.milestonesPaid = [...(rep.milestonesPaid || []), threshold];
+          showToast(`✓ $${amount} milestone bonus marked paid to ${repName}`, "success");
+          renderPayroll();
+        } catch (err) {
+          showToast("Update failed.", "error");
+        }
+      };
+
+      // ── Apply clawback ────────────────────────────────────────
+      window.applyClawback = async function (subId, repEmail, amount) {
+        if (!confirm(`Apply $${amount} clawback deduction? This will be deducted from next payout.`)) return;
+        try {
+          await updateDoc(doc(db, "providerSubmissions", subId), {
+            clawbackApplied: true,
+            clawbackAmount: amount,
+            clawbackDate: serverTimestamp(),
+          });
+          await addDoc(collection(db, "payrollRuns"), {
+            repEmail, amount: -amount,
+            type: "clawback",
+            subId,
+            paidAt: serverTimestamp(),
+            paidByEmail: ADMIN_EMAIL,
+          });
+          const sub = allSubmissions.find(s => s._id === subId);
+          if (sub) sub.clawbackApplied = true;
+          showToast(`Clawback of $${amount} applied.`, "success");
+          renderPayroll();
+        } catch (err) {
+          showToast("Update failed.", "error");
+        }
+      };
+
+      // ── Mark all paid for a rep (full monthly run) ────────────
+      window.markAllPaid = async function (repId, repEmail, repName) {
+        const rep = allApplications.find(a => a._id === repId);
+        if (!rep) return;
+        const d = calcRepPayroll(rep);
+        const bookingRevenue = parseFloat(document.getElementById("booking-input-" + repId)?.value) || 0;
+        const bookingResidual = bookingRevenue * 0.10;
+        const grandTotal = d.totalDue + bookingResidual;
+
+        if (grandTotal <= 0) {
+          showToast("Nothing to mark paid.", "error");
+          return;
+        }
+        if (!confirm(`Mark total payment of $${grandTotal.toFixed(2)} to ${repName} as paid?\n\nMake sure you've completed the Relay / Venmo / Zelle transfer first.`)) return;
+
+        try {
+          // Mark all unpaid enrollment fees
+          for (const s of d.unpaidEnrollment) {
+            await updateDoc(doc(db, "providerSubmissions", s._id), {
+              commissionPaid: true,
+              paidAt: serverTimestamp(),
+            });
+            const sub = allSubmissions.find(x => x._id === s._id);
+            if (sub) sub.commissionPaid = true;
+          }
+
+          // Mark fast start paid if applicable
+          if (d.fastStartEarned && !rep.fastStartPaid) {
+            await updateDoc(doc(db, "repApplications", repId), { fastStartPaid: true });
+            rep.fastStartPaid = true;
+          }
+
+          // Mark all milestones paid
+          for (const m of d.milestonesOwed) {
+            await updateDoc(doc(db, "repApplications", repId), {
+              milestonesPaid: arrayUnion(m.threshold),
+            });
+            rep.milestonesPaid = [...(rep.milestonesPaid || []), m.threshold];
+          }
+
+          // Update rep pendingEarnings to 0
+          await updateDoc(doc(db, "repApplications", repId), {
+            pendingEarnings: 0,
+            updatedAt: serverTimestamp(),
+          });
+          rep.pendingEarnings = 0;
+
+          // Log full payroll run
+          const now = new Date();
+          await addDoc(collection(db, "payrollRuns"), {
+            repEmail, repName,
+            amount: grandTotal,
+            breakdown: {
+              enrollment: d.enrollmentTotal,
+              flatResidual: d.flatResidual,
+              bookingResidual,
+              bonuses: d.fastStartBonus + d.milestonesTotal,
+              clawbacks: -d.clawbackTotal,
+            },
+            type: "full_run",
+            month: now.getMonth() + 1,
+            year: now.getFullYear(),
+            paidAt: serverTimestamp(),
+            paidByEmail: ADMIN_EMAIL,
+          });
+
+          showToast(`✓ $${grandTotal.toFixed(2)} logged as paid to ${repName}`, "success");
+          await loadAll();
+        } catch (err) {
+          showToast("Update failed. Check console.", "error");
+          console.error(err);
+        }
+      };
+
+      // ── Payroll history ───────────────────────────────────────
+      function renderPayrollHistory() {
+        const section = document.getElementById("payrollHistorySection");
+        const rows = document.getElementById("payrollHistoryRows");
+        if (!section || !rows) return;
+
+        if (payrollHistory.length === 0) {
+          section.style.display = "none";
+          return;
+        }
+        section.style.display = "block";
+
+        const typeLabel = { full_run: "Monthly run", enrollment: "Enrollment fee", milestone_bonus: "Milestone bonus", fast_start_bonus: "Fast Start bonus", clawback: "Clawback" };
+
+        rows.innerHTML = payrollHistory.map(h => {
+          const d = h.paidAt?.toDate?.() || new Date();
+          return `
+          <div class="history-row">
+            <div>
+              <div class="history-rep">${esc(h.repName || h.repEmail)}</div>
+              <div class="history-meta">${typeLabel[h.type] || h.type} · Paid by ${esc(h.paidByEmail)} · ${d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>
+            </div>
+            <div class="history-amt" style="${h.amount < 0 ? "color:var(--red)" : ""}">
+              ${h.amount < 0 ? "-" : ""}$${Math.abs(h.amount).toFixed(2)}
+            </div>
+          </div>`;
+        }).join("");
+      }
+
+      // ── Rep Performance ───────────────────────────────────────
+      window.renderPerformance = function () {
+        const grid = document.getElementById("performanceGrid");
+        if (!grid) return;
+
+        // Build per-rep stats from approved reps only
+        const approvedReps = allApplications.filter((a) => a.status === "approved");
+
+        if (approvedReps.length === 0) {
+          grid.innerHTML = `<div class="perf-empty">No approved reps yet.</div>`;
+          return;
+        }
+
+        grid.innerHTML = approvedReps.map((rep) => {
+          const repSubs = allSubmissions.filter((s) => s.repEmail === rep.email);
+          const total     = repSubs.length;
+          const live      = repSubs.filter((s) => s.status === "live").length;
+          const pending   = repSubs.filter((s) =>
+            ["pending_verification", "in_review", "awaiting_npi"].includes(s.status)
+          ).length;
+          const rejected  = repSubs.filter((s) => s.status === "not_verified").length;
+          const convRate  = total > 0 ? Math.round((live / total) * 100) : 0;
+
+          const commOwed = repSubs
+            .filter((s) => s.status === "live" && s.commissionAmount && !s.commissionPaid)
+            .reduce((a, s) => a + (s.commissionAmount || 0), 0);
+          const commPaid = repSubs
+            .filter((s) => s.status === "live" && s.commissionAmount && s.commissionPaid)
+            .reduce((a, s) => a + (s.commissionAmount || 0), 0);
+          const commTotal = commOwed + commPaid;
+
+          // 5 most recent submissions
+          const recents = repSubs.slice(0, 5);
+
+          const initials = (rep.name || "?")
+            .split(" ")
+            .map((w) => w[0])
+            .join("")
+            .substring(0, 2)
+            .toUpperCase();
+
+          const recentRows = recents.length === 0
+            ? `<div style="font-size:12px;color:var(--text-3);padding:8px 0;">No submissions yet.</div>`
+            : recents.map((s) => `
+              <div class="perf-recent-row">
+                <span class="perf-recent-name">${esc(s.providerName)}</span>
+                <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                  ${statusBadge(s.status)}
+                  <span class="perf-recent-date">${fmtDate(s.submittedAt)}</span>
+                </div>
+              </div>`).join("");
+
+          return `
+          <div class="perf-card">
+            <div class="perf-card-header">
+              <div class="perf-avatar">${initials}</div>
+              <div>
+                <div class="perf-name">${esc(rep.name)}</div>
+                <div class="perf-email">${esc(rep.email)}</div>
+              </div>
+              <div style="margin-left:auto;">${appStatusBadge(rep.status)}</div>
+            </div>
+            <div class="perf-stats">
+              <div class="perf-stat">
+                <div class="perf-stat-val">${total}</div>
+                <div class="perf-stat-label">Submitted</div>
+              </div>
+              <div class="perf-stat">
+                <div class="perf-stat-val teal">${live}</div>
+                <div class="perf-stat-label">Live</div>
+              </div>
+              <div class="perf-stat">
+                <div class="perf-stat-val amber">${pending}</div>
+                <div class="perf-stat-label">Pending</div>
+              </div>
+            </div>
+            <div class="perf-bar-wrap">
+              <div class="perf-bar-label">
+                <span>Conversion rate</span>
+                <span>${convRate}%</span>
+              </div>
+              <div class="perf-bar">
+                <div class="perf-bar-fill" style="width:${convRate}%"></div>
+              </div>
+            </div>
+            <div class="perf-commission">
+              <div class="perf-commission-label">Commission</div>
+              <div class="perf-commission-vals">
+                ${commPaid > 0 ? `<div class="perf-commission-item">
+                  <div class="perf-commission-paid">$${commPaid} paid</div>
+                </div>` : ""}
+                <div class="perf-commission-item">
+                  <div class="perf-commission-amount">$${commOwed}</div>
+                  <div class="perf-commission-sub">OWED</div>
+                </div>
+              </div>
+            </div>
+            <div class="perf-recents">
+              <div class="perf-recents-title">Recent Submissions</div>
+              ${recentRows}
+            </div>
+          </div>`;
+        }).join("");
       };
 
       // ── Modal helpers ─────────────────────────────────────────
