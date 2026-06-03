@@ -114,3 +114,6 @@ firestore-debug.log
 # Google service files — contain API keys, never commit
 GoogleService-Info.plist
 google-services.json
+
+# Provider onboarding scripts contain real provider PII — keep local only
+scripts/create*.js

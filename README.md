@@ -1,486 +1,143 @@
-# AccessCare - Maternal Healthcare Platform
+# Morava
 
-![AccessCare Logo](./assets/images/AccessCare-logo.png)
+**Connecting Oklahoma patients with quality healthcare — search, discover, and book local providers in one place.**
 
-**Connecting patients with quality healthcare, regardless of location.**
+Morava is a healthcare technology platform (Morava Care LLC) that helps patients in Oklahoma find healthcare providers and request appointments. It is a multi-sided system: a patient mobile app, a provider web dashboard, a rep & admin portal, and a serverless backend.
 
-AccessCare is a comprehensive mobile healthcare platform that bridges the gap between patients and providers, with a special focus on maternal care and underserved communities.
+> Morava is a technology platform, not a healthcare provider. It does not provide medical advice. See the in-app [Terms of Service](./docs/terms.html) and Privacy Policy for details.
 
 ---
 
-## 🎯 Features
+## 🧩 Platform Overview
 
-### Core Functionality
-- ✅ **Provider Search & Discovery** - Search across 23+ healthcare providers in 3 service categories
-- ✅ **Advanced Filtering** - Filter by category, specialty, distance, and availability
-- ✅ **Real-time Appointments** - Book and manage appointments with Firebase integration
-- ✅ **Interactive Maps** - Integrated navigation with turn-by-turn directions
-- ✅ **Q&A System** - Ask questions and receive answers from healthcare professionals
-- ✅ **Push Notifications** - Appointment reminders and updates
-- ✅ **Profile Management** - Insurance info, payment methods, preferences
-- ✅ **Dark Mode** - Full theme support for comfortable viewing
-### Additional Features Implemented:
-- ✅ **Profile Picture Upload** - Camera & gallery integration with Firebase Storage
-- ✅ **Local Push Notifications** - Appointment confirmations with immediate alerts
-- ✅ **23 Real Oklahoma Providers** - Unique addresses with accurate GPS coordinates
-- ✅ **Native Navigation** - Opens Apple Maps (iOS) or Google Maps (Android)
-- ✅ **Dark Mode** - Full theme support across all screens
-- ✅ **Real-time Q&A** - Patient questions with admin dashboard responses
+Morava is made up of four surfaces sharing one Firebase backend:
 
-### Provider Network
-**Core Services:**
-- OB/GYN
-- Midwives
-- Hospitals
-- Family Medicine
-- Pediatricians
+| Surface | Audience | Stack | Location |
+|---|---|---|---|
+| **Patient app** | Patients | React Native + Expo (iOS/Android) | `app/` |
+| **Provider dashboard** | Providers & facility operators | React + Vite (web) | `provider-dashboard/` |
+| **Rep portal + Admin** | Recruiting reps & internal admin | Static HTML/JS | `landing/` |
+| **Backend** | — | Firebase Cloud Functions (TypeScript) | `functions/` |
 
-**Extended Services:**
-- Maternal-Fetal Medicine
-- Lactation Consultants
-- Nutritionists
-- Mental Health Providers
-- Physical Therapists
-- Social Workers
+---
 
-**Rare & Specialized Services:**
-- Reproductive Endocrinologists
-- Neonatologists
-- Genetic Counselors
-- Perinatal Mental Health Specialists
-- Rheumatologists
-- Infectious Disease Specialists
-- Palliative Care
-- Rare Disease Centers
+## 🎯 Key Capabilities
+
+### Patients (mobile app)
+- Provider search & discovery with specialty, insurance, distance, and availability filters
+- Provider detail profiles and appointment requests
+- Recovery housing search with in-app intake requests and status tracking
+- Optional health intake profile, transmitted to providers only at booking
+- Appointment management (confirm, reschedule, cancel) with push & SMS reminders
+- Dependent/family booking, biometric sign-in, dark mode
+
+### Providers (web dashboard)
+- Profile, hours, insurance, and listing management
+- Real-time booking queue: confirm, decline, reschedule, mark complete/no-show
+- EHR-style patient summary per booking + provider-only clinical notes
+- Direct Primary Care (DPC) listings with a free-to-list, pay-on-enrollment model
+- Recovery housing operator dashboard: live bed availability + intake inbox
+- Stripe-backed billing (per-completed-visit for standard providers)
+- Multi-factor authentication enforced for clinical providers
+
+### Reps & Admin
+- Rep application + OTP-verified provider submission flow
+- Submission status tracking
+- Admin review, provider onboarding, performance, and payroll tooling
 
 ---
 
 ## 🛠️ Tech Stack
 
-### Frontend
-- **Framework:** React Native with Expo
-- **Language:** TypeScript
-- **Navigation:** Expo Router (file-based routing)
-- **UI:** Custom components with StyleSheet
-
-### Backend
-- **Database:** Firebase Firestore (NoSQL)
-- **Authentication:** Firebase Auth (Email/Password)
-- **Storage:** Firebase Storage (Profile images)
-- **Real-time Updates:** Firestore listeners
-
-### Key Libraries
-- `react-native-maps` - Map integration
-- `expo-notifications` - Push notifications
-- `expo-image-picker` - Profile picture upload
-- `@react-native-async-storage/async-storage` - Local storage
+- **Mobile:** React Native, Expo (SDK 54), Expo Router, TypeScript
+- **Web dashboard:** React, Vite, Tailwind CSS, TypeScript
+- **Backend:** Firebase — Firestore, Auth, Storage, Cloud Functions (2nd gen)
+- **Payments:** Stripe (provider billing)
+- **Messaging:** Resend (email), Twilio (SMS), Expo push notifications
+- **Monitoring:** Sentry
+- **Builds & OTA:** EAS Build + EAS Update
 
 ---
 
-## 📱 Screenshots
+## 📂 Repository Structure
 
-### Light Mode
-![Welcome Screen](./screenshots/welcome-light.png)
-![Find Care](./screenshots/find-care-light.png)
-![Provider Detail](./screenshots/provider-detail-light.png)
-
-### Dark Mode
-![Welcome Screen Dark](./screenshots/welcome-dark.png)
-![Find Care Dark](./screenshots/find-care-dark.png)
-![Profile Dark](./screenshots/profile-dark.png)
+```
+.
+├── app/                    # Patient mobile app (Expo Router screens)
+│   ├── (tabs)/             # Main tab navigation (search, appointments, profile)
+│   ├── booking/            # Appointment booking flow
+│   ├── provider/           # Provider detail screens
+│   ├── recovery-housing/   # Recovery housing search + intake
+│   └── profile/            # Account, edit, terms, settings
+├── provider-dashboard/     # Provider/facility web dashboard (React + Vite)
+├── landing/                # Marketing site, rep portal, admin panel (static)
+├── functions/              # Firebase Cloud Functions (TypeScript)
+├── docs/                   # Terms of Service / Privacy (GitHub Pages)
+├── scripts/                # Operational scripts (run with Admin SDK)
+├── context/                # Shared React contexts (theme, auth)
+├── components/ hooks/ utils/ data/ types/   # Shared app code
+├── firestore.rules         # Firestore security rules
+├── app.json                # Expo app configuration
+└── eas.json                # EAS build & submit profiles
+```
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Getting Started (local development)
 
 ### Prerequisites
-- Node.js (v16 or higher)
-- npm or yarn
-- Expo CLI
-- iOS Simulator (Mac) or Android Studio
+- Node.js 18+
+- npm
+- Expo CLI / EAS CLI (`npm i -g eas-cli`)
+- iOS Simulator (macOS) or Android Studio
 
-### Installation
+### Setup
 
-1. **Clone the repository**
 ```bash
-   git clone https://github.com/YOUR_USERNAME/accesscare-app.git
-   cd accesscare-app
+# 1. Install dependencies
+npm install
+
+# 2. Provide configuration via environment variables (see below) — never hardcode
+cp .env.example .env   # then fill in your own values
+
+# 3. Start the app
+npx expo start
 ```
 
-2. **Install dependencies**
+Sub-projects each have their own dependencies:
+
 ```bash
-   npm install
-```
-
-3. **Set up Firebase**
-   - Create a Firebase project at [https://firebase.google.com](https://firebase.google.com)
-   - Enable Authentication (Email/Password)
-   - Create Firestore database
-   - Enable Storage
-   - Copy your Firebase config to `firebase.ts`
-
-4. **Update Firebase Configuration**
-   
-   Edit `firebase.ts` with your credentials:
-```typescript
-   const firebaseConfig = {
-     apiKey: "YOUR_API_KEY",
-     authDomain: "YOUR_PROJECT.firebaseapp.com",
-     projectId: "YOUR_PROJECT_ID",
-     storageBucket: "YOUR_PROJECT.appspot.com",
-     messagingSenderId: "YOUR_SENDER_ID",
-     appId: "YOUR_APP_ID"
-   };
-```
-
-5. **Run the app**
-```bash
-   npx expo start
-```
-
-6. **Open in simulator**
-   - Press `i` for iOS simulator
-   - Press `a` for Android emulator
-   - Scan QR code with Expo Go app on your phone
-
----
-
-## 📂 Project Structure
-```
-AccessCare/
-├── app/
-│   ├── (tabs)/          # Main tab navigation
-│   │   ├── index.tsx    # Find Care screen
-│   │   ├── profile.tsx  # Profile screen
-│   │   └── _layout.tsx  # Tab layout
-│   ├── profile/         # Profile sub-screens
-│   │   ├── appointments.tsx
-│   │   ├── saved.tsx
-│   │   ├── insurance.tsx
-│   │   ├── payments.tsx
-│   │   ├── notifications.tsx
-│   │   ├── privacy.tsx
-│   │   ├── help.tsx
-│   │   ├── edit.tsx
-│   │   └── theme.tsx
-│   ├── provider/        # Provider screens
-│   │   └── [id].tsx     # Provider detail (dynamic route)
-│   ├── booking/         # Booking screens
-│   │   └── [id].tsx     # Booking form (dynamic route)
-│   ├── qa/              # Q&A system
-│   │   └── index.tsx
-│   ├── admin/           # Admin panel
-│   │   └── qa.tsx
-│   ├── welcome.tsx      # Welcome/landing screen
-│   ├── index.tsx        # Login screen
-│   ├── signup.tsx       # Sign up screen
-│   ├── about.tsx        # About screen
-│   └── _layout.tsx      # Root layout with auth
-├── assets/
-│   └── images/          # App images and logo
-├── context/
-│   └── ThemeContext.tsx # Dark mode theme provider
-├── data/
-│   └── providers.ts     # Provider data and types
-├── utils/
-│   └── notifications.ts # Notification utilities
-├── firebase.ts          # Firebase configuration
-├── app.json            # Expo configuration
-├── package.json        # Dependencies
-└── README.md           # This file
+cd provider-dashboard && npm install   # provider web dashboard
+cd functions && npm install            # cloud functions
 ```
 
 ---
 
-## 🔥 Firebase Collections
+## 🔐 Security & Configuration
 
-### `providers`
-```typescript
-{
-  id: string
-  name: string
-  specialty: string
-  category: string
-  distance: number
-  rating: number
-  address: string
-  phone: string
-  available: boolean
-  services: string[]
-}
-```
+This project follows a strict no-secrets-in-source policy. **Do not commit credentials.**
 
-### `appointments`
-```typescript
-{
-  userId: string
-  providerId: string
-  provider: string
-  specialty: string
-  date: string
-  time: string
-  reason: string
-  status: string
-  createdAt: Date
-}
-```
+- **All keys and config come from environment variables**, not source code. Client-side Firebase/Maps config is provided via `EXPO_PUBLIC_*` env vars; server-side secrets are managed through Firebase/EAS secret stores.
+- **Service account keys** (`*serviceAccount*.json`, `google-services.json`, `GoogleService-Info.plist`) are git-ignored and must never be staged. Operational scripts authenticate via the `GOOGLE_APPLICATION_CREDENTIALS` environment variable.
+- **Firestore security rules** (`firestore.rules`) enforce least-privilege access: patients see only their own data, providers only their bookings, and privileged collections are Admin-SDK-only.
+- **PHI handling** is governed by HIPAA, applicable Business Associate Agreements, and the Privacy Policy. Sensitive health data is transmitted to providers only at the point of booking.
+- Contributors are expected to run a local pre-commit hook that scans for hardcoded credentials before committing.
 
-### `questions`
-```typescript
-{
-  userId: string
-  question: string
-  answer?: string
-  createdAt: Date
-  answeredAt?: Date
-}
-```
-
-### `users`
-```typescript
-{
-  profileImage?: string
-}
-```
-
-### `savedProviders`
-```typescript
-{
-  userId: string
-  providerId: string
-  name: string
-  specialty: string
-  rating: number
-  distance: number
-}
-```
-
-### `insurance`
-```typescript
-{
-  provider: string
-  policy: string
-}
-```
-
-### `paymentMethods`
-```typescript
-{
-  userId: string
-  cardNumber: string
-}
-```
-
-### `notifications`
-```typescript
-{
-  appointmentReminders: boolean
-  generalUpdates: boolean
-}
-```
-
-### `privacy`
-```typescript
-{
-  shareData: boolean
-  twoFactorAuth: boolean
-}
-```
-
-### `supportRequests`
-```typescript
-{
-  userId: string
-  email: string
-  message: string
-  createdAt: Date
-  status: string
-}
-```
+If you discover a security issue, contact **support@moravacare.com** — do not open a public issue.
 
 ---
 
-## 🎨 Theme System
+## 📦 Builds & Releases
 
-AccessCare includes a complete dark mode theme system.
-
-**Toggle theme:**
-Profile → Settings → Theme → Select Light/Dark/System
-
-**Available colors:**
-- `colors.background` - Main background color
-- `colors.card` - Card/surface background
-- `colors.text` - Primary text color
-- `colors.subtext` - Secondary text color
-- `colors.primary` - Accent color (purple)
-- `colors.border` - Border color
-- `colors.error` - Error/destructive actions
-- `colors.success` - Success messages
+- **Native builds:** `eas build --platform <ios|android> --profile production`
+- **Over-the-air JS updates:** `eas update --channel production` (ships JavaScript-only changes to the matching runtime version; native changes require a new build)
+- Version name and Android `versionCode` are managed remotely by EAS (`appVersionSource: "remote"`, auto-increment enabled).
 
 ---
 
-## 🧪 Testing
+## 📄 Legal
 
-### Test Accounts
-Create test accounts using the signup flow or use:
-```
-Email: test@accesscare.com
-Password: test123
-```
+- [Terms of Service](./docs/terms.html)
+- Privacy Policy (published via GitHub Pages)
 
-### Testing Notifications
-1. Book an appointment
-2. Wait 5 seconds
-3. Notification should appear
-
-### Testing Dark Mode
-1. Go to Profile
-2. Click Theme
-3. Select Dark Mode
-4. Navigate through app to see changes
-
----
-
-## 📊 Project Objectives Met
-
-| Requirement | Status | Implementation |
-|-------------|--------|----------------|
-| Functional program without errors | ✅ | App runs smoothly on iOS/Android |
-| Main + 3 additional screens | ✅ | 7+ major screens, 15+ total screens |
-| View component | ✅ | Used throughout all screens |
-| Text component | ✅ | All text rendered with Text |
-| Image component | ✅ | Logo, profile pictures, avatars |
-| TextInput component | ✅ | Search, forms, Q&A |
-| StyleSheet | ✅ | All components styled |
-| Button component | ✅ | TouchableOpacity throughout |
-| Integrated map | ✅ | MapView in provider details |
-| Local push notifications | ✅ | Appointment reminders |
-| Firebase data storage | ✅ | 9+ collections with real-time sync |
-| Design principles & clean UI | ✅ | Professional, consistent design |
-
----
-
-## 🎯 Use Cases
-
-### For Patients
-1. **Find Nearby Providers** - Search by specialty, filter by distance
-2. **Book Appointments** - Real-time scheduling with confirmation
-3. **Ask Questions** - Get answers from professionals 24/7
-4. **Navigate to Care** - Turn-by-turn directions to appointments
-5. **Manage Health Info** - Insurance, payments, preferences
-
-### For Remote/Rural Communities
-1. **Discover Specialists** - Find rare disease centers and specialists
-2. **Reduce Travel** - Ask questions remotely before traveling
-3. **Plan Visits** - Get directions to unfamiliar facilities
-4. **Access Support** - 24/7 Q&A reduces need for office calls
-
-### For Healthcare Providers
-1. **Answer Questions** - Admin panel to respond to patient queries
-2. **Manage Availability** - Update schedule and availability
-3. **View Bookings** - Track appointments in real-time
-
----
-
-## 🚧 Future Enhancements
-
-- [ ] Telemedicine integration (video calls)
-- [ ] AI-powered symptom checker
-- [ ] Insurance verification API
-- [ ] Prescription management
-- [ ] Lab results integration
-- [ ] Multi-language support
-- [ ] Health records storage (HIPAA compliant)
-- [ ] Provider reviews and ratings
-- [ ] Transportation booking integration
-- [ ] Wearable device integration
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## 👨‍💻 Developer
-
-**Your Name**
-- GitHub: [@YOUR_USERNAME](https://github.com/YOUR_USERNAME)
-- Email: your.email@example.com
-
----
-
-## 🙏 Acknowledgments
-
-- **Expo** - For the amazing React Native framework
-- **Firebase** - For backend infrastructure
-- **React Native Maps** - For map integration
-- **Oklahoma City Healthcare Providers** - For inspiration
-
----
-
-## 📞 Support
-
-For support, email support@accesscare.com or open an issue in this repository.
-
----
-
-## 🌟 Star This Repo
-
-If you found this project helpful, please give it a ⭐️!
-
----
-
-**Built with ❤️ for better maternal healthcare access**
-```
-
----
-
-## 📝 STEP 2: Create .gitignore
-
-**Create `.gitignore` in project root:**
-```
-# Dependencies
-node_modules/
-
-# Expo
-.expo/
-.expo-shared/
-dist/
-web-build/
-
-# Native
-*.orig.*
-*.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
-
-# Metro
-.metro-health-check*
-
-# Debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
-*.log
-
-# OS
-.DS_Store
-Thumbs.db
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Env files (if you add them later)
-.env
-.env.local
-.env.production
-
-# TypeScript
-*.tsbuildinfo
+© Morava Care LLC · Oklahoma City, OK
