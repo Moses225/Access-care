@@ -46,6 +46,8 @@ interface ProviderData {
   telehealth: boolean;
   telehealthAvailable: boolean;
   telehealthOnly: boolean;
+  providesSUDTreatment?: boolean;
+  requiresPart2Consent?: boolean;
   avgVisitMinutes: number;
   typicalWaitDays: number;
   insuranceAccepted: string[];
@@ -355,6 +357,9 @@ export default function Profile() {
         visitApproach: data.visitApproach || [],
         voucherParticipant: data.voucherParticipant ?? false,
         "interviewConsult.offered": data.interviewConsult?.offered ?? false,
+        // SUD-treatment disclosure → drives 42 CFR Part 2 consent requirement
+        providesSUDTreatment: data.providesSUDTreatment ?? false,
+        requiresPart2Consent: data.providesSUDTreatment ?? false,
         hours: data.hours || {},
         lastUpdatedBy: "provider",
         lastUpdated: new Date(),
@@ -707,6 +712,20 @@ export default function Profile() {
                 }
                 label="Free meet & greet offered"
               />
+              <Toggle
+                checked={data.providesSUDTreatment ?? false}
+                onChange={(v) => update("providesSUDTreatment", v)}
+                label="My practice provides substance use disorder (SUD) treatment"
+              />
+              {data.providesSUDTreatment && (
+                <div className="ml-1 -mt-1 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 text-xs text-amber-800 leading-relaxed">
+                  <strong>42 CFR Part 2 applies.</strong> Because your practice provides SUD treatment
+                  (detox, MAT, addiction counseling, or rehab), patient records carry stricter federal
+                  protections than standard HIPAA. Patients booking with you will complete an additional
+                  Part 2 consent before any information is shared. Leave this off if you only provide
+                  general mental-health care (anxiety, depression, etc.).
+                </div>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>

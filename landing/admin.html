@@ -1517,6 +1517,9 @@
           <button class="tab" onclick="switchTab('payroll', this)">
             💰 Payroll
           </button>
+          <button class="tab" onclick="switchTab('providers', this)">
+            🏥 Providers
+          </button>
         </div>
 
         <!-- ── SUBMISSIONS TAB ──────────────────────────────── -->
@@ -1612,6 +1615,33 @@
           </div>
           <div id="performanceGrid" class="perf-grid">
             <div class="perf-empty">Loading performance data...</div>
+          </div>
+        </div>
+
+        <!-- ── PROVIDERS TAB ───────────────────────────────── -->
+        <div class="tab-panel" id="tab-providers">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:12px;flex-wrap:wrap;">
+            <div style="font-size:13px;color:var(--text-3);">
+              Search live & unclaimed listings. Deactivate hides a provider from the app & website (reversible).
+            </div>
+            <button class="refresh-btn" onclick="loadProviders()">↻ Refresh</button>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+            <input id="providerSearch" type="text" placeholder="Search by name, practice, or city…"
+              oninput="renderProviders()"
+              style="flex:1;min-width:220px;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;"/>
+            <select id="providerStatusFilter" onchange="renderProviders()"
+              style="padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;">
+              <option value="all">All</option>
+              <option value="active">Active only</option>
+              <option value="inactive">Deactivated only</option>
+              <option value="unclaimed">Unclaimed only</option>
+              <option value="claimed">Claimed/verified only</option>
+            </select>
+          </div>
+          <div id="providerCount" style="font-size:12px;color:var(--text-3);margin-bottom:10px;"></div>
+          <div class="data-table" id="providersTable">
+            <div class="table-loading">Click "Providers" to load…</div>
           </div>
         </div>
       </div>
@@ -3379,7 +3409,108 @@
           .forEach((p) => p.classList.remove("active"));
         el.classList.add("active");
         document.getElementById("tab-" + id).classList.add("active");
+        // Lazy-load providers the first time the tab is opened
+        if (id === "providers" && !window._providersLoaded) loadProviders();
       }
+
+      // ── Providers management (deactivate / reactivate / takedown) ───────────
+      window._allProviders = [];
+      window._providersLoaded = false;
+
+      window.loadProviders = async function () {
+        const table = document.getElementById("providersTable");
+        table.innerHTML = '<div class="table-loading">Loading providers…</div>';
+        try {
+          const snap = await getDocs(collection(db, "providers"));
+          window._allProviders = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          window._providersLoaded = true;
+          renderProviders();
+        } catch (err) {
+          console.error(err);
+          table.innerHTML = '<div class="table-empty"><p>Could not load providers.</p></div>';
+        }
+      };
+
+      window.renderProviders = function () {
+        const table = document.getElementById("providersTable");
+        const q = (document.getElementById("providerSearch")?.value || "").toLowerCase().trim();
+        const statusFilter = document.getElementById("providerStatusFilter")?.value || "all";
+
+        let list = window._allProviders.slice();
+
+        if (statusFilter === "active") list = list.filter((p) => p.active !== false);
+        else if (statusFilter === "inactive") list = list.filter((p) => p.active === false);
+        else if (statusFilter === "unclaimed") list = list.filter((p) => p.verified === false);
+        else if (statusFilter === "claimed") list = list.filter((p) => p.verified === true);
+
+        if (q) {
+          list = list.filter((p) =>
+            (p.name || "").toLowerCase().includes(q) ||
+            (p.practiceName || "").toLowerCase().includes(q) ||
+            (p.city || "").toLowerCase().includes(q) ||
+            (p.specialty || "").toLowerCase().includes(q),
+          );
+        }
+
+        // Sort: deactivated first (need attention), then by name
+        list.sort((a, b) => {
+          if ((a.active === false) !== (b.active === false)) return a.active === false ? -1 : 1;
+          return (a.practiceName || a.name || "").localeCompare(b.practiceName || b.name || "");
+        });
+
+        document.getElementById("providerCount").textContent =
+          `${list.length} provider${list.length === 1 ? "" : "s"} shown · ${window._allProviders.length} total`;
+
+        if (list.length === 0) {
+          table.innerHTML = '<div class="table-empty"><div class="table-empty-icon">🔍</div><p>No matching providers.</p></div>';
+          return;
+        }
+
+        table.innerHTML = list.slice(0, 200).map((p) => {
+          const isActive = p.active !== false;
+          const isVerified = p.verified === true;
+          const statusBadge = !isActive
+            ? '<span class="badge b-rejected" style="padding:5px 10px;">✕ Deactivated</span>'
+            : isVerified
+              ? '<span class="badge b-live" style="padding:5px 10px;">● Active · Claimed</span>'
+              : '<span class="badge b-pending" style="padding:5px 10px;">◌ Active · Unclaimed</span>';
+          const safeName = esc(p.practiceName || p.name || "Unknown");
+          const safeSub = esc([p.specialty, p.city].filter(Boolean).join(" · "));
+          const btn = isActive
+            ? `<button class="pay-mark-btn" style="background:var(--rejected,#dc2626);" onclick="setProviderActive('${esc(p.id)}', false)">Deactivate</button>`
+            : `<button class="pay-mark-btn" onclick="setProviderActive('${esc(p.id)}', true)">Reactivate</button>`;
+          return `
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border);">
+              <div style="min-width:0;">
+                <div style="font-weight:700;font-size:14px;">${safeName}</div>
+                <div style="font-size:12px;color:var(--text-3);">${safeSub}${p.phone ? " · " + esc(p.phone) : ""}</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+                ${statusBadge}
+                ${btn}
+              </div>
+            </div>`;
+        }).join("");
+      };
+
+      window.setProviderActive = async function (providerId, active) {
+        const verb = active ? "reactivate" : "deactivate";
+        if (!confirm(`Are you sure you want to ${verb} this provider? ${active ? "It will reappear" : "It will be hidden"} in the app & website search.`)) return;
+        try {
+          await updateDoc(doc(db, "providers", providerId), {
+            active,
+            ...(active ? {} : { deactivatedAt: new Date().toISOString(), deactivatedReason: "admin_takedown" }),
+            lastUpdated: new Date().toISOString(),
+          });
+          // Update local cache and re-render
+          const p = window._allProviders.find((x) => x.id === providerId);
+          if (p) p.active = active;
+          renderProviders();
+        } catch (err) {
+          console.error(err);
+          alert("Could not update. Please try again.");
+        }
+      };
     </script>
   </body>
 </html>
