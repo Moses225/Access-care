@@ -121,12 +121,12 @@ service cloud.firestore {
     }
 
     match /providers/{providerId} {
-      // C-4: provider data is not public — requires authentication.
-      // Anonymous / unauthenticated callers cannot enumerate providers.
-      // NOTE: sensitive billing fields (stripeCustomerId, stripePaymentMethodId,
-      // commissionRate, etc.) live in the private billing subcollection below,
-      // NOT on this document.  This document contains only patient-safe fields.
-      allow read: if isAuthenticated();
+      // Provider profiles are public discovery content — readable by anyone
+      // (authenticated or not). This enables moravacare.com website search for
+      // unauthenticated visitors. Sensitive financial fields (stripeCustomerId,
+      // stripePaymentMethodId, commissionRate, etc.) are in the private billing
+      // subcollection below and remain restricted to owner + admin only.
+      allow read: if true;
       allow create: if isAdmin();
       allow delete: if isAdmin();
       // M-3: noScript guards on free-text provider fields that render in the
@@ -163,9 +163,15 @@ service cloud.firestore {
     // ================================================================
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
+      // Users can edit their own doc EXCEPT privileged fields that only
+      // the backend can grant (vouchers, admin flags, internal metadata).
       allow write: if isOwner(userId)
                   && (!('firstName' in request.resource.data) || noScript('firstName'))
-                  && (!('lastName' in request.resource.data) || noScript('lastName'));
+                  && (!('lastName' in request.resource.data) || noScript('lastName'))
+                  // Prevent users from self-granting vouchers or privileges
+                  && !request.resource.data.diff(resource.data).affectedKeys()
+                      .hasAny(['voucherEligible', 'voucherUsed', 'isAdmin',
+                               'adminOverride', 'creditBalance']);
 
       match /dependents/{dependentId} {
         allow read:   if isOwner(userId) && isFullAccount();
@@ -241,7 +247,14 @@ service cloud.firestore {
                                   'invoiced','invoicedAt','stripePaymentIntentId',
                                   'noShowAt','noShowBy','proposedDate','proposedTime',
                                   'rescheduledAt','rescheduledBy','updatedAt',
-                                  'preRescheduleStatus','cancelledAt','cancelledBy']))
+                                  'preRescheduleStatus','cancelledAt','cancelledBy',
+                                  'providerMarkedEnrolled','providerEnrolledAt']))
+                 // DPC enrollment — patient confirms they enrolled as a member.
+                 // Can only flip the patientConfirmedEnrolled flag, nothing else.
+                 || (isBookingPatient()
+                     && isFullAccount()
+                     && request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['patientConfirmedEnrolled','patientEnrolledAt']))
                  // Patient cancellation — cannot change date, time, provider, or userId
                  || (isBookingPatient()
                      && isFullAccount()
@@ -632,12 +645,9 @@ service cloud.firestore {
         && validOptionalString('source', 100)
         && validOptionalString('claimedBy', 200);
 
-      // Mobile-app reps can read their own submissions (rep claim + email match).
-      // Web portal reads go through a Cloud Function — no unauthenticated read needed.
-      allow read: if isAdmin()
-                  || (isFullAccount()
-                      && request.auth.token.rep == true
-                      && resource.data.repEmail == request.auth.token.email);
+      // Web portal reads go through getRepSubmissions Cloud Function (Admin SDK).
+      // No rep Firebase Auth claim exists — the dead branch below is removed.
+      allow read: if isAdmin();
 
       // Only admin can update status, commission, notes
       allow update: if isAdmin();
@@ -696,6 +706,10 @@ service cloud.firestore {
         // GAP 4 FIX: phone length-capped; sobrietyDays must be a non-negative int when present
         allow create: if isFullAccount()
                       && request.resource.data.status == "pending"
+                      // Enforce plan gate at DB level — free-tier facilities cannot
+                      // receive in-app inquiries (UI-only gate was bypassable)
+                      && get(/databases/$(database)/documents/recoveryHousing/$(facilityId)).data.listingPlan
+                          in ['standard', 'growth', 'partner']
                       // Caller can only write their own userId (or omit it)
                       && (!(  'userId' in request.resource.data)
                           || request.resource.data.userId == request.auth.uid)
@@ -767,11 +781,41 @@ service cloud.firestore {
     }
 
     // ================================================================
+    // REP SESSION TOKENS — written by verifyRepCode CF, read by getRepSubmissions CF.
+    // Client-side access fully blocked — tokens are opaque and must only
+    // be consumed server-side to prevent token enumeration attacks.
+    // ================================================================
+    match /repSessionTokens/{tokenId} {
+      allow read, write: if false; // Admin SDK only
+    }
+
+    // ================================================================
+    // PAYROLL RUNS — written by admin panel when marking rep commissions paid.
+    // Admin-only read and write. No client can write without admin claim.
+    // ================================================================
+    match /payrollRuns/{runId} {
+      allow read, write: if isAdmin();
+    }
+
+    // ================================================================
     // PHONE CHECK RATE LIMIT — written by checkPhoneAvailability function
     // Only Admin SDK writes here; clients cannot read or manipulate.
     // ================================================================
     match /phoneCheckRateLimit/{docId} {
       allow read, write: if isAdmin();
+    }
+
+    // ================================================================
+    // INTAKE REQUESTS — collection group rule
+    // Allows patients to query ALL their intake requests across facilities
+    // via collectionGroup('intakeRequests').where('userId','==',uid).
+    // Without this top-level rule, collection group queries are denied even
+    // when the nested subcollection rule would allow the individual read.
+    // Write/update/delete still governed by the nested recoveryHousing rule.
+    // ================================================================
+    match /{path=**}/intakeRequests/{requestId} {
+      allow read: if isAdmin()
+                  || (isFullAccount() && resource.data.userId == request.auth.uid);
     }
 
     // CATCH-ALL — deny everything not explicitly allowed

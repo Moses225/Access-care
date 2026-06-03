@@ -469,20 +469,85 @@ export const nightlyAutoComplete = onSchedule(
     let total = 0;
     for (let i = 0; i < snap.docs.length; i += CHUNK) {
       const batch = db.batch();
-      snap.docs.slice(i, i + CHUNK).forEach((d) =>
+      snap.docs.slice(i, i + CHUNK).forEach((d) => {
+        // DPC membership inquiries are NOT billed per-visit. They bill once on
+        // enrollment (dual-confirmation flow → enrollment fee). Mark them complete
+        // but never auto-billable, so monthlyBilling's per-visit path skips them.
+        const isDpc = d.data().providerPracticeType === "dpc";
         batch.update(d.ref, {
           status: "completed",
           completedAt: admin.firestore.FieldValue.serverTimestamp(),
           completedBy: "system",
-          billable: true,
-        }),
-      );
+          billable: isDpc ? false : true,
+        });
+      });
       await batch.commit();
       total += Math.min(CHUNK, snap.docs.length - i);
     }
     console.log(
       `nightlyAutoComplete: completed ${total} bookings before ${today}.`,
     );
+  },
+);
+
+// ================================================================
+// DPC ENROLLMENT CONFIRMATION — dual-sided
+// ================================================================
+// A DPC membership inquiry comes through as a booking. When BOTH the
+// provider marks "enrolled" AND the patient confirms enrollment, we
+// compute a one-time finder's fee = one month of the provider's own
+// membership fee, clamped to [$50, $150] (default $75 if unset), and
+// mark the booking billable so monthlyBilling charges it once.
+//
+// Fires on any booking update. Idempotent: only acts once, when both
+// flags flip true and the fee hasn't already been set.
+// ================================================================
+const DPC_FEE_FLOOR = 50;
+const DPC_FEE_CAP = 150;
+const DPC_FEE_DEFAULT = 75;
+function computeDpcEnrollmentFee(monthlyFee: unknown): number {
+  const n = typeof monthlyFee === "number" ? monthlyFee : 0;
+  if (!n || n <= 0) return DPC_FEE_DEFAULT;
+  return Math.min(DPC_FEE_CAP, Math.max(DPC_FEE_FLOOR, Math.round(n)));
+}
+
+export const onDpcEnrollmentConfirmed = onDocumentUpdated(
+  "bookings/{bookingId}",
+  async (event) => {
+    const before = event.data?.before.data();
+    const after = event.data?.after.data();
+    if (!before || !after) return;
+
+    // Only DPC inquiries
+    if (after.providerPracticeType !== "dpc") return;
+
+    const bothConfirmed =
+      after.providerMarkedEnrolled === true &&
+      after.patientConfirmedEnrolled === true;
+    if (!bothConfirmed) return;
+
+    // Idempotency — only act when the fee hasn't been set yet
+    if (after.dpcEnrollmentFee != null || after.invoiced === true) return;
+
+    const providerId = after.providerId as string | undefined;
+    if (!providerId) return;
+
+    try {
+      const provSnap = await db.collection("providers").doc(providerId).get();
+      const monthlyFee = provSnap.exists ? provSnap.data()?.dpcMonthlyFee : null;
+      const fee = computeDpcEnrollmentFee(monthlyFee);
+
+      await event.data!.after.ref.update({
+        dpcEnrollmentFee: fee,
+        dpcEnrolledAt: admin.firestore.FieldValue.serverTimestamp(),
+        billable: true, // monthlyBilling will charge `dpcEnrollmentFee` (not per-visit)
+      });
+      console.log(
+        `onDpcEnrollmentConfirmed: ${event.params.bookingId} — $${fee} enrollment fee logged for provider ${providerId}`,
+      );
+    } catch (err) {
+      console.error("onDpcEnrollmentConfirmed: failed", err);
+    }
   },
 );
 
@@ -523,13 +588,26 @@ export const monthlyBilling = onSchedule(
       return;
     }
 
-    const byProvider: Record<string, { count: number; ids: string[] }> = {};
+    // Track per-visit bookings and DPC enrollment fees separately.
+    // DPC bookings carry a fixed `dpcEnrollmentFee` (dollars); per-visit
+    // bookings are charged count × rate.
+    const byProvider: Record<string, {
+      count: number;            // per-visit bookings
+      ids: string[];            // all booking ids (visit + enrollment)
+      enrollmentFeeCents: number; // sum of DPC enrollment fees, in cents
+    }> = {};
     snap.docs.forEach((d) => {
-      const pid = d.data().providerId as string | undefined;
+      const data = d.data();
+      const pid = data.providerId as string | undefined;
       if (!pid) return;
-      if (!byProvider[pid]) byProvider[pid] = { count: 0, ids: [] };
-      byProvider[pid].count++;
+      if (!byProvider[pid]) byProvider[pid] = { count: 0, ids: [], enrollmentFeeCents: 0 };
       byProvider[pid].ids.push(d.id);
+      const dpcFee = data.dpcEnrollmentFee as number | undefined;
+      if (typeof dpcFee === "number" && dpcFee > 0) {
+        byProvider[pid].enrollmentFeeCents += Math.round(dpcFee * 100);
+      } else {
+        byProvider[pid].count++;
+      }
     });
 
     for (const [pid, info] of Object.entries(byProvider)) {
@@ -574,7 +652,17 @@ export const monthlyBilling = onSchedule(
           const twoYearsMs = 2 * 365 * 24 * 60 * 60 * 1000;
           if (Date.now() - since.getTime() < twoYearsMs) rate = 6;
         }
-        const amount = info.count * rate * 100;
+        // Total = per-visit charges + DPC enrollment fees (already in cents)
+        const visitCents = info.count * rate * 100;
+        const amount = visitCents + info.enrollmentFeeCents;
+        if (amount <= 0) continue; // nothing chargeable this period
+
+        // Build a human-readable description across both fee types
+        const descParts: string[] = [];
+        if (info.count > 0) descParts.push(`${info.count} visit${info.count !== 1 ? "s" : ""}`);
+        if (info.enrollmentFeeCents > 0) descParts.push(`DPC enrollment fee${info.enrollmentFeeCents > (DPC_FEE_CAP * 100) ? "s" : ""}`);
+        const description = `Morava — ${descParts.join(" + ")} (${startDate} to ${endDate})`;
+
         const pi = await stripe.paymentIntents.create(
           {
             amount,
@@ -583,10 +671,11 @@ export const monthlyBilling = onSchedule(
             payment_method: pmid,
             confirm: true,
             off_session: true,
-            description: `Morava — ${info.count} visit${info.count !== 1 ? "s" : ""} (${startDate} to ${endDate})`,
+            description,
             metadata: {
               providerId: pid,
               visitCount: String(info.count),
+              enrollmentFeeUsd: String(info.enrollmentFeeCents / 100),
               period: periodKey,
               bookingIds: info.ids.slice(0, 10).join(","),
             },
@@ -1539,7 +1628,7 @@ export const onboardProvider = onCall(
     const provPlan = (provDoc.exists ? provDoc.data()?.plan : null) || "standard";
     const isDPCAccount = provDoc.exists && provDoc.data()?.practiceType === "dpc";
     const billingLine = isDPCAccount
-      ? "You will be billed a flat monthly fee based on your DPC listing tier."
+      ? "Your DPC listing is <strong>free</strong>. You only pay a one-time finder's fee (one month of your membership) when a patient enrolls and you both confirm — never a monthly subscription."
       : provPlan === "founding"
         ? "You pay <strong>$6 per completed visit</strong> (Founding Provider rate, locked for 2 years)."
         : "You pay <strong>$10 per completed visit</strong> — only when a patient attends.";
@@ -2361,9 +2450,21 @@ export const verifyRepCode = onCall(
     }
 
     const rep = repSnap.docs[0].data();
+
+    // ── Issue a 1-hour session token for status tab ────────────────────────
+    // crypto is available in Node 18+ runtime without import
+    const { randomBytes } = await import("crypto");
+    const sessionToken = randomBytes(32).toString("hex");
+    await db.collection("repSessionTokens").doc(sessionToken).set({
+      email: normalizedEmail,
+      expiresAt: Date.now() + 60 * 60 * 1000, // 1 hour
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
     console.log(`verifyRepCode: verified rep ${normalizedEmail}`);
     return {
       success: true,
+      sessionToken,
       rep: {
         name:         rep.name        ?? "",
         email:        rep.email       ?? normalizedEmail,
@@ -2372,6 +2473,88 @@ export const verifyRepCode = onCall(
         verifiedCount: rep.verifiedCount ?? 0,
       },
     };
+  }
+);
+
+// ================================================================
+// GET REP SUBMISSIONS
+// ================================================================
+// Callable function: returns all provider submissions for a rep.
+// Secured by a short-lived session token issued by verifyRepCode.
+// Uses Admin SDK to bypass Firestore security rules (reps are
+// unauthenticated on the web portal — auth is handled by OTP).
+// ================================================================
+export const getRepSubmissions = onCall(
+  {},
+  async (request) => {
+    const { email, sessionToken } = request.data as {
+      email?: string;
+      sessionToken?: string;
+    };
+
+    if (!email || !sessionToken) {
+      throw new HttpsError("invalid-argument", "Email and session token required.");
+    }
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // ── Validate session token ─────────────────────────────────────────────
+    const tokenRef = db.collection("repSessionTokens").doc(sessionToken.trim());
+    const tokenSnap = await tokenRef.get();
+
+    if (!tokenSnap.exists) {
+      throw new HttpsError("unauthenticated", "Session expired. Please verify your email again.");
+    }
+
+    const tokenData = tokenSnap.data()!;
+
+    if ((tokenData.email as string) !== normalizedEmail) {
+      throw new HttpsError("permission-denied", "Token does not match email.");
+    }
+
+    if (Date.now() > (tokenData.expiresAt as number)) {
+      await tokenRef.delete().catch(() => {});
+      throw new HttpsError("unauthenticated", "Session expired. Please verify your email again.");
+    }
+
+    // ── Fetch submissions via Admin SDK ────────────────────────────────────
+    const submissionsSnap = await db
+      .collection("providerSubmissions")
+      .where("repEmail", "==", normalizedEmail)
+      .orderBy("submittedAt", "desc")
+      .get();
+
+    const submissions = submissionsSnap.docs.map((doc) => {
+      const d = doc.data();
+      // Return only fields the rep needs — no internal notes, no other rep data
+      return {
+        id:             doc.id,
+        providerName:   d.providerName   ?? "",
+        specialty:      d.specialty      ?? "",
+        city:           d.city           ?? "",
+        status:         d.status         ?? "pending_verification",
+        commissionAmount: d.commissionAmount ?? null,
+        commissionPaid: d.commissionPaid  ?? false,
+        submittedAt:    d.submittedAt     ? (d.submittedAt as admin.firestore.Timestamp).toMillis() : null,
+      };
+    });
+
+    // ── Also fetch rep application status ─────────────────────────────────
+    const appSnap = await db
+      .collection("repApplications")
+      .where("email", "==", normalizedEmail)
+      .limit(1)
+      .get();
+    const appData = appSnap.empty ? null : (() => {
+      const d = appSnap.docs[0].data();
+      return {
+        status:       d.status      ?? "new",
+        name:         d.name        ?? "",
+        submittedAt:  d.submittedAt ? (d.submittedAt as admin.firestore.Timestamp).toMillis() : null,
+      };
+    })();
+
+    console.log(`getRepSubmissions: returned ${submissions.length} submissions for ${normalizedEmail}`);
+    return { success: true, submissions, app: appData };
   }
 );
 
