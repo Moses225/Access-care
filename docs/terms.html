@@ -19,7 +19,7 @@
     .container { max-width: 780px; margin: 40px auto; background: white; border-radius: 12px; box-shadow: 0 2px 16px rgba(0,0,0,.08); padding: 48px; }
     .effective-date { display: inline-block; background: var(--teal-light); color: var(--teal-dark); font-size: .85rem; font-weight: 600; padding: 6px 14px; border-radius: 20px; margin-bottom: 32px; }
     .summary-box { background: var(--teal-light); border-left: 4px solid var(--teal); border-radius: 8px; padding: 20px 24px; margin-bottom: 40px; }
-    .summary-box h2 { font-size: 1rem; font-weight: 700; color: var(--teal-dark); margin-bottom: 10px; }
+    .summary-box h2 { font-size: 1rem; font-weight: 700; color: var(--teal-dark); margin-bottom: 10px; border: none; padding: 0; }
     .summary-box ul { padding-left: 20px; }
     .summary-box li { margin-bottom: 6px; font-size: .95rem; }
     h2 { font-size: 1.25rem; font-weight: 700; color: var(--teal-dark); margin: 40px 0 14px; padding-bottom: 8px; border-bottom: 2px solid var(--teal-light); }
@@ -29,9 +29,16 @@
     li { margin-bottom: 8px; color: #333; }
     .highlight { background: #fff8e1; border: 1px solid #ffe082; border-radius: 8px; padding: 16px 20px; margin: 20px 0; }
     .highlight strong { color: #e65100; }
+    .emergency { background: #fef2f2; border: 1.5px solid #fca5a5; border-radius: 8px; padding: 16px 20px; margin: 20px 0; }
+    .emergency strong { color: #b91c1c; display: block; font-size: 1.05rem; margin-bottom: 6px; }
+    .legal-block { background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; margin: 16px 0; font-size: .9rem; }
+    .legal-block p { color: #475569; }
+    .hipaa-note { background: #f0f4ff; border-left: 4px solid #6366f1; border-radius: 8px; padding: 16px 20px; margin: 20px 0; }
+    .hipaa-note strong { color: #4338ca; }
     .contact-box { background: #f0f4ff; border-radius: 10px; padding: 24px; margin-top: 16px; }
     .contact-box p { margin: 4px 0; font-size: .95rem; }
     .contact-box a { color: var(--teal-dark); font-weight: 600; text-decoration: none; }
+    a { color: var(--teal-dark); }
     footer { text-align: center; padding: 32px 24px; color: #888; font-size: .85rem; }
     @media(max-width:640px) { .container { margin: 16px; padding: 28px 20px; } header h1 { font-size: 1.5rem; } }
   </style>
@@ -44,115 +51,254 @@
 </header>
 
 <div class="container">
-  <span class="effective-date">Effective Date: March 25, 2026</span>
+  <span class="effective-date">Effective Date: March 25, 2026 · Last Revised: June 2, 2026</span>
 
   <div class="summary-box">
     <h2>The Short Version (Plain English)</h2>
     <ul>
-      <li>Morava is a free platform that connects patients with healthcare providers.</li>
-      <li>We are not a healthcare provider — we do not provide medical advice or treatment.</li>
-      <li>You must be 13 or older to use Morava. Users under 18 need parental consent.</li>
-      <li>Appointments requested through Morava must be confirmed by the provider.</li>
+      <li>Morava is a free platform that connects patients with healthcare providers in Oklahoma. We are not a healthcare provider and do not give medical advice.</li>
+      <li>You must be 13 or older to use Morava; users under 18 need parental consent.</li>
+      <li>Appointment requests must be confirmed by the provider.</li>
       <li>You are responsible for the accuracy of your health information.</li>
-      <li>We can suspend accounts that violate these terms.</li>
+      <li>We protect your health information in accordance with HIPAA and our Privacy Policy.</li>
+      <li>We can suspend accounts that violate these Terms.</li>
     </ul>
   </div>
 
   <h2>1. About Morava</h2>
-  <p>Morava Care LLC ("Morava," "we," "us," or "our") operates a mobile application and website that helps patients in Oklahoma discover healthcare providers and request appointments. Morava is not a healthcare provider, medical practice, or insurance company.</p>
-  <p>By using the Morava app or website (collectively, the "Service"), you agree to these Terms of Service ("Terms"). If you do not agree, please do not use the Service.</p>
+  <p>Morava Care LLC ("Morava," "we," "us," or "our") operates a mobile application and website (collectively, the "Service") that helps patients in Oklahoma discover healthcare providers and request appointments. Morava is a healthcare technology platform. We are not a healthcare provider, medical practice, hospital, or insurance company, and we do not practice medicine.</p>
+  <p>By using the Service, you agree to these Terms of Service ("Terms"). If you do not agree, please do not use the Service. These Terms incorporate by reference our Privacy Policy and, where applicable, our Business Associate Agreement ("BAA") with covered healthcare providers.</p>
 
   <h2>2. Eligibility</h2>
   <p>To use Morava, you must:</p>
   <ul>
-    <li>Be at least 13 years old. Users between 13 and 17 must have parental or guardian consent.</li>
-    <li>Users under 13 are not permitted to create accounts (COPPA compliance).</li>
-    <li>Provide accurate and truthful information when creating your account.</li>
-    <li>Not use the Service on behalf of another person without authorization.</li>
+    <li>Be at least 13 years old. Users between 13 and 17 must have documented parental or legal guardian consent before creating an account or submitting health information. Users under 13 are strictly prohibited from creating accounts or using the Service.</li>
+    <li>Provide accurate, complete, and truthful information when creating and maintaining your account.</li>
+    <li>Have the legal authority to agree to these Terms on your own behalf, or on behalf of a minor or dependent for whom you are the legal guardian or authorized representative.</li>
+    <li>Not be barred from receiving the Service under applicable law.</li>
   </ul>
 
   <h2>3. Not Medical Advice</h2>
-  <div class="highlight">
-    <strong>Important:</strong> Morava is not a medical service. Nothing on Morava constitutes medical advice, diagnosis, or treatment. Always consult a qualified healthcare provider for medical decisions. In a medical emergency, call 911 immediately.
+  <div class="emergency">
+    <strong>⚠ Medical Emergency: Call 911</strong>
+    Morava is not a medical service. Nothing on Morava constitutes medical advice, diagnosis, or treatment. For medical emergencies, call 911 or go to the nearest emergency room immediately. Do not rely on Morava for urgent medical matters.
   </div>
-  <p>Morava facilitates appointment requests between patients and independent healthcare providers. We do not employ, supervise, or control any healthcare provider listed on the platform. Providers are solely responsible for the care they deliver.</p>
+  <p>Morava facilitates appointment requests between patients and independent, licensed healthcare providers. We do not employ, supervise, control, or direct any healthcare provider listed on the platform. Providers are solely responsible for the quality and content of the healthcare services they deliver. Any clinical decisions made by providers in connection with your care are entirely the responsibility of those providers.</p>
 
   <h2>4. Your Account</h2>
-  <p>When you create an account, you agree to:</p>
+  <p>When you create a Morava account, you agree to:</p>
   <ul>
-    <li>Provide accurate, complete, and current information.</li>
-    <li>Keep your password confidential and not share your account.</li>
-    <li>Notify us immediately of any unauthorized use at support@moravacare.com.</li>
-    <li>Be responsible for all activity that occurs under your account.</li>
+    <li>Provide accurate, complete, and current registration information and promptly update it as needed.</li>
+    <li>Maintain the security and confidentiality of your login credentials. Do not share your password or account access with any other person.</li>
+    <li>Notify us immediately of any suspected unauthorized access at support@moravacare.com or (432) 803-0136.</li>
+    <li>Accept full responsibility for all activity that occurs under your account, whether or not authorized by you.</li>
+    <li>Not create more than one account per person, or create an account for another person without proper authorization.</li>
   </ul>
-  <p>We reserve the right to suspend or terminate accounts that violate these Terms, provide false information, or engage in abusive behavior toward providers or staff.</p>
+  <p>We reserve the right to suspend or terminate accounts that violate these Terms, provide false or misleading information, engage in abusive conduct toward providers or staff, or present a security or legal risk to Morava or other users.</p>
 
-  <h2>5. Appointment Bookings</h2>
-  <p>Morava allows you to request appointments with healthcare providers. Please note:</p>
+  <h2>5. Appointment Requests and Bookings</h2>
+  <p>Morava allows you to request appointments with healthcare providers. You acknowledge and agree:</p>
   <ul>
-    <li>An appointment request is not a confirmed appointment until the provider accepts it.</li>
-    <li>Providers may decline, reschedule, or cancel appointments at their discretion.</li>
-    <li>Morava is not responsible for provider cancellations, delays, or the quality of care received.</li>
-    <li>You are responsible for arriving on time and providing accurate information.</li>
-    <li>Some providers listed on Morava may not yet have claimed their profile. We will attempt to notify unclaimed providers of booking requests, but confirmation is not guaranteed.</li>
-  </ul>
-
-  <h2>6. Health Information</h2>
-  <p>You may provide health information through Morava's health profile feature. By doing so, you:</p>
-  <ul>
-    <li>Confirm that the information is accurate to the best of your knowledge.</li>
-    <li>Authorize Morava to share that information with providers you book with.</li>
-    <li>Understand that inaccurate health information may affect the quality of care you receive.</li>
-  </ul>
-  <p>Morava handles health information in accordance with our <a href="https://moses225.github.io/Access-care/" style="color:var(--teal-dark)">Privacy Policy</a> and applicable law, including HIPAA where applicable.</p>
-
-  <h2>7. Family Members and Dependents</h2>
-  <p>You may book appointments for family members or dependents using your account. By doing so, you represent that you have legal authority to make healthcare decisions for those individuals, or that you have their consent to share their health information with providers through Morava.</p>
-
-  <h2>8. Prohibited Conduct</h2>
-  <p>You agree not to:</p>
-  <ul>
-    <li>Use Morava for any unlawful purpose.</li>
-    <li>Submit false, misleading, or fraudulent information.</li>
-    <li>Harass, threaten, or abuse healthcare providers or Morava staff.</li>
-    <li>Attempt to access another user's account or health information.</li>
-    <li>Reverse engineer, scrape, or copy any part of the Service.</li>
-    <li>Use the Service to spam, solicit, or advertise.</li>
-    <li>Interfere with the security or proper functioning of the Service.</li>
+    <li>An appointment request submitted through Morava is a request only. It is not a confirmed appointment until explicitly accepted by the provider or their authorized staff.</li>
+    <li>Providers may decline, reschedule, modify, or cancel appointment requests at their sole discretion without liability to Morava.</li>
+    <li>Morava is not responsible for provider cancellations, no-shows, delays, scheduling errors, or the quality, appropriateness, or outcome of care received.</li>
+    <li>You are responsible for arriving on time, providing accurate information, and complying with provider check-in requirements.</li>
+    <li>Some providers on Morava may have unclaimed profiles created from public records. Morava will make reasonable efforts to notify unclaimed providers of booking requests, but booking confirmation is not guaranteed for unclaimed profiles.</li>
+    <li>Morava does not facilitate payment for healthcare services. Billing, insurance verification, co-pays, and financial arrangements are solely between you and your provider.</li>
+    <li>You are responsible for verifying insurance acceptance, hours of operation, and provider availability directly with the provider prior to your appointment.</li>
   </ul>
 
-  <h2>9. Provider Listings</h2>
-  <p>Providers listed on Morava are independent professionals. Morava does not verify, endorse, or guarantee the qualifications, credentials, or quality of any provider. We encourage you to independently verify provider credentials through the Oklahoma Medical Board or relevant licensing authority.</p>
-  <p>Provider profiles may be incomplete or not yet claimed by the provider. Information such as accepted insurance, hours, and availability is subject to change.</p>
+  <h2>6. Health Information and HIPAA Compliance</h2>
+  <h3>6.1 Scope of HIPAA Applicability</h3>
+  <p>Morava may function as a "business associate" under the Health Insurance Portability and Accountability Act of 1996, as amended ("HIPAA"), and the Health Information Technology for Economic and Clinical Health Act ("HITECH"), when providing services to covered healthcare providers. Morava's obligations as a business associate are governed by applicable Business Associate Agreements ("BAAs") entered into with covered entity providers and by applicable federal and Oklahoma state law.</p>
 
-  <h2>10. Intellectual Property</h2>
-  <p>All content, design, logos, and software on Morava are owned by Morava Care LLC or its licensors. You may not copy, reproduce, or distribute any part of the Service without our written permission.</p>
-  <p>By submitting any content to Morava (such as reviews or feedback), you grant us a non-exclusive, royalty-free license to use that content to operate and improve the Service.</p>
+  <h3>6.2 Protected Health Information</h3>
+  <p>Certain health information you submit through Morava may constitute "Protected Health Information" ("PHI") under HIPAA when associated with a covered healthcare provider. Morava will:</p>
+  <ul>
+    <li>Use and disclose PHI only as permitted or required by applicable BAAs, these Terms, and applicable law.</li>
+    <li>Implement and maintain appropriate administrative, physical, and technical safeguards to protect the confidentiality, integrity, and availability of electronic PHI ("ePHI") as required by the HIPAA Security Rule (45 CFR Part 164, Subpart C).</li>
+    <li>Not use or disclose PHI in a manner that would violate HIPAA's Privacy Rule (45 CFR Part 164, Subpart E) if done by a covered entity.</li>
+    <li>Report any breach of unsecured PHI to the applicable covered entity provider without unreasonable delay, and no later than 60 days after discovery, in accordance with HIPAA's Breach Notification Rule (45 CFR Part 164, Subpart D).</li>
+    <li>Ensure that any subcontractors or agents who create, receive, maintain, or transmit PHI on Morava's behalf agree to the same restrictions and conditions applicable to Morava under applicable BAAs.</li>
+  </ul>
 
-  <h2>11. Disclaimers and Limitation of Liability</h2>
-  <p>THE SERVICE IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND. MORAVA DOES NOT WARRANT THAT THE SERVICE WILL BE UNINTERRUPTED, ERROR-FREE, OR THAT PROVIDER INFORMATION IS ACCURATE OR CURRENT.</p>
-  <p>TO THE MAXIMUM EXTENT PERMITTED BY LAW, MORAVA SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, OR CONSEQUENTIAL DAMAGES ARISING FROM YOUR USE OF THE SERVICE, INCLUDING DAMAGES RELATED TO MEDICAL CARE RECEIVED OR NOT RECEIVED THROUGH THE PLATFORM.</p>
-  <p>MORAVA'S TOTAL LIABILITY TO YOU FOR ANY CLAIM SHALL NOT EXCEED $100.</p>
+  <h3>6.3 Your Health Profile</h3>
+  <p>You may optionally submit health information through Morava's health profile feature. By submitting such information, you:</p>
+  <ul>
+    <li>Confirm the information is accurate to the best of your knowledge and understand that inaccurate information may affect the quality of care you receive.</li>
+    <li>Authorize Morava to transmit that information to healthcare providers with whom you book appointments through the Service, solely for the purposes of facilitating your appointment.</li>
+    <li>Understand that once health information is transmitted to a provider, it is subject to that provider's own privacy practices and HIPAA obligations.</li>
+    <li>Retain the right to request deletion of your health profile data from Morava's systems by contacting support@moravacare.com, subject to applicable legal retention requirements.</li>
+  </ul>
 
-  <h2>12. Indemnification</h2>
-  <p>You agree to indemnify and hold harmless Morava Care LLC, its officers, employees, and agents from any claims, damages, or expenses arising from your violation of these Terms or your use of the Service.</p>
+  <h3>6.4 User-Submitted Information vs. PHI</h3>
+  <p>Not all information you submit to Morava is PHI. Information submitted in the absence of a provider relationship (e.g., general account registration data not linked to a covered provider's appointment) is governed by our Privacy Policy rather than HIPAA. Our Privacy Policy describes how we handle non-PHI personal information.</p>
 
-  <h2>13. Changes to These Terms</h2>
-  <p>We may update these Terms from time to time. We will notify you of material changes by posting the new Terms in the app and updating the effective date above. Continued use of the Service after changes constitutes acceptance of the new Terms.</p>
+  <h3>6.5 Oklahoma Health Data Privacy</h3>
+  <p>In addition to HIPAA, Morava complies with applicable Oklahoma statutes governing health information privacy, including the Oklahoma Health Records Act (63 O.S. § 1-501 et seq.) and the Oklahoma Consumer Privacy Act where applicable. Users who are Oklahoma residents may have additional rights regarding their health information as described in our Privacy Policy.</p>
 
-  <h2>14. Governing Law</h2>
-  <p>These Terms are governed by the laws of the State of Oklahoma, without regard to conflict of law principles. Any disputes shall be resolved in the courts of Oklahoma County, Oklahoma.</p>
+  <h2>7. Data Security</h2>
+  <p>Morava maintains a comprehensive information security program designed to protect user data, including PHI and ePHI. Our security measures include, but are not limited to:</p>
+  <ul>
+    <li>Encryption of ePHI in transit (TLS 1.2 or higher) and at rest using industry-standard encryption protocols.</li>
+    <li>Access controls limiting PHI access to authorized personnel on a minimum-necessary basis.</li>
+    <li>Regular risk assessments and vulnerability testing in accordance with HIPAA Security Rule requirements.</li>
+    <li>Workforce training on HIPAA privacy and security obligations.</li>
+    <li>Incident response and breach notification procedures consistent with HIPAA's Breach Notification Rule.</li>
+  </ul>
+  <p>Despite these measures, no electronic transmission or storage is 100% secure. You use the Service at your own risk and should take care when transmitting sensitive health information over the internet.</p>
 
-  <h2>15. Contact Us</h2>
-  <p>If you have questions about these Terms, please contact us:</p>
+  <h2>8. Family Members and Dependents</h2>
+  <p>You may book appointments or manage health profiles for family members or dependents using your Morava account. By doing so, you represent and warrant that:</p>
+  <ul>
+    <li>You have legal authority to make healthcare decisions for the individual (e.g., you are a parent, legal guardian, or hold a valid healthcare power of attorney).</li>
+    <li>You have obtained any required consent to share the individual's health information with healthcare providers through the Service.</li>
+    <li>For minor children under 18, you are the parent or legal guardian or have been delegated such authority.</li>
+    <li>For adult dependents who lack decision-making capacity, you hold a valid legal authorization (such as a durable power of attorney for healthcare or court-appointed guardianship).</li>
+  </ul>
+  <p>You agree to indemnify Morava for any claims arising from your unauthorized use of another person's health information or lack of proper authorization to manage their healthcare decisions.</p>
+
+  <h2>9. Prohibited Conduct</h2>
+  <p>You agree not to use the Service to:</p>
+  <ul>
+    <li>Violate any applicable federal, state, or local law or regulation, including HIPAA, HITECH, and Oklahoma health privacy statutes.</li>
+    <li>Submit false, misleading, or fraudulent information, including false health information.</li>
+    <li>Impersonate another person, entity, or healthcare provider.</li>
+    <li>Harass, threaten, defame, or abuse healthcare providers, Morava employees, or other users.</li>
+    <li>Access or attempt to access another user's account, health information, or PHI without authorization.</li>
+    <li>Transmit malware, viruses, or malicious code of any kind.</li>
+    <li>Reverse engineer, decompile, scrape, or attempt to extract source code or data from the Service without authorization.</li>
+    <li>Use automated tools (bots, scrapers, crawlers) to access the Service.</li>
+    <li>Use the Service for spam, solicitation, advertising, or commercial purposes not authorized by Morava.</li>
+    <li>Interfere with or disrupt the security, integrity, or proper functioning of the Service or its infrastructure.</li>
+    <li>Circumvent, disable, or otherwise interfere with security-related features, including features that prevent or restrict use or copying of content.</li>
+    <li>Aggregate, sell, or otherwise exploit other users' personal or health information.</li>
+  </ul>
+  <p>Violations may result in immediate account suspension or termination, reporting to law enforcement, and civil or criminal liability.</p>
+
+  <h2>10. Provider Listings and Credentials</h2>
+  <p>Providers listed on Morava are independent, licensed healthcare professionals. Morava:</p>
+  <ul>
+    <li>Does not employ, supervise, or control any listed provider.</li>
+    <li>Does not verify, certify, endorse, or guarantee the qualifications, credentials, licensure status, malpractice history, or quality of any provider.</li>
+    <li>Strongly encourages users to independently verify provider credentials through the Oklahoma Medical Board (<a href="https://www.okmedicalboard.org">www.okmedicalboard.org</a>), the Oklahoma Board of Nursing, or other applicable licensing authorities.</li>
+    <li>Is not responsible for provider profile information that is incomplete, outdated, or inaccurate, particularly for unclaimed profiles.</li>
+  </ul>
+  <p>Provider profile information such as accepted insurance plans, hours of operation, specialties, and availability is provided for informational purposes only and is subject to change. You should confirm this information directly with the provider's office before booking.</p>
+
+  <h2>11. Intellectual Property</h2>
+  <p>All content, software, designs, trademarks, logos, and other materials on or in the Service are owned by Morava Care LLC or its licensors and are protected by applicable intellectual property laws. You may not copy, reproduce, distribute, modify, create derivative works from, publicly display, or commercially exploit any part of the Service without our prior written permission.</p>
+  <p>By voluntarily submitting content to Morava (such as reviews, feedback, or general comments), you grant Morava a non-exclusive, worldwide, royalty-free, sublicensable license to use, reproduce, and display that content to operate, promote, and improve the Service. You represent that you have the right to grant this license and that your content does not infringe any third-party rights.</p>
+  <p>You retain ownership of any PHI or personal health information you submit. The license above does not apply to PHI, which is governed exclusively by Section 6 of these Terms, our Privacy Policy, and applicable HIPAA obligations.</p>
+
+  <h2>12. Third-Party Links and Services</h2>
+  <p>The Service may contain links to third-party websites, applications, or services not operated or controlled by Morava, including provider websites, telehealth platforms, and health information resources. Morava:</p>
+  <ul>
+    <li>Does not endorse, control, or assume responsibility for third-party content, privacy practices, or services.</li>
+    <li>Is not responsible for the privacy or security practices of third-party sites you visit through links on the Service.</li>
+    <li>Recommends you review the privacy policy and terms of service of any third-party site before submitting personal or health information.</li>
+  </ul>
+
+  <h2>13. Disclaimers</h2>
+  <div class="legal-block">
+    <p>TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW:</p>
+    <p>THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, OR NON-INFRINGEMENT.</p>
+    <p>MORAVA DOES NOT WARRANT THAT: (A) THE SERVICE WILL BE UNINTERRUPTED, SECURE, OR ERROR-FREE; (B) PROVIDER INFORMATION IS ACCURATE, COMPLETE, OR CURRENT; (C) ANY APPOINTMENT REQUEST WILL RESULT IN A CONFIRMED APPOINTMENT; OR (D) THE SERVICE WILL MEET YOUR SPECIFIC NEEDS OR EXPECTATIONS.</p>
+    <p>MORAVA IS NOT RESPONSIBLE FOR THE ACTS OR OMISSIONS OF ANY HEALTHCARE PROVIDER, INCLUDING THE QUALITY, APPROPRIATENESS, TIMELINESS, OR OUTCOME OF MEDICAL CARE DELIVERED OR NOT DELIVERED THROUGH OR IN CONNECTION WITH THE PLATFORM.</p>
+    <p>NOTHING IN THESE DISCLAIMERS LIMITS MORAVA'S OBLIGATIONS UNDER HIPAA, HITECH, OR APPLICABLE BAAs, WHICH REMAIN IN FULL FORCE.</p>
+  </div>
+
+  <h2>14. Limitation of Liability</h2>
+  <div class="legal-block">
+    <p>TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, MORAVA AND ITS OFFICERS, DIRECTORS, EMPLOYEES, AGENTS, AND LICENSORS SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, PUNITIVE, OR CONSEQUENTIAL DAMAGES OF ANY KIND, INCLUDING BUT NOT LIMITED TO LOST PROFITS, LOSS OF DATA, PERSONAL INJURY, OR PROPERTY DAMAGE, ARISING OUT OF OR RELATED TO YOUR USE OF OR INABILITY TO USE THE SERVICE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.</p>
+    <p>MORAVA'S TOTAL AGGREGATE LIABILITY TO YOU FOR ALL CLAIMS ARISING UNDER THESE TERMS SHALL NOT EXCEED THE GREATER OF: (A) ONE HUNDRED DOLLARS ($100.00), OR (B) THE AMOUNTS PAID BY YOU TO MORAVA IN THE TWELVE (12) MONTHS PRECEDING THE CLAIM.</p>
+  </div>
+  <div class="hipaa-note">
+    <strong>Important: HIPAA Liability Not Limited.</strong>
+    Nothing in this Section 14 limits Morava's liability for violations of HIPAA, HITECH, or applicable BAAs, or for Morava's own gross negligence or willful misconduct in the handling of PHI. These limitations apply to contract and tort claims to the extent permitted by law.
+  </div>
+
+  <h2>15. Indemnification</h2>
+  <p>You agree to indemnify, defend, and hold harmless Morava Care LLC and its officers, directors, employees, contractors, and agents from and against any and all claims, liabilities, damages, losses, costs, and expenses (including reasonable attorneys' fees) arising from or related to:</p>
+  <ul>
+    <li>Your violation of these Terms or any applicable law or regulation.</li>
+    <li>Your use or misuse of the Service.</li>
+    <li>Your submission of false, inaccurate, or unauthorized health information.</li>
+    <li>Your unauthorized use of another person's health information or account.</li>
+    <li>Your violation of any third-party right, including any intellectual property or privacy right.</li>
+    <li>Any claim by a healthcare provider arising from inaccurate information you submitted.</li>
+  </ul>
+
+  <h2>16. Dispute Resolution</h2>
+  <h3>16.1 Informal Resolution</h3>
+  <p>Before initiating any formal legal proceeding, you agree to contact Morava at support@moravacare.com and make a good-faith effort to resolve the dispute informally. Morava will attempt to respond within 30 days.</p>
+  <h3>16.2 Binding Arbitration</h3>
+  <p>If informal resolution fails, you and Morava agree that any dispute, claim, or controversy arising out of or relating to these Terms or the Service (excluding claims for injunctive or equitable relief) shall be resolved by binding individual arbitration administered by the American Arbitration Association ("AAA") under its Consumer Arbitration Rules, except as set forth below.</p>
+  <div class="legal-block">
+    <p>THE PARTIES WAIVE THEIR RIGHT TO A JURY TRIAL AND AGREE THAT ARBITRATION SHALL BE CONDUCTED ON AN INDIVIDUAL BASIS ONLY. YOU AGREE NOT TO BRING OR PARTICIPATE IN ANY CLASS ACTION OR REPRESENTATIVE PROCEEDING.</p>
+  </div>
+  <h3>16.3 Exceptions</h3>
+  <p>Either party may seek injunctive or other equitable relief in a court of competent jurisdiction to protect intellectual property rights or prevent unauthorized access to or disclosure of PHI. Small claims matters within the applicable jurisdictional threshold may also be brought in small claims court.</p>
+  <h3>16.4 Governing Law and Venue</h3>
+  <p>These Terms are governed by the laws of the State of Oklahoma, without regard to conflict of law principles. To the extent court proceedings are permitted under these Terms, you consent to exclusive jurisdiction and venue in the state and federal courts of Oklahoma County, Oklahoma.</p>
+
+  <h2>17. HIPAA Breach Notification</h2>
+  <p>In the event of a breach of unsecured PHI, Morava will comply with HIPAA's Breach Notification Rule (45 CFR §§ 164.400–164.414), including:</p>
+  <ul>
+    <li>Notifying the applicable covered entity provider without unreasonable delay, and no later than 60 days after discovery of the breach.</li>
+    <li>Providing notification to affected individuals, as directed by the covered entity provider, in compliance with HIPAA requirements.</li>
+    <li>Notifying the Secretary of the U.S. Department of Health and Human Services as required.</li>
+    <li>Cooperating with covered entity providers in their breach investigation and remediation efforts.</li>
+  </ul>
+  <p>If you suspect that your PHI has been compromised through the Service, please contact us immediately at support@moravacare.com or (432) 803-0136.</p>
+
+  <h2>18. Children's Privacy (COPPA)</h2>
+  <p>The Service is not directed to children under the age of 13. Morava does not knowingly collect personal information from children under 13. If we learn we have inadvertently collected personal information from a child under 13, we will delete it promptly. If you believe a child under 13 has provided us with personal information, please contact support@moravacare.com immediately.</p>
+  <p>Users between 13 and 17 may use the Service only with verifiable parental or guardian consent. Parents or guardians may contact us to review, update, or request deletion of a minor's account information.</p>
+
+  <h2>19. Your HIPAA Rights</h2>
+  <p>To the extent Morava holds PHI on behalf of a covered entity provider, you may have the following rights under HIPAA, which you may exercise through the applicable covered entity provider:</p>
+  <ul>
+    <li><strong>Right of access:</strong> Request a copy of your PHI held by your provider.</li>
+    <li><strong>Right to amendment:</strong> Request correction of inaccurate or incomplete PHI.</li>
+    <li><strong>Right to an accounting of disclosures:</strong> Request a list of certain disclosures of your PHI.</li>
+    <li><strong>Right to restrict:</strong> Request restrictions on certain uses and disclosures of your PHI.</li>
+    <li><strong>Right to confidential communications:</strong> Request that your PHI be communicated by alternative means or at an alternative location.</li>
+    <li><strong>Right to file a complaint:</strong> File a complaint with the U.S. Department of Health and Human Services, Office for Civil Rights (OCR) at <a href="https://www.hhs.gov/ocr">www.hhs.gov/ocr</a> if you believe your HIPAA rights have been violated.</li>
+  </ul>
+  <p>To exercise any of these rights, please contact us at support@moravacare.com or contact your healthcare provider directly. Morava will cooperate with covered entity providers to facilitate your rights requests.</p>
+
+  <h2>20. Changes to These Terms</h2>
+  <p>Morava may update these Terms from time to time. We will notify you of material changes by: (a) posting the revised Terms in the app and on our website with an updated effective date, and (b) sending a notice to the email address associated with your account at least 14 days before the changes take effect, where practicable. Your continued use of the Service after the effective date of revised Terms constitutes your acceptance of those changes.</p>
+  <p>If we make changes to how we handle PHI that materially affect your rights, we will provide notice as required by HIPAA and applicable law, which may include obtaining your acknowledgment of the updated terms.</p>
+
+  <h2>21. Termination</h2>
+  <p>Morava may suspend or terminate your access to the Service at any time, with or without cause, and with or without notice, including for violations of these Terms, suspected fraud, security concerns, or legal requirements.</p>
+  <p>Upon termination, your right to use the Service immediately ceases. Sections 6, 7, 11, 13, 14, 15, 16, and 17 survive termination. Termination does not affect Morava's HIPAA and BAA obligations with respect to PHI already held by Morava, which continue in accordance with applicable law and BAA terms.</p>
+  <p>You may close your account at any time by contacting support@moravacare.com. Upon account closure, we will handle your personal data and PHI in accordance with our Privacy Policy and applicable law, including HIPAA retention requirements.</p>
+
+  <h2>22. Accessibility</h2>
+  <p>Morava is committed to making the Service accessible to individuals with disabilities in compliance with the Americans with Disabilities Act ("ADA") and Section 508 of the Rehabilitation Act, to the extent applicable. If you experience accessibility barriers while using the Service, please contact us at support@moravacare.com.</p>
+
+  <h2>23. General Provisions</h2>
+  <p><strong>Entire Agreement:</strong> These Terms, together with our Privacy Policy and any applicable BAA, constitute the entire agreement between you and Morava regarding the Service and supersede all prior agreements relating to the same subject matter.</p>
+  <p><strong>Severability:</strong> If any provision of these Terms is found to be invalid or unenforceable, the remaining provisions shall continue in full force and effect.</p>
+  <p><strong>Waiver:</strong> Morava's failure to enforce any right or provision of these Terms shall not constitute a waiver of that right or provision.</p>
+  <p><strong>Assignment:</strong> You may not assign your rights under these Terms without Morava's prior written consent. Morava may assign its rights and obligations without restriction.</p>
+  <p><strong>Force Majeure:</strong> Morava shall not be liable for any failure or delay in performance resulting from causes beyond its reasonable control, including natural disasters, acts of government, cyberattacks, or public health emergencies. However, Morava's HIPAA obligations remain in force regardless of such events.</p>
+  <p><strong>No Third-Party Beneficiaries:</strong> These Terms do not create rights in any third party, except that covered entity providers with whom Morava has executed a BAA are intended third-party beneficiaries of Sections 6, 7, and 17 of these Terms.</p>
+
+  <h2>24. Contact Us</h2>
+  <p>If you have questions, concerns, or complaints about these Terms, privacy, or your health data, please contact us:</p>
   <div class="contact-box">
     <p><strong>Morava Care LLC</strong></p>
     <p>14556 N Pennsylvania Ave, Building B Apt 305</p>
     <p>Oklahoma City, OK 73134</p>
-    <p>Email: <a href="mailto:support@moravacare.com">support@moravacare.com</a></p>
-    <p>Phone: (432) 803-0136</p>
+    <p>Email: <a href="mailto:support@moravacare.com">support@moravacare.com</a> · Phone: (432) 803-0136</p>
     <p>Website: <a href="https://moravacare.com">moravacare.com</a></p>
   </div>
+  <p style="margin-top:16px;font-size:.9rem;color:#475569;">For HIPAA-specific concerns or to submit a HIPAA complaint, you may also contact the U.S. Department of Health and Human Services Office for Civil Rights at <a href="https://www.hhs.gov/ocr">www.hhs.gov/ocr</a> or 1-800-368-1019.</p>
+
 </div>
 
 <footer>
