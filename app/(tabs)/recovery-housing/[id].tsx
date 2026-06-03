@@ -66,6 +66,8 @@ export default function RecoveryHousingDetailScreen() {
   const [intakePhone, setIntakePhone]         = useState("");
   const [intakeSobriety, setIntakeSobriety]   = useState("");
   const [intakeGender, setIntakeGender]       = useState("");
+  const [intakeFunding, setIntakeFunding]     = useState("");
+  const [intakeMAT, setIntakeMAT]             = useState<boolean | null>(null);
   const [intakeMessage, setIntakeMessage]     = useState("");
   const [intakeSubmitting, setIntakeSubmitting] = useState(false);
   const [intakeSubmitted, setIntakeSubmitted] = useState(false);
@@ -153,16 +155,20 @@ export default function RecoveryHousingDetailScreen() {
       // Build the doc without null fields — Firestore rules reject null on
       // optional string checks (validOptionalString returns false for null).
       const requestData: Record<string, unknown> = {
-        patientName: intakeName.trim(),
-        phone:       intakePhone.trim(),
-        status:      "pending",
-        facilityId:  id,
-        createdAt:   serverTimestamp(),
+        patientName:  intakeName.trim(),
+        phone:        intakePhone.trim(),
+        status:       "pending",
+        facilityId:   id,
+        facilityName: facility?.facilityName ?? "",
+        facilityCity: facility?.city ?? "",
+        createdAt:    serverTimestamp(),
       };
       if (user?.uid)              requestData.userId      = user.uid;
-      if (intakeGender.trim())    requestData.gender      = intakeGender.trim();
+      if (intakeGender.trim())    requestData.gender       = intakeGender.trim();
       if (intakeSobriety.trim())  requestData.sobrietyDays = parseInt(intakeSobriety, 10) || 0;
-      if (intakeMessage.trim())   requestData.message     = intakeMessage.trim();
+      if (intakeFunding.trim())   requestData.fundingType  = intakeFunding.trim();
+      if (intakeMAT !== null)     requestData.onMAT        = intakeMAT;
+      if (intakeMessage.trim())   requestData.message      = intakeMessage.trim();
 
       await addDoc(collection(db, "recoveryHousing", id, "intakeRequests"), requestData);
 
@@ -182,7 +188,8 @@ export default function RecoveryHousingDetailScreen() {
 
   const resetIntakeForm = () => {
     setIntakeName(""); setIntakePhone(""); setIntakeSobriety("");
-    setIntakeGender(""); setIntakeMessage("");
+    setIntakeGender(""); setIntakeFunding(""); setIntakeMAT(null);
+    setIntakeMessage("");
     setIntakeSubmitted(false); setShowIntake(false);
   };
 
@@ -612,6 +619,52 @@ export default function RecoveryHousingDetailScreen() {
                   </View>
                 </View>
 
+                {/* Funding type */}
+                <View style={s.fieldGroup}>
+                  <Text style={[s.fieldLabel, { color: colors.subtext }]}>How are you planning to pay? (optional)</Text>
+                  {[
+                    "Self-Pay / Private Pay",
+                    "Medicaid / SoonerCare",
+                    "ODMHSAS Voucher",
+                    "Private Insurance",
+                    "Not sure yet",
+                  ].map((opt) => (
+                    <TouchableOpacity
+                      key={opt}
+                      onPress={() => setIntakeFunding(intakeFunding === opt ? "" : opt)}
+                      style={[
+                        s.optionRow,
+                        { borderColor: intakeFunding === opt ? "#00838F" : colors.border,
+                          backgroundColor: intakeFunding === opt ? "#E0F2F4" : colors.card }
+                      ]}
+                    >
+                      <View style={[s.optionDot, { borderColor: "#00838F", backgroundColor: intakeFunding === opt ? "#00838F" : "transparent" }]} />
+                      <Text style={[s.optionText, { color: colors.text }]}>{opt}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* MAT */}
+                <View style={s.fieldGroup}>
+                  <Text style={[s.fieldLabel, { color: colors.subtext }]}>Are you currently on MAT? (Suboxone / Methadone)</Text>
+                  <View style={{ flexDirection: "row", gap: 10 }}>
+                    {([["Yes", true], ["No", false], ["Prefer not to say", null]] as [string, boolean | null][]).map(([label, val]) => (
+                      <TouchableOpacity
+                        key={label}
+                        onPress={() => setIntakeMAT(intakeMAT === val ? null : val)}
+                        style={[
+                          s.optionRow,
+                          { flex: 1, justifyContent: "center",
+                            borderColor: intakeMAT === val && val !== null ? "#00838F" : colors.border,
+                            backgroundColor: intakeMAT === val && val !== null ? "#E0F2F4" : colors.card }
+                        ]}
+                      >
+                        <Text style={[s.optionText, { color: colors.text, textAlign: "center" }]}>{label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
                 {/* Message */}
                 <View style={s.fieldGroup}>
                   <Text style={[s.fieldLabel, { color: colors.subtext }]}>Anything else to share? (optional)</Text>
@@ -804,6 +857,23 @@ const s = StyleSheet.create({
     marginBottom: 20,
   },
   phiText: { fontSize: 12, lineHeight: 18, flex: 1 },
+  optionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 6,
+    gap: 10,
+  },
+  optionDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+  },
+  optionText: { fontSize: 14, fontWeight: "500" },
   submitBtn: {
     flexDirection: "row",
     alignItems: "center",

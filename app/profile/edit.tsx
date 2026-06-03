@@ -6,7 +6,7 @@ import { useScreenSecurity } from '../../hooks/useScreenSecurity';
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator, Alert, Image, ScrollView,
+  ActivityIndicator, Alert, Image, Platform, ScrollView,
   StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
@@ -133,8 +133,14 @@ export default function EditProfileScreen() {
   };
 
   const pickImageFromGallery = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') { Alert.alert('Permission needed', 'Please allow access to your photos'); return; }
+    // Android 13+ uses the system Photo Picker, which needs NO permission and
+    // no READ_MEDIA_IMAGES. Requesting that permission triggers a Google Play
+    // policy violation (we only need infrequent access for a profile picture).
+    // iOS still uses the permission-gated photo library.
+    if (Platform.OS !== 'android') {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') { Alert.alert('Permission needed', 'Please allow access to your photos'); return; }
+    }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.5,
     });

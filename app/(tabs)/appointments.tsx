@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { collection, doc, onSnapshot, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
+import { collection, collectionGroup, doc, getDocs, onSnapshot, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
 import React, { useEffect, useRef, useState } from 'react';
 import { useScreenSecurity } from '../../hooks/useScreenSecurity';
 import {
@@ -30,6 +30,11 @@ interface Appointment {
   notes?: string;
   proposedDate?: string;
   proposedTime?: string;
+  // DPC dual-confirmation enrollment
+  providerPracticeType?: string;
+  providerMarkedEnrolled?: boolean;
+  patientConfirmedEnrolled?: boolean;
+  dpcEnrollmentFee?: number;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: string }> = {
@@ -38,6 +43,24 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: string
   cancelled:          { label: 'Cancelled',            color: '#EF4444', icon: '❌' },
   completed:          { label: 'Completed',            color: '#818CF8', icon: '🎉' },
   reschedule_pending: { label: 'Reschedule Proposed',  color: '#8B5CF6', icon: '🔄' },
+};
+
+// ── Housing intake request types ─────────────────────────────────────────────
+interface HousingRequest {
+  id: string;
+  facilityId: string;
+  facilityName: string;
+  facilityCity: string;
+  status: 'pending' | 'contacted' | 'admitted' | 'declined';
+  createdAt: any;
+  fundingType?: string;
+}
+
+const HOUSING_STATUS_CONFIG: Record<string, { label: string; color: string; icon: string; desc: string }> = {
+  pending:   { label: 'Under Review',        color: '#F59E0B', icon: '⏳', desc: 'The facility is reviewing your request.' },
+  contacted: { label: 'Interview Scheduled', color: '#3B82F6', icon: '📞', desc: 'The facility will be in touch to schedule your visit.' },
+  admitted:  { label: 'Admitted',            color: '#22C55E', icon: '🏠', desc: 'You have been admitted. Contact the facility for next steps.' },
+  declined:  { label: 'Not a Fit',           color: '#94A3B8', icon: '✕',  desc: 'This facility was not able to accommodate your request.' },
 };
 
 function formatDateParts(dateStr: string): { weekday: string; monthDay: string } {
@@ -59,6 +82,7 @@ export default function AppointmentsScreen() {
   const { isGuest } = useAuth();
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [housingRequests, setHousingRequests] = useState<HousingRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'past'>('upcoming');
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
@@ -89,6 +113,36 @@ export default function AppointmentsScreen() {
     } finally {
       setRescheduleActionId(null);
     }
+  };
+
+  // ── DPC: patient confirms they enrolled as a member ──────────────────────
+  // Sets the patient-side flag. The finder's fee is only logged once the
+  // provider ALSO marks enrolled (dual confirmation via Cloud Function).
+  const [enrollActionId, setEnrollActionId] = useState<string | null>(null);
+  const handleConfirmEnrollment = (appt: Appointment) => {
+    Alert.alert(
+      'Confirm Enrollment',
+      `Did you enroll as a member with ${appt.providerName}? This helps confirm your membership started through Morava.`,
+      [
+        { text: 'Not yet', style: 'cancel' },
+        {
+          text: 'Yes, I enrolled',
+          onPress: async () => {
+            setEnrollActionId(appt.id);
+            try {
+              await updateDoc(doc(db, 'bookings', appt.id), {
+                patientConfirmedEnrolled: true,
+                patientEnrolledAt: serverTimestamp(),
+              });
+            } catch {
+              Alert.alert('Error', 'Could not confirm. Please try again.');
+            } finally {
+              setEnrollActionId(null);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleRescheduleDecline = (appt: Appointment) => {
@@ -168,6 +222,30 @@ export default function AppointmentsScreen() {
         );
 
         snapshotUnsubRef.current = snapshotUnsub;
+
+        // ── Load housing intake requests (collection group query) ──────────────
+        // Reads all intakeRequests subcollections across all facilities for this user.
+        // Only returns requests with userId == user.uid (enforced by Firestore rules).
+        getDocs(
+          query(collectionGroup(db, 'intakeRequests'), where('userId', '==', user.uid))
+        ).then((snap) => {
+          const requests: HousingRequest[] = snap.docs.map((d) => ({
+            id:           d.id,
+            facilityId:   d.data().facilityId   ?? '',
+            facilityName: d.data().facilityName ?? 'Recovery Facility',
+            facilityCity: d.data().facilityCity ?? '',
+            status:       d.data().status       ?? 'pending',
+            createdAt:    d.data().createdAt,
+            fundingType:  d.data().fundingType,
+          }));
+          requests.sort((a, b) => {
+            const at = a.createdAt?.toMillis?.() ?? 0;
+            const bt = b.createdAt?.toMillis?.() ?? 0;
+            return bt - at;
+          });
+          setHousingRequests(requests);
+        }).catch(() => { /* silent — user may have no requests */ });
+
       }).catch(() => setLoading(false));
     });
 
@@ -256,6 +334,60 @@ export default function AppointmentsScreen() {
           ))}
         </View>
       </View>
+
+      {/* ── Housing Intake Requests ──────────────────────────────────────── */}
+      {housingRequests.length > 0 && (
+        <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 }}>
+          <Text style={{ fontSize: 13, fontWeight: '700', color: colors.subtext, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 8 }}>
+            🏠 Recovery Housing Requests
+          </Text>
+          {housingRequests.map((req) => {
+            const sc = HOUSING_STATUS_CONFIG[req.status] ?? HOUSING_STATUS_CONFIG.pending;
+            const dateStr = req.createdAt?.toDate
+              ? req.createdAt.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+              : '—';
+            return (
+              <View
+                key={req.id}
+                style={[styles.card, {
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                  borderLeftColor: sc.color,
+                  marginBottom: 8,
+                }]}
+              >
+                <View style={[styles.dateColumn, { borderRightColor: colors.border, justifyContent: 'center' }]}>
+                  <Text style={{ fontSize: 22 }}>{sc.icon}</Text>
+                </View>
+                <View style={[styles.infoColumn, { paddingVertical: 12 }]}>
+                  <Text style={[styles.providerName, { color: colors.text }]} numberOfLines={1}>
+                    {req.facilityName}
+                  </Text>
+                  {req.facilityCity ? (
+                    <Text style={[styles.providerSpecialty, { color: colors.primary }]}>
+                      📍 {req.facilityCity}
+                    </Text>
+                  ) : null}
+                  {req.fundingType ? (
+                    <Text style={[styles.reasonText, { color: colors.subtext }]}>
+                      💳 {req.fundingType}
+                    </Text>
+                  ) : null}
+                  <View style={[styles.statusPill, { backgroundColor: sc.color + '20', marginTop: 6 }]}>
+                    <Text style={[styles.statusPillText, { color: sc.color }]}>{sc.label}</Text>
+                  </View>
+                  <Text style={{ fontSize: 11, color: colors.subtext, marginTop: 4, fontStyle: 'italic' }}>
+                    {sc.desc}
+                  </Text>
+                  <Text style={{ fontSize: 11, color: colors.subtext, marginTop: 2 }}>
+                    Submitted {dateStr}
+                  </Text>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      )}
 
       {filteredAppointments.length === 0 ? (
         <View style={styles.emptyState}>
@@ -374,6 +506,35 @@ export default function AppointmentsScreen() {
                       <Text style={styles.rescheduleTapHint}>Tap to accept or decline →</Text>
                     </View>
                   )}
+
+                  {/* DPC enrollment confirmation — patient side of dual confirmation */}
+                  {item.providerPracticeType === 'dpc' &&
+                    (item.status === 'confirmed' || item.status === 'completed') &&
+                    !item.dpcEnrollmentFee && (
+                    <View style={styles.enrollBox}>
+                      {item.patientConfirmedEnrolled ? (
+                        <Text style={styles.enrollConfirmedText}>
+                          ✓ You confirmed enrollment{item.providerMarkedEnrolled ? '' : ' — waiting on the practice to confirm'}
+                        </Text>
+                      ) : (
+                        <>
+                          <Text style={styles.enrollTitle}>Did you enroll as a member?</Text>
+                          <Text style={styles.enrollSub}>
+                            Confirm if you signed up with {item.providerName} through Morava.
+                          </Text>
+                          <TouchableOpacity
+                            style={styles.enrollBtn}
+                            onPress={() => handleConfirmEnrollment(item)}
+                            disabled={enrollActionId === item.id}
+                          >
+                            <Text style={styles.enrollBtnText}>
+                              {enrollActionId === item.id ? 'Confirming…' : 'Yes, I enrolled'}
+                            </Text>
+                          </TouchableOpacity>
+                        </>
+                      )}
+                    </View>
+                  )}
                 </View>
 
                 <Text style={[styles.chevron, { color: colors.subtext }]}>›</Text>
@@ -442,4 +603,17 @@ const styles = StyleSheet.create({
   rescheduleTitle: { fontSize: 12, fontWeight: '700', color: '#7C3AED', marginBottom: 2 },
   rescheduleTime:  { fontSize: 13, fontWeight: '600', color: '#4C1D95', marginBottom: 4 },
   rescheduleTapHint: { fontSize: 11, color: '#7C3AED', fontStyle: 'italic' },
+  // DPC enrollment confirmation
+  enrollBox: {
+    marginTop: 8, backgroundColor: '#F5F3FF', borderRadius: 10,
+    borderWidth: 1, borderColor: '#DDD6FE', padding: 10,
+  },
+  enrollTitle: { fontSize: 12, fontWeight: '700', color: '#6D28D9', marginBottom: 2 },
+  enrollSub: { fontSize: 11, color: '#7C3AED', marginBottom: 8 },
+  enrollConfirmedText: { fontSize: 12, fontWeight: '600', color: '#15803D' },
+  enrollBtn: {
+    backgroundColor: '#7C3AED', borderRadius: 8,
+    paddingVertical: 8, paddingHorizontal: 14, alignSelf: 'flex-start',
+  },
+  enrollBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
 });

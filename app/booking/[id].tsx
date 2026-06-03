@@ -1944,6 +1944,9 @@ export default function BookingScreen() {
         providerId: id,
         providerName: provider.name,
         providerSpecialty: provider.specialty,
+        // Carry practice type so billing can distinguish DPC membership inquiries
+        // (billed once on enrollment) from per-visit bookings (billed per completed visit)
+        providerPracticeType: (provider as any).practiceType || "standard",
         bookingFor: selectedPatientId === "self" ? "self" : "dependent",
         dependentId: selectedPatientId !== "self" ? selectedPatientId : null,
         isMinorPatient: isMinorBooking,
