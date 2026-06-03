@@ -36,26 +36,13 @@
         color: var(--text);
         background: var(--bg);
       }
-
-      /* Header */
       header {
-        background: linear-gradient(
-          135deg,
-          #006064 0%,
-          #00acc1 60%,
-          #1565c0 100%
-        );
+        background: linear-gradient(135deg, #006064 0%, #00acc1 60%, #1565c0 100%);
         color: #fff;
         padding: 56px 24px 48px;
         text-align: center;
         position: relative;
         overflow: hidden;
-      }
-      header::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
       }
       header .logo {
         display: inline-flex;
@@ -77,10 +64,7 @@
         align-items: center;
         justify-content: center;
       }
-      header .logo-mark svg {
-        width: 22px;
-        height: 22px;
-      }
+      header .logo-mark svg { width: 22px; height: 22px; }
       header .logo-name {
         font-family: "DM Serif Display", serif;
         font-size: 1.2rem;
@@ -101,8 +85,6 @@
         margin: 0 auto;
         position: relative;
       }
-
-      /* Effective date pill */
       .meta-row {
         display: flex;
         align-items: center;
@@ -110,6 +92,7 @@
         gap: 10px;
         margin-top: 24px;
         position: relative;
+        flex-wrap: wrap;
       }
       .pill {
         display: inline-block;
@@ -122,15 +105,7 @@
         border-radius: 50px;
         letter-spacing: 0.05em;
       }
-
-      /* Layout */
-      .container {
-        max-width: 800px;
-        margin: 0 auto;
-        padding: 0 24px 80px;
-      }
-
-      /* Summary card */
+      .container { max-width: 800px; margin: 0 auto; padding: 0 24px 80px; }
       .summary {
         background: var(--white);
         border-radius: var(--radius);
@@ -143,9 +118,7 @@
       .summary::before {
         content: "";
         position: absolute;
-        left: 0;
-        top: 0;
-        bottom: 0;
+        left: 0; top: 0; bottom: 0;
         width: 4px;
         background: linear-gradient(180deg, var(--teal), var(--blue));
       }
@@ -157,29 +130,9 @@
         text-transform: uppercase;
         letter-spacing: 0.08em;
       }
-      .summary ul {
-        padding-left: 0;
-        list-style: none;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-      }
-      .summary li {
-        display: flex;
-        align-items: flex-start;
-        gap: 10px;
-        font-size: 0.95rem;
-        color: var(--muted);
-      }
-      .summary li::before {
-        content: "✓";
-        color: var(--teal);
-        font-weight: 700;
-        flex-shrink: 0;
-        margin-top: 2px;
-      }
-
-      /* Sections */
+      .summary ul { padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+      .summary li { display: flex; align-items: flex-start; gap: 10px; font-size: 0.95rem; color: var(--muted); }
+      .summary li::before { content: "✓"; color: var(--teal); font-weight: 700; flex-shrink: 0; margin-top: 2px; }
       .section {
         background: var(--white);
         border-radius: var(--radius);
@@ -198,106 +151,41 @@
         gap: 12px;
       }
       .section h2 .num {
-        width: 32px;
-        height: 32px;
+        width: 32px; height: 32px;
         background: var(--teal-light);
         color: var(--teal-dark);
         border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        display: flex; align-items: center; justify-content: center;
         font-family: "DM Sans", sans-serif;
-        font-size: 0.85rem;
-        font-weight: 700;
-        flex-shrink: 0;
+        font-size: 0.85rem; font-weight: 700; flex-shrink: 0;
       }
-      .section h3 {
-        font-size: 0.95rem;
-        font-weight: 700;
-        color: var(--text);
-        margin: 20px 0 8px;
-      }
-      .section p {
-        color: var(--muted);
-        margin-bottom: 12px;
-        font-size: 0.95rem;
-      }
-      .section ul {
-        padding-left: 0;
-        list-style: none;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        margin-bottom: 12px;
-      }
-      .section li {
-        display: flex;
-        align-items: flex-start;
-        gap: 10px;
-        font-size: 0.95rem;
-        color: var(--muted);
-      }
-      .section li::before {
-        content: "·";
-        color: var(--teal);
-        font-weight: 700;
-        font-size: 1.2rem;
-        flex-shrink: 0;
-        line-height: 1.5;
-      }
-      .section li strong {
-        color: var(--text);
-      }
-
-      /* Alert box */
+      .section h3 { font-size: 0.95rem; font-weight: 700; color: var(--text); margin: 20px 0 8px; }
+      .section p { color: var(--muted); margin-bottom: 12px; font-size: 0.95rem; }
+      .section ul { padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+      .section li { display: flex; align-items: flex-start; gap: 10px; font-size: 0.95rem; color: var(--muted); }
+      .section li::before { content: "·"; color: var(--teal); font-weight: 700; font-size: 1.2rem; flex-shrink: 0; line-height: 1.5; }
+      .section li strong { color: var(--text); }
       .alert {
         background: var(--teal-light);
         border: 1px solid #b2ebf2;
         border-radius: 10px;
         padding: 16px 20px;
         margin: 16px 0;
-        display: flex;
-        align-items: flex-start;
-        gap: 12px;
+        display: flex; align-items: flex-start; gap: 12px;
       }
-      .alert-icon {
-        font-size: 1.2rem;
-        flex-shrink: 0;
-        margin-top: 2px;
-      }
-      .alert p {
-        margin: 0;
-        font-size: 0.9rem;
-        color: #006064;
-      }
-      .alert strong {
-        color: #004d56;
-      }
-
-      /* Warning box */
+      .alert-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: 2px; }
+      .alert p { margin: 0; font-size: 0.9rem; color: #006064; }
+      .alert strong { color: #004d56; }
       .warning {
         background: #fff8e1;
         border: 1px solid #ffe082;
         border-radius: 10px;
         padding: 16px 20px;
         margin: 16px 0;
-        display: flex;
-        align-items: flex-start;
-        gap: 12px;
+        display: flex; align-items: flex-start; gap: 12px;
       }
-      .warning p {
-        margin: 0;
-        font-size: 0.9rem;
-        color: #e65100;
-      }
-
-      /* Table */
-      .data-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 16px 0;
-        font-size: 0.9rem;
-      }
+      .warning p { margin: 0; font-size: 0.9rem; color: #e65100; }
+      .data-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.9rem; }
       .data-table th {
         background: var(--teal-light);
         color: var(--teal-dark);
@@ -306,20 +194,9 @@
         text-align: left;
         border-bottom: 2px solid #b2ebf2;
       }
-      .data-table td {
-        padding: 10px 14px;
-        border-bottom: 1px solid var(--border);
-        color: var(--muted);
-        vertical-align: top;
-      }
-      .data-table tr:last-child td {
-        border-bottom: none;
-      }
-      .data-table tr:hover td {
-        background: #f8fdfe;
-      }
-
-      /* Contact box */
+      .data-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); color: var(--muted); vertical-align: top; }
+      .data-table tr:last-child td { border-bottom: none; }
+      .data-table tr:hover td { background: #f8fdfe; }
       .contact {
         background: linear-gradient(135deg, #e0f7fa, #e8f5e9);
         border: 1px solid #b2ebf2;
@@ -327,86 +204,23 @@
         padding: 28px 32px;
         margin-top: 16px;
       }
-      .contact h3 {
-        font-family: "DM Serif Display", serif;
-        font-size: 1.2rem;
-        font-weight: 400;
-        color: var(--text);
-        margin-bottom: 16px;
-      }
-      .contact-row {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-bottom: 10px;
-        font-size: 0.95rem;
-        color: var(--muted);
-      }
-      .contact-row a {
-        color: var(--teal-dark);
-        font-weight: 600;
-        text-decoration: none;
-      }
-      .contact-row a:hover {
-        text-decoration: underline;
-      }
-
-      /* COPPA badge */
+      .contact h3 { font-family: "DM Serif Display", serif; font-size: 1.2rem; font-weight: 400; color: var(--text); margin-bottom: 16px; }
+      .contact-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 0.95rem; color: var(--muted); }
+      .contact-row a { color: var(--teal-dark); font-weight: 600; text-decoration: none; }
+      .contact-row a:hover { text-decoration: underline; }
       .coppa-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        background: #e8f5e9;
-        border: 1px solid #a5d6a7;
-        border-radius: 50px;
-        padding: 4px 12px;
-        font-size: 0.8rem;
-        font-weight: 700;
-        color: #2e7d32;
-        margin-bottom: 12px;
+        display: inline-flex; align-items: center; gap: 6px;
+        background: #e8f5e9; border: 1px solid #a5d6a7;
+        border-radius: 50px; padding: 4px 12px;
+        font-size: 0.8rem; font-weight: 700; color: #2e7d32; margin-bottom: 12px;
       }
-
-      /* Footer */
-      footer {
-        text-align: center;
-        padding: 32px 24px;
-        color: #999;
-        font-size: 0.85rem;
-      }
-      footer a {
-        color: var(--teal-dark);
-        text-decoration: none;
-      }
-
-      /* Version badge */
-      .version-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        background: var(--white);
-        border: 1px solid var(--border);
-        border-radius: 50px;
-        padding: 5px 14px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        color: var(--muted);
-        margin-bottom: 32px;
-      }
-
+      footer { text-align: center; padding: 32px 24px; color: #999; font-size: 0.85rem; }
+      footer a { color: var(--teal-dark); text-decoration: none; }
       @media (max-width: 640px) {
-        header h1 {
-          font-size: 1.8rem;
-        }
-        .container {
-          padding: 0 16px 60px;
-        }
-        .section,
-        .summary {
-          padding: 24px 20px;
-        }
-        .contact {
-          padding: 20px;
-        }
+        header h1 { font-size: 1.8rem; }
+        .container { padding: 0 16px 60px; }
+        .section, .summary { padding: 24px 20px; }
+        .contact { padding: 20px; }
       }
     </style>
   </head>
@@ -414,15 +228,8 @@
     <header>
       <div class="logo">
         <div class="logo-mark">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M3 18 Q8 14 12 10 Q16 6 20 3 L21 5 Q17 8 13 12 Q9 16 4 20 Z"
-              fill="#00BCD4"
-            />
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 18 Q8 14 12 10 Q16 6 20 3 L21 5 Q17 8 13 12 Q9 16 4 20 Z" fill="#00BCD4" />
             <circle cx="20" cy="3" r="3" fill="#1565C0" />
           </svg>
         </div>
@@ -432,7 +239,7 @@
       <p>How we collect, use, and protect your information</p>
       <div class="meta-row">
         <span class="pill">Effective: May 13, 2026</span>
-        <span class="pill">Version 2.1</span>
+        <span class="pill">Last Revised: June 2, 2026</span>
       </div>
     </header>
 
@@ -440,516 +247,294 @@
       <div class="summary">
         <h2>The Short Version — Plain English</h2>
         <ul>
-          <li>
-            We collect only what we need to help you find and book healthcare
-            appointments.
-          </li>
-          <li>We <strong>never sell your data</strong> to anyone — ever.</li>
+          <li>We collect only what we need to help you find and book healthcare appointments.</li>
+          <li>We <strong>never sell your data</strong> to anyone, ever.</li>
           <li>We never share your information with advertisers.</li>
           <li>You can delete your account and all your data at any time.</li>
-          <li>
-            Your data is stored securely on Google's Firebase platform with
-            HIPAA-aligned controls.
-          </li>
-          <li>
-            We collect your birth year only to comply with COPPA — we do not use
-            it for any other purpose.
-          </li>
-          <li>Morava is free. We don't monetize your health data.</li>
+          <li>Your data is stored securely on Google's Firebase platform under a HIPAA Business Associate Agreement.</li>
+          <li>We collect your birth year only for COPPA age verification — not for any other purpose.</li>
+          <li>Morava is free. We do not monetize your health data.</li>
         </ul>
       </div>
 
       <div class="section">
         <h2><span class="num">1</span> Who We Are</h2>
-        <p>
-          <strong>Morava</strong> (moravacare.com) is a mobile application
-          designed to help SoonerCare, Medicaid, and uninsured patients in
-          Oklahoma find and connect with healthcare providers. Morava is
-          operated by Moise Kouassi, Oklahoma, United States.
-        </p>
-        <p>
-          This Privacy Policy applies to the Morava mobile app, the provider
-          dashboard at dashboard.moravacare.com, and any related services. If
-          you have questions, contact us at
-          <strong>support@moravacare.com</strong>.
-        </p>
+        <p>Morava Care LLC ("Morava," "we," "us," or "our") operates a mobile application and website (moravacare.com) designed to help SoonerCare, Medicaid, and uninsured patients in Oklahoma find and connect with healthcare providers. Morava is a healthcare technology platform — we are not a healthcare provider, medical practice, or insurance company.</p>
+        <p>This Privacy Policy applies to the Morava mobile app, the provider dashboard at dashboard.moravacare.com, and all related services (collectively, the "Service"). It governs how we collect, use, share, and protect your personal information, including Protected Health Information ("PHI") where applicable.</p>
+        <p>This Privacy Policy is incorporated by reference into our Terms of Service. In the event of a conflict between this Privacy Policy and our Terms of Service regarding the treatment of personal data or PHI, this Privacy Policy controls. For healthcare providers with whom we have executed a Business Associate Agreement ("BAA"), that BAA governs our handling of PHI on your behalf.</p>
+        <p>Questions? Contact us at support@moravacare.com or (432) 803-0136.</p>
       </div>
 
       <div class="section">
-        <h2><span class="num">2</span> Information We Collect</h2>
+        <h2><span class="num">2</span> Key Definitions</h2>
+        <ul>
+          <li><strong>"Personal Information"</strong> means any information that identifies or could reasonably identify you as an individual, including name, email address, and device identifiers.</li>
+          <li><strong>"Protected Health Information" or "PHI"</strong> means individually identifiable health information created, received, maintained, or transmitted by Morava in connection with a covered healthcare provider, as defined under HIPAA (45 CFR § 160.103).</li>
+          <li><strong>"Electronic PHI" or "ePHI"</strong> means PHI that is created, received, maintained, or transmitted in electronic form.</li>
+          <li><strong>"Business Associate"</strong> means an entity that performs services on behalf of a covered entity that involve the use or disclosure of PHI, as defined under HIPAA (45 CFR § 160.103). Morava may act as a Business Associate when providing services to covered healthcare providers.</li>
+          <li><strong>"Covered Entity"</strong> means a healthcare provider, health plan, or healthcare clearinghouse that transmits health information in electronic form in connection with HIPAA-covered transactions.</li>
+          <li><strong>"De-identified Data"</strong> means data from which all 18 HIPAA identifiers have been removed in accordance with 45 CFR § 164.514(b), such that it cannot reasonably be used to identify an individual.</li>
+        </ul>
+      </div>
 
-        <h3>Information You Provide Directly</h3>
+      <div class="section">
+        <h2><span class="num">3</span> Information We Collect</h2>
+        <h3>3.1 Information You Provide Directly</h3>
         <table class="data-table">
-          <thead>
-            <tr>
-              <th>Data</th>
-              <th>Why We Collect It</th>
-            </tr>
-          </thead>
+          <thead><tr><th>Data Element</th><th>Why We Collect It</th><th>HIPAA Category</th></tr></thead>
           <tbody>
-            <tr>
-              <td><strong>First and last name</strong></td>
-              <td>
-                To personalize your experience and identify you to providers
-                when booking
-              </td>
-            </tr>
-            <tr>
-              <td><strong>Email address</strong></td>
-              <td>Account creation, verification, and password reset</td>
-            </tr>
-            <tr>
-              <td><strong>Birth year</strong></td>
-              <td>
-                COPPA compliance only — to verify users are 13 or older. Not
-                used for any other purpose.
-              </td>
-            </tr>
-            <tr>
-              <td><strong>Insurance type</strong></td>
-              <td>
-                To filter providers who accept your coverage (SoonerCare,
-                Medicaid, uninsured)
-              </td>
-            </tr>
-            <tr>
-              <td><strong>Insurance plan name</strong></td>
-              <td>
-                To show relevant providers and surface your saved plan in the
-                app
-              </td>
-            </tr>
-            <tr>
-              <td><strong>Appointment details</strong></td>
-              <td>
-                Date, time, provider, and reason — to manage your bookings
-              </td>
-            </tr>
-            <tr>
-              <td><strong>Location (optional)</strong></td>
-              <td>
-                GPS or city/ZIP to find nearby providers. Never stored
-                permanently.
-              </td>
-            </tr>
-            <tr>
-              <td><strong>Profile photo (optional)</strong></td>
-              <td>If you choose to add one to your profile</td>
-            </tr>
+            <tr><td>First and last name</td><td>Account personalization; shared with providers at booking</td><td>PHI when linked to appointment</td></tr>
+            <tr><td>Email address</td><td>Account creation, verification, notifications, password reset</td><td>Personal Information</td></tr>
+            <tr><td>Birth year</td><td>COPPA age verification only (13+) — no other purpose</td><td>Personal Information</td></tr>
+            <tr><td>Insurance type</td><td>Filter providers who accept your coverage</td><td>PHI when linked to appointment</td></tr>
+            <tr><td>Insurance plan name</td><td>Show relevant providers; saved to profile for convenience</td><td>PHI when linked to appointment</td></tr>
+            <tr><td>Appointment details</td><td>Date, time, provider, reason for visit — to manage bookings</td><td>PHI</td></tr>
+            <tr><td>Health profile (optional)</td><td>Shared with booked providers to support appointment preparation</td><td>PHI</td></tr>
+            <tr><td>Location (optional)</td><td>GPS or city/ZIP to find nearby providers; not stored permanently</td><td>Personal Information</td></tr>
+            <tr><td>Profile photo (optional)</td><td>Account personalization only; not shared with providers</td><td>Personal Information</td></tr>
           </tbody>
         </table>
-
-        <h3>Information Collected Automatically</h3>
+        <h3>3.2 Information Collected Automatically</h3>
         <ul>
-          <li>
-            <strong>Usage analytics:</strong> Which screens you visit and
-            features you use — stored in our private Firestore analytics_events
-            collection, never shared with ad networks.
-          </li>
-          <li>
-            <strong>Crash reports:</strong> Error details sent to Sentry. All
-            personally identifiable information (names, emails, appointment
-            details) is automatically stripped before transmission.
-          </li>
-          <li>
-            <strong>Device type and OS version:</strong> For troubleshooting
-            only.
-          </li>
+          <li><strong>Usage analytics:</strong> Which screens you visit and features you use, stored in our private Firestore analytics_events collection. This data is never shared with advertising networks, data brokers, or any third party.</li>
+          <li><strong>Crash reports:</strong> Error details sent to Sentry (under a signed BAA as of May 2026). All personally identifiable information — including names, emails, appointment details, and insurance information — is automatically stripped from crash reports before transmission. Stack traces are truncated in production.</li>
+          <li><strong>Device information:</strong> Device type and operating system version, used for troubleshooting only.</li>
+          <li><strong>Log data:</strong> Server logs may capture IP addresses and timestamps for security monitoring and fraud prevention. Logs are retained for 90 days and are not used for profiling.</li>
         </ul>
-
-        <h3>Information We Do NOT Collect</h3>
-        <ul>
-          <li>
-            Social Security Number, Medicaid ID, or government-issued ID numbers
-          </li>
-          <li>
-            Medical records, diagnoses, prescriptions, or treatment history
-          </li>
-          <li>Payment or financial account information</li>
-          <li>
-            Phone contacts, camera, or microphone (unless you explicitly grant
-            permission)
-          </li>
-          <li>
-            Precise GPS location stored to a database (location is used
-            in-session only)
-          </li>
-        </ul>
+        <h3>3.3 Information We Do NOT Collect</h3>
+        <p>We do not collect: Social Security Numbers, Medicaid ID numbers, or government-issued ID numbers · Medical records, diagnoses, prescriptions, or treatment histories · Payment or financial account information · Phone contacts, camera, or microphone data (unless you explicitly grant permission for a specific feature) · Precise GPS coordinates stored to a database (location is used in-session only, not persisted) · Biometric data of any kind.</p>
+        <h3>3.4 Cookies and Tracking Technologies</h3>
+        <p>The Morava mobile app does not use third-party advertising cookies or tracking pixels. The web dashboard at dashboard.moravacare.com may use session cookies and local storage strictly necessary for authentication and functionality. We do not use cookies for behavioral advertising or cross-site tracking. We do not participate in any advertising networks or data exchanges.</p>
       </div>
 
       <div class="section">
-        <h2><span class="num">3</span> How We Use Your Information</h2>
+        <h2><span class="num">4</span> How We Use Your Information</h2>
+        <p>We use the information we collect only for the following purposes:</p>
         <ul>
-          <li>Create and manage your Morava account</li>
-          <li>
-            Connect you with healthcare providers who accept your insurance
-          </li>
-          <li>Process and track appointment requests</li>
-          <li>
-            Send appointment confirmation and status update notifications (push notifications via Firebase; SMS notifications via Twilio are currently paused pending execution of a Business Associate Agreement and will be re-enabled once complete)
-          </li>
-          <li>Show you providers near your location during a search session</li>
-          <li>
-            Display your voucher eligibility if you are among Morava's first 100
-            members
-          </li>
-          <li>
-            Improve app features and fix technical issues using aggregated,
-            anonymized analytics
-          </li>
-          <li>Respond to support requests and privacy inquiries</li>
+          <li>Create, authenticate, and manage your Morava account.</li>
+          <li>Connect you with healthcare providers who accept your insurance type.</li>
+          <li>Process and track appointment requests submitted through the Service.</li>
+          <li>Transmit your name, contact information, and relevant health profile details to providers with whom you book an appointment, solely to facilitate that appointment.</li>
+          <li>Send appointment confirmation, status update, and reminder notifications (push via Firebase; SMS via Twilio — see Section 5 regarding current Twilio BAA status).</li>
+          <li>Display your voucher eligibility if you are among Morava's first 100 founding members.</li>
+          <li>Improve app features and fix technical issues using aggregated, anonymized analytics.</li>
+          <li>Respond to your support requests and privacy inquiries.</li>
+          <li>Comply with legal obligations, including HIPAA, HITECH, COPPA, and applicable Oklahoma law.</li>
+          <li>Detect, investigate, and prevent fraud, security incidents, and other illegal activity.</li>
         </ul>
         <div class="alert">
-          <span class="alert-icon">🔒</span>
-          <p>
-            <strong>We do not use your information for advertising.</strong> We
-            do not sell, rent, trade, or share your personal information with
-            third parties for marketing. Morava does not display advertisements
-            and never will.
-          </p>
+          <span class="alert-icon">🚫</span>
+          <p><strong>We do not use your information for advertising — ever.</strong> We do not sell, rent, trade, license, or share your personal information or PHI with any third party for marketing or advertising purposes. Morava does not display advertisements and has no plans to do so. This is a founding principle of Morava and will not change.</p>
         </div>
-      </div>
-
-      <div class="section">
-        <h2><span class="num">4</span> Data Storage and Security</h2>
-        <p>
-          Your data is stored on <strong>Google Firebase</strong> (Firestore and
-          Firebase Authentication), a secure cloud platform operated by Google
-          LLC. All data is encrypted in transit (TLS 1.3) and at rest (AES-256).
-        </p>
-
-        <h3>Access Controls</h3>
-        <ul>
-          <li>
-            Patients can only read and write their own records — no access to
-            other patients' data
-          </li>
-          <li>
-            Providers can only see appointment requests made specifically to
-            them
-          </li>
-          <li>
-            Audit logs are write-only and immutable — no user can delete or
-            modify audit entries
-          </li>
-          <li>
-            Analytics events are write-only for authenticated users — no patient
-            can read others' events
-          </li>
-          <li>
-            All provider actions (confirm/decline bookings) verify identity
-            before executing
-          </li>
-        </ul>
-
-        <h3>Crash Reporting</h3>
-        <p>
-          We use <strong>Sentry</strong> for crash monitoring. Before any error
-          data is transmitted to Sentry, our app automatically strips all PII
-          fields including names, emails, phone numbers, insurance details, and
-          appointment information. Stack traces are truncated in production to
-          prevent data leakage through file paths.
-        </p>
-
-        <h3>HIPAA Alignment</h3>
-        <p>
-          Morava operates under a Business Associate Agreement (BAA) with Google
-          for Firebase services. While Morava is primarily an appointment
-          scheduling platform (not a covered entity under HIPAA), we maintain
-          HIPAA-aligned data practices including audit logging, minimum
-          necessary data collection, and access controls.
-        </p>
+        <h3>4.1 Minimum Necessary Standard</h3>
+        <p>Consistent with HIPAA's minimum necessary standard (45 CFR § 164.502(b)), Morava limits its use and disclosure of PHI to the minimum amount necessary to accomplish the intended purpose. We do not access, process, or transmit more PHI than is required for the specific function being performed.</p>
+        <h3>4.2 De-identification</h3>
+        <p>Where we use data for analytics, product improvement, or research, we apply de-identification methods consistent with 45 CFR § 164.514(b) to ensure that individuals cannot reasonably be identified. De-identified data is not subject to HIPAA restrictions and may be used to improve the Service.</p>
       </div>
 
       <div class="section">
         <h2><span class="num">5</span> Information Sharing</h2>
-        <p>We share your information only in these limited circumstances:</p>
+        <p>We share your information only in the following limited circumstances:</p>
+        <h3>5.1 With Your Healthcare Provider</h3>
+        <p>When you request an appointment, the provider receives your name, contact information, and the health profile details you authorized for sharing. This disclosure is made solely to facilitate your appointment. Providers are independent covered entities subject to their own HIPAA privacy obligations.</p>
+        <h3>5.2 With Our Service Providers (Sub-processors)</h3>
+        <table class="data-table">
+          <thead><tr><th>Service Provider</th><th>Purpose</th><th>Data Shared</th><th>BAA Status</th></tr></thead>
+          <tbody>
+            <tr><td>Google Firebase (Firestore, Auth, Hosting)</td><td>Database, authentication, cloud hosting</td><td>All user data including PHI</td><td>BAA executed</td></tr>
+            <tr><td>Google Maps API</td><td>Provider location display, geocoding</td><td>Location coordinates only (no PHI)</td><td>Not required</td></tr>
+            <tr><td>Sentry</td><td>Crash monitoring and error reporting</td><td>PII-scrubbed, anonymized error reports</td><td>BAA signed May 2026</td></tr>
+            <tr><td>Twilio</td><td>SMS appointment notifications</td><td>No PHI transmitted until BAA executed</td><td>BAA PENDING — SMS paused</td></tr>
+            <tr><td>Expo / EAS</td><td>App builds and over-the-air updates</td><td>No personal data</td><td>Not required</td></tr>
+          </tbody>
+        </table>
+        <p>All service providers who process PHI on our behalf are required to execute a Business Associate Agreement with Morava before handling any PHI. We contractually require all service providers to: (a) use PHI only as necessary to provide the contracted services; (b) implement appropriate safeguards to protect PHI; and (c) report any breach or security incident to Morava without unreasonable delay.</p>
+        <h3>5.3 When Required by Law</h3>
+        <p>We may disclose information when required to do so by: (a) a valid legal process, such as a court order, subpoena, or government demand; (b) to comply with applicable federal or state law; or (c) to protect the rights, property, or safety of Morava, our users, or the public. To the extent permitted by law, we will notify you of any such compelled disclosure unless prohibited by court order or applicable law.</p>
+        <h3>5.4 Business Transfers</h3>
+        <p>If Morava is involved in a merger, acquisition, bankruptcy, or sale of all or substantially all of its assets, your information may be transferred as part of that transaction. We will provide notice of any such transfer and the opportunity for you to delete your account. Any successor entity will be required to honor this Privacy Policy or obtain your consent before materially changing how your PHI is used. PHI transferred in a business transaction remains subject to HIPAA obligations.</p>
+        <h3>5.5 With Your Explicit Consent</h3>
+        <p>In any other circumstance not described above, we will share your information only with your explicit, informed consent.</p>
+        <div class="alert">
+          <span class="alert-icon">🔒</span>
+          <p><strong>We never sell your data. No exceptions. No future carve-outs.</strong> This is a founding principle of Morava. We will not sell, rent, trade, or otherwise monetize your personal information or PHI. This commitment applies regardless of any future changes to our business model.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2><span class="num">6</span> Data Storage and Security</h2>
+        <h3>6.1 Infrastructure</h3>
+        <p>Your data is stored on Google Firebase (Firestore and Firebase Authentication), a secure cloud platform operated by Google LLC under a HIPAA Business Associate Agreement with Morava. All data is encrypted in transit using TLS 1.3 and at rest using AES-256 encryption.</p>
+        <h3>6.2 HIPAA Security Rule Compliance</h3>
+        <p>Morava maintains a comprehensive information security program aligned with HIPAA's Security Rule (45 CFR Part 164, Subpart C), including:</p>
         <ul>
-          <li>
-            <strong>With your healthcare provider:</strong> When you request an
-            appointment, the provider receives your name and contact details for
-            that appointment only.
-          </li>
-          <li>
-            <strong>Google Firebase:</strong> Data storage and authentication
-            infrastructure. Google is contractually bound not to use your data
-            for any other purpose.
-          </li>
-          <li>
-            <strong>Sentry:</strong> Crash reporting — receives anonymized,
-            PII-scrubbed error reports only.
-          </li>
-          <li>
-            <strong>Twilio:</strong> SMS delivery for appointment notifications.
-            SMS notifications are currently paused pending execution of a HIPAA Business Associate Agreement with Twilio. No PHI is transmitted to Twilio until the BAA is executed.
-          </li>
-          <li>
-            <strong>Expo / EAS:</strong> App delivery and over-the-air updates.
-            Does not receive personal data.
-          </li>
-          <li>
-            <strong>When required by law:</strong> We may disclose information
-            if required by a valid legal process, court order, or government
-            authority.
-          </li>
-          <li>
-            <strong>With your explicit consent:</strong> In any other
-            circumstance, only with your direct permission.
-          </li>
+          <li><strong>Administrative safeguards:</strong> Designated Security Officer, workforce HIPAA training, access management policies, risk assessment and risk management program, contingency planning.</li>
+          <li><strong>Physical safeguards:</strong> Hosted on Google's SOC 2-certified infrastructure with physical access controls. No PHI is stored on employee devices.</li>
+          <li><strong>Technical safeguards:</strong> Encryption of ePHI in transit (TLS 1.3) and at rest (AES-256); unique user authentication; automatic logoff; audit controls and immutable audit logs; transmission security.</li>
         </ul>
+        <h3>6.3 Access Controls</h3>
+        <ul>
+          <li>Patients can only read and write their own records — no cross-patient data access is permitted.</li>
+          <li>Providers can only see appointment requests submitted specifically to them.</li>
+          <li>Audit logs are write-only and immutable — no user, including administrators, can delete or alter audit entries.</li>
+          <li>Analytics events are write-only for authenticated users — no patient can read other patients' events.</li>
+          <li>All provider actions (confirm, decline, reschedule bookings) verify provider identity before execution.</li>
+          <li>Administrative access to PHI is limited on a minimum-necessary basis to authorized Morava personnel only.</li>
+        </ul>
+        <h3>6.4 Risk Assessments</h3>
+        <p>Morava conducts periodic risk assessments of its systems, infrastructure, and processes that involve PHI, consistent with HIPAA Security Rule requirements (45 CFR § 164.308(a)(1)). Identified risks are tracked and mitigated according to documented remediation plans.</p>
+        <h3>6.5 Crash Reporting (Sentry)</h3>
+        <p>We use Sentry for crash monitoring under a signed BAA (executed May 2026). Before any error data is transmitted to Sentry, the app automatically strips all PII fields including names, emails, phone numbers, insurance information, and appointment details. Stack traces are truncated in production to prevent data leakage through file paths.</p>
+        <h3>6.6 Security Limitations</h3>
+        <p>Despite these measures, no electronic transmission or storage system is 100% secure. You use the Service at your own risk. You are responsible for maintaining the security of your account credentials and notifying us immediately of any suspected unauthorized access at support@moravacare.com.</p>
+      </div>
+
+      <div class="section">
+        <h2><span class="num">7</span> Children's Privacy (COPPA)</h2>
+        <span class="coppa-badge">🛡️ Users Under 13 Are Not Permitted</span>
+        <p>Morava is not directed to children under the age of 13. We do not knowingly collect personal information from children under 13. If we learn we have inadvertently collected such information, we will delete it within 72 hours.</p>
+        <p>Morava requires all users to provide their birth year during account creation. If a user indicates they are under 13, account creation is blocked and they are directed to contact us with a parent or guardian.</p>
+        <p>Birth year is collected solely for COPPA age verification. It is stored in your user record but is never used for profiling, analytics segmentation, advertising, or any purpose other than verifying that you are 13 or older.</p>
+        <p>For users aged 13 to 17: A parent or legal guardian may contact us at support@moravacare.com to: (a) review the minor's account information; (b) request correction of inaccurate data; or (c) request deletion of the minor's account and all associated data. We will respond to such requests within 72 hours.</p>
+        <p>If you believe a child under 13 has created an account or submitted personal information, please contact us immediately at support@moravacare.com. We will delete the account and all associated data within 72 hours of verification.</p>
+      </div>
+
+      <div class="section">
+        <h2><span class="num">8</span> Your Rights and Choices</h2>
+        <h3>8.1 General Privacy Rights</h3>
+        <ul>
+          <li><strong>Right to Access:</strong> Email support@moravacare.com to request a copy of all personal information we hold about you. We will provide a portable copy within 30 days.</li>
+          <li><strong>Right to Correct:</strong> Update your name, email, and insurance information directly in the app under Profile → Edit Profile, or by contacting us.</li>
+          <li><strong>Right to Delete:</strong> Request full deletion of your account and all associated personal data. We will complete deletion within 30 days and confirm by email. See Section 10 for retention exceptions.</li>
+          <li><strong>Right to Restrict Processing:</strong> Request that we restrict certain uses of your information while a correction or objection is pending.</li>
+          <li><strong>Right to Data Portability:</strong> Request your personal data in a structured, machine-readable format.</li>
+        </ul>
+        <h3>8.2 HIPAA-Specific Rights</h3>
+        <p>To the extent Morava holds PHI on behalf of a covered entity healthcare provider, you may have the following rights, which must be exercised through the applicable provider:</p>
+        <ul>
+          <li><strong>Right of Access to PHI (45 CFR § 164.524):</strong> Request a copy of your PHI held by your provider. Morava will cooperate with providers to fulfill these requests.</li>
+          <li><strong>Right to Amendment (45 CFR § 164.526):</strong> Request correction of inaccurate or incomplete PHI in your records.</li>
+          <li><strong>Right to an Accounting of Disclosures (45 CFR § 164.528):</strong> Request a list of disclosures of your PHI other than for treatment, payment, or healthcare operations purposes.</li>
+          <li><strong>Right to Restrict (45 CFR § 164.522):</strong> Request restrictions on certain uses and disclosures of your PHI. Note: providers are not required to agree to all restrictions.</li>
+          <li><strong>Right to Confidential Communications (45 CFR § 164.522(b)):</strong> Request that your PHI be communicated by alternative means or at an alternative location.</li>
+          <li><strong>Right to File a Complaint:</strong> If you believe your HIPAA privacy rights have been violated, you may file a complaint with the U.S. Department of Health and Human Services Office for Civil Rights (OCR) at www.hhs.gov/ocr or 1-800-368-1019. Morava will not retaliate against you for filing a complaint.</li>
+        </ul>
+        <h3>8.3 Communication Preferences</h3>
+        <ul>
+          <li><strong>Push notifications:</strong> Manage in your device's notification settings or in the Morava app settings.</li>
+          <li><strong>SMS notifications:</strong> Reply STOP to any SMS from Morava at any time to opt out. (SMS is currently paused — see Section 5.2.)</li>
+          <li><strong>Email notifications:</strong> Follow the unsubscribe link in any Morava email, or contact support@moravacare.com.</li>
+        </ul>
+        <h3>8.4 Location</h3>
+        <p>You can deny location permission at any time in your device settings. Location access is optional and is never required to use the core features of the Service. When location is used, it is processed in-session only and is not stored to a database.</p>
+        <h3>8.5 Analytics</h3>
+        <p>Morava's analytics are collected internally and are never shared with advertising networks, data brokers, or any third party. There is no behavioral advertising opt-out required because we do not engage in behavioral advertising.</p>
+        <h3>8.6 How to Exercise Your Rights</h3>
+        <p>To exercise any of the rights described above, contact us at support@moravacare.com, (432) 803-0136, or Morava Care LLC, 14556 N Pennsylvania Ave, Building B Apt 305, Oklahoma City, OK 73134. We will respond to all privacy rights requests within 30 days. For requests involving children's data, we respond within 72 hours. We may need to verify your identity before processing certain requests to protect against unauthorized access.</p>
+      </div>
+
+      <div class="section">
+        <h2><span class="num">9</span> Oklahoma Privacy Rights</h2>
+        <p>In addition to your HIPAA rights, Oklahoma residents may have rights under the Oklahoma Health Records Act (63 O.S. § 1-501 et seq.) and the Oklahoma Consumer Privacy Act ("OCPA"), where applicable. These may include:</p>
+        <ul>
+          <li>The right to access your health records maintained by your healthcare provider.</li>
+          <li>The right to obtain copies of your health records within the timeframes required by Oklahoma law.</li>
+          <li>Rights applicable to SoonerCare and Medicaid recipients under Oklahoma Health Care Authority regulations.</li>
+        </ul>
+        <p>To exercise any Oklahoma-specific rights, contact us at support@moravacare.com. We will direct your request appropriately and cooperate with applicable regulatory authorities.</p>
+      </div>
+
+      <div class="section">
+        <h2><span class="num">10</span> Data Retention</h2>
+        <table class="data-table">
+          <thead><tr><th>Data Type</th><th>Retention Period</th><th>Basis</th></tr></thead>
+          <tbody>
+            <tr><td>Account information</td><td>Until account deletion + 30 days</td><td>Service operation</td></tr>
+            <tr><td>Appointment records</td><td>12 months from appointment date</td><td>Operational need</td></tr>
+            <tr><td>Health profile (PHI)</td><td>Until account deletion or withdrawal of consent</td><td>HIPAA; user consent</td></tr>
+            <tr><td>Audit logs</td><td>6 years from creation</td><td>HIPAA (45 CFR § 164.530(j))</td></tr>
+            <tr><td>Analytics events</td><td>24 months (aggregated, anonymized)</td><td>Product improvement</td></tr>
+            <tr><td>Crash reports (Sentry)</td><td>90 days</td><td>Sentry default; PII-free</td></tr>
+            <tr><td>Server/security logs</td><td>90 days</td><td>Security monitoring</td></tr>
+            <tr><td>Location data</td><td>Not stored — in-session use only</td><td>Privacy by design</td></tr>
+            <tr><td>Birth year</td><td>Until account deletion</td><td>COPPA compliance</td></tr>
+            <tr><td>BAA-required records</td><td>6 years from creation or last effective date</td><td>HIPAA (45 CFR § 164.530(j))</td></tr>
+          </tbody>
+        </table>
+        <p>When you delete your account, all personal data is removed from active systems within 30 days. Audit logs are retained for the required 6-year period in a form that may be anonymized where feasible. Backups containing your data are purged on a rolling 90-day cycle following deletion.</p>
+      </div>
+
+      <div class="section">
+        <h2><span class="num">11</span> Security Incident and Breach Notification</h2>
+        <p>Morava maintains comprehensive safeguards to protect your information. In the event of a data security incident involving your Protected Health Information (PHI), Morava will comply with HIPAA's Breach Notification Rule (45 CFR §§ 164.400–164.414):</p>
+        <ul>
+          <li>Promptly investigate and assess the scope of any unauthorized access or disclosure.</li>
+          <li>Notify affected individuals within 60 days of discovering a breach, unless a law enforcement exception applies.</li>
+          <li>Notify the applicable covered entity healthcare provider without unreasonable delay.</li>
+          <li>Notify the U.S. Department of Health and Human Services (HHS) as required by HIPAA.</li>
+          <li>For breaches affecting 500 or more individuals in Oklahoma, provide notice to prominent media outlets in the state, as required by HIPAA.</li>
+          <li>Provide breach notices that include: a description of what occurred, the types of information involved, steps you can take to protect yourself, what Morava is doing to investigate and prevent recurrence, and contact information for follow-up questions.</li>
+        </ul>
+        <p>We will provide notification by email (to the address associated with your account) or, if email is unavailable, by prominent notice on moravacare.com and in the app.</p>
         <div class="warning">
           <span class="alert-icon">⚠️</span>
-          <p>
-            <strong>We never sell your data.</strong> No exceptions. No future
-            carve-outs. This is a founding principle of Morava.
-          </p>
+          <p><strong>Report a Suspected Security Incident.</strong> If you believe your account or health information may have been compromised, contact us immediately at support@moravacare.com or (432) 803-0136. You may also report a HIPAA violation to HHS OCR at www.hhs.gov/ocr or 1-800-368-1019.</p>
         </div>
       </div>
 
       <div class="section">
-        <h2><span class="num">6</span> Children's Privacy (COPPA)</h2>
-        <div class="coppa-badge">🛡 COPPA Compliant</div>
-        <p>
-          Morava is not directed to children under the age of 13. We require all
-          users to provide their birth year during signup. If a user indicates
-          they are under 13, account creation is blocked and they are directed
-          to contact us with a parent or guardian.
-        </p>
-        <p>
-          We do not knowingly collect personal information from children under
-          13. If you believe a child under 13 has created an account, please
-          contact us immediately at <strong>support@moravacare.com</strong> and
-          we will delete the account and all associated data within 72 hours.
-        </p>
-        <p>
-          For users aged 13–17, a parent or guardian may contact us to request
-          access, correction, or deletion of their child's data.
-        </p>
-        <div class="alert">
-          <span class="alert-icon">ℹ️</span>
-          <p>
-            Birth year is collected solely for age verification. It is stored in
-            your user record but is never used for profiling, analytics
-            segmentation, or any purpose other than verifying you are 13 or
-            older.
-          </p>
-        </div>
-      </div>
-
-      <div class="section">
-        <h2><span class="num">7</span> Your Rights and Choices</h2>
+        <h2><span class="num">12</span> Founding Member Voucher Program</h2>
+        <p>Morava's founding member voucher program tracks the total number of signups using an atomic counter. If you are among the first 100 users to create an account, your user record is flagged with voucherEligible: true. This flag:</p>
         <ul>
-          <li>
-            <strong>Access your data:</strong> Email support@moravacare.com to
-            request a copy of all personal information we hold about you.
-          </li>
-          <li>
-            <strong>Correct your data:</strong> Update your name, email, and
-            insurance information directly in the app's Profile → Edit Profile
-            screen.
-          </li>
-          <li>
-            <strong>Delete your account:</strong> Request full deletion of your
-            account and all associated data. We will complete deletion within 30
-            days and confirm by email.
-          </li>
-          <li>
-            <strong>Opt out of SMS:</strong> Reply STOP to any SMS message from
-            Morava at any time.
-          </li>
-          <li>
-            <strong>Location:</strong> You can deny location permission at any
-            time in your device settings. Location is never required to use the
-            app.
-          </li>
-          <li>
-            <strong>Analytics:</strong> Our analytics are internal only and not
-            shared with any ad network or data broker. There is nothing to opt
-            out of.
-          </li>
+          <li>Is visible only to you and Morava's authorized administrative team.</li>
+          <li>Is never shared with providers, third parties, or advertising partners.</li>
+          <li>Is used solely to display the free Meet &amp; Greet badge in the app.</li>
+          <li>Changes to voucherUsed: true only after a provider confirms a Meet &amp; Greet appointment.</li>
         </ul>
-          <li>
-            <strong>Request an accounting of disclosures:</strong> You may request a list of instances where we have disclosed your health information to third parties, other than for treatment, payment, or healthcare operations purposes.
-          </li>
-          <li>
-            <strong>File a complaint:</strong> If you believe your privacy rights have been violated, you have the right to file a complaint with the U.S. Department of Health and Human Services Office for Civil Rights (OCR) at <strong>hhs.gov/ocr</strong> or by calling 1-800-368-1019. We will not retaliate against you for filing a complaint.
-          </li>
-        </ul>
-        <p>
-          To exercise any of these rights, email
-          <strong>support@moravacare.com</strong>. We respond to all privacy
-          requests within 30 days.
-        </p>
+        <p>Voucher eligibility data is treated as personal information under this Privacy Policy and is deleted when you delete your account.</p>
       </div>
 
       <div class="section">
-        <h2><span class="num">8</span> Voucher Program</h2>
-        <p>
-          Morava's founding member voucher program tracks the total number of
-          signups using an atomic counter. If you are among the first 100 users
-          to create an account, your user record is flagged with
-          <code>voucherEligible: true</code>. This flag:
-        </p>
-        <ul>
-          <li>Is visible only to you and Morava's admin team</li>
-          <li>Is never shared with providers or third parties</li>
-          <li>
-            Is used solely to display the free Meet & Greet badge in the app
-          </li>
-          <li>
-            Flips to <code>voucherUsed: true</code> only after a provider
-            confirms a Meet & Greet appointment
-          </li>
-        </ul>
+        <h2><span class="num">13</span> Third-Party Links and Services</h2>
+        <p>The Service may contain links to third-party websites, applications, or services, including provider websites, telehealth platforms, and health information resources. Morava does not control, endorse, or assume responsibility for third-party privacy practices or content.</p>
+        <p>We recommend reviewing the privacy policy of any third-party site or service before submitting personal or health information. Your interactions with third-party services are governed by their own terms and privacy policies, not this Privacy Policy.</p>
       </div>
 
       <div class="section">
-        <h2><span class="num">9</span> Data Retention</h2>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Data Type</th>
-              <th>Retention Period</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Account information</td>
-              <td>Until account deletion</td>
-            </tr>
-            <tr>
-              <td>Appointment records</td>
-              <td>12 months from appointment date</td>
-            </tr>
-            <tr>
-              <td>Audit logs</td>
-              <td>6 years (HIPAA-aligned)</td>
-            </tr>
-            <tr>
-              <td>Analytics events</td>
-              <td>24 months</td>
-            </tr>
-            <tr>
-              <td>Crash reports (Sentry)</td>
-              <td>90 days (Sentry default)</td>
-            </tr>
-            <tr>
-              <td>Location data</td>
-              <td>Not stored — used in-session only</td>
-            </tr>
-            <tr>
-              <td>Birth year</td>
-              <td>Until account deletion</td>
-            </tr>
-          </tbody>
-        </table>
-        <p>
-          When you delete your account, all personal data is removed within 30
-          days. Audit logs are retained for the legally required period in
-          anonymized form.
-        </p>
+        <h2><span class="num">14</span> Data Processing Location</h2>
+        <p>Your data is stored and processed in the United States on Google Firebase infrastructure. Morava does not transfer personal data or PHI to servers outside the United States. If you access the Service from outside the United States, you acknowledge that your information will be transferred to and processed in the U.S., where privacy laws may differ from those in your jurisdiction.</p>
       </div>
 
       <div class="section">
-        <h2><span class="num">10</span> Third-Party Services</h2>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Service</th>
-              <th>Purpose</th>
-              <th>Data Shared</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>Google Firebase</strong></td>
-              <td>Database, authentication, hosting</td>
-              <td>All user data (under BAA)</td>
-            </tr>
-            <tr>
-              <td><strong>Google Maps</strong></td>
-              <td>Provider location, static maps, geocoding</td>
-              <td>Location coordinates only</td>
-            </tr>
-            <tr>
-              <td><strong>Sentry</strong></td>
-              <td>Crash monitoring</td>
-              <td>PII-scrubbed error reports only (BAA signed May 2026)</td>
-            </tr>
-            <tr>
-              <td><strong>Twilio</strong></td>
-              <td>SMS appointment notifications (paused pending BAA)</td>
-              <td>No PHI transmitted until BAA is executed</td>
-            </tr>
-            <tr>
-              <td><strong>Expo / EAS</strong></td>
-              <td>App builds and OTA updates</td>
-              <td>No personal data</td>
-            </tr>
-          </tbody>
-        </table>
+        <h2><span class="num">15</span> Do Not Track</h2>
+        <p>Some web browsers transmit "Do Not Track" signals to websites. Because Morava does not engage in behavioral tracking or cross-site advertising, Do Not Track signals do not materially change how we operate. We do not track your activity across third-party websites.</p>
       </div>
 
       <div class="section">
-        <h2><span class="num">11</span> Security Incident &amp; Breach Notification</h2>
-        <p>Morava maintains safeguards to protect your information. In the event of a data security incident involving your Protected Health Information (PHI), we will:</p>
-        <ul>
-          <li><strong>Investigate promptly</strong> and determine the scope of any unauthorized access or disclosure</li>
-          <li><strong>Notify affected individuals within 60 days</strong> of discovering a breach, as required by HIPAA's Breach Notification Rule</li>
-          <li>Notify the U.S. Department of Health and Human Services (HHS) as required by law</li>
-          <li>Provide notification by email (if you have an account) or prominent notice on moravacare.com</li>
-          <li>Include: what occurred, types of information involved, steps to protect yourself, and what we are doing to investigate and prevent recurrence</li>
-        </ul>
-        <p>To report a suspected security incident, contact us immediately at <strong>support@moravacare.com</strong>.</p>
+        <h2><span class="num">16</span> Changes to This Privacy Policy</h2>
+        <p>We may update this Privacy Policy as Morava grows and adds new features. The version number and effective date at the top of this page reflect the most recent revision.</p>
+        <p>For material changes — changes that significantly affect your rights or how we use your data — we will: (a) notify you by email to the address associated with your account at least 14 days before the change takes effect, and (b) display a prominent in-app notice. Your continued use of the Service after the effective date constitutes acceptance of the updated policy.</p>
+        <p>If we make changes that affect how we handle PHI, we will provide notice as required by HIPAA and applicable law, which may include obtaining your updated authorization or acknowledgment. We will not materially change our use or disclosure of your PHI without your prior consent where required by HIPAA.</p>
       </div>
 
       <div class="section">
-        <h2><span class="num">12</span> Changes to This Policy</h2>
-        <p>
-          We may update this Privacy Policy as Morava grows and adds new
-          features. The Effective Date at the top of this page reflects the most
-          recent revision.
-        </p>
-        <p>
-          For material changes — changes that significantly affect your rights
-          or how we use your data — we will notify you by email and display an
-          in-app notice at least 14 days before the change takes effect.
-        </p>
-        <p>
-          Continued use of Morava after the effective date of a change
-          constitutes acceptance of the updated policy.
-        </p>
-      </div>
-
-      <div class="section">
-        <h2><span class="num">13</span> Contact Us</h2>
+        <h2><span class="num">17</span> Contact Us</h2>
+        <p>For privacy questions, requests, complaints, or concerns about this Privacy Policy or how we handle your data, contact us:</p>
         <div class="contact">
-          <h3>Get in Touch</h3>
-          <div class="contact-row">📍 <span>Oklahoma, United States</span></div>
-          <div class="contact-row">
-            📧
-            <a href="mailto:support@moravacare.com">support@moravacare.com</a>
-          </div>
-          <div class="contact-row">
-            🌐 <a href="https://moravacare.com">moravacare.com</a>
-          </div>
-          <p style="margin-top: 16px; font-size: 0.85rem; color: #555">
-            We respond to all privacy requests within 30 days. For urgent
-            matters involving children's data, we respond within 72 hours.
-          </p>
+          <h3>Morava Care LLC — Privacy Inquiries</h3>
+          <div class="contact-row">📍 14556 N Pennsylvania Ave, Building B Apt 305, Oklahoma City, OK 73134</div>
+          <div class="contact-row">✉️ <a href="mailto:support@moravacare.com">support@moravacare.com</a></div>
+          <div class="contact-row">📞 <a href="tel:+14328030136">(432) 803-0136</a></div>
+          <div class="contact-row">🌐 <a href="https://moravacare.com">moravacare.com</a></div>
         </div>
+        <p style="margin-top:16px;">We respond to all privacy requests within 30 days. For matters involving children's data or suspected breaches, we respond within 72 hours.</p>
+        <p>For HIPAA concerns or to file a HIPAA complaint, you may also contact the U.S. Department of Health and Human Services, Office for Civil Rights (OCR): <a href="https://www.hhs.gov/ocr">www.hhs.gov/ocr</a> · 1-800-368-1019 (toll-free) or 1-800-537-7697 (TDD) · Centralized Case Management Operations, 200 Independence Avenue, S.W., Room 509F, HHH Bldg., Washington, D.C. 20201.</p>
       </div>
     </div>
 
     <footer>
-      <p>
-        © 2026 Morava. All rights reserved. &nbsp;·&nbsp;
-        <a href="https://moravacare.com">moravacare.com</a>
-      </p>
-      <p style="margin-top: 6px">
-        Privacy Policy v2.1 — Last updated May 13, 2026
-      </p>
+      <p>© 2026 Morava Care LLC · Oklahoma City, OK · <a href="https://moses225.github.io/Access-care/terms.html">Terms of Service</a></p>
+      <p style="margin-top:8px;">Privacy Policy v2.2 — Last Revised June 2, 2026</p>
     </footer>
   </body>
 </html>
-
