@@ -326,7 +326,7 @@ export default function RecoveryDashboard() {
                 <p className={`text-xs mt-0.5 ${
                   recoveryBillingDaysRemaining! > 0 ? "text-amber-700" : "text-red-700"
                 }`}>
-                  Your {listingPlan === "growth" ? "Growth" : "Standard"} listing
+                  Your {listingPlan === "partner" ? "Partner" : listingPlan === "growth" || listingPlan === "standard" ? "Growth" : ""} listing
                   is billed monthly. Add a card to keep your facility visible to those in need.
                 </p>
               </div>
@@ -546,7 +546,7 @@ export default function RecoveryDashboard() {
 
         {/* ── Analytics snapshot ──────────────────────────────────────────── */}
         <AnalyticsCard
-          plan={listingPlan as "free" | "standard" | "growth"}
+          plan={listingPlan as "free" | "standard" | "growth" | "partner"}
           viewCount={(facility as unknown as { viewCount?: number })?.viewCount}
           inquiryCount={intakeRequests.length}
           onUpgrade={() => navigate("/billing")}
@@ -555,7 +555,7 @@ export default function RecoveryDashboard() {
         {/* ── Intake requests ──────────────────────────────────────────────── */}
         <div id="intake-requests">
           <IntakeRequestsCard
-            plan={listingPlan as "free" | "standard" | "growth"}
+            plan={listingPlan as "free" | "standard" | "growth" | "partner"}
             requests={intakeRequests}
             onUpgrade={() => navigate("/billing")}
             onStatusChange={updateIntakeStatus}
@@ -689,7 +689,7 @@ function StatCard({
 function AnalyticsCard({
   plan, viewCount, inquiryCount, onUpgrade,
 }: {
-  plan: "free" | "standard" | "growth";
+  plan: "free" | "standard" | "growth" | "partner";
   viewCount?: number;
   inquiryCount: number;
   onUpgrade: () => void;
@@ -701,7 +701,7 @@ function AnalyticsCard({
         <h2 className="text-base font-bold text-slate-800">Analytics</h2>
         {isLocked ? (
           <span className="text-xs bg-slate-100 text-slate-400 font-semibold px-2.5 py-1 rounded-full">
-            🔒 Standard+
+            🔒 Growth+
           </span>
         ) : (
           <span className="text-xs text-slate-400">Last 30 days</span>
@@ -718,7 +718,7 @@ function AnalyticsCard({
             onClick={onUpgrade}
             className="text-sm text-teal-600 font-semibold hover:text-teal-800 border border-teal-200 hover:border-teal-400 px-4 py-2 rounded-lg transition-colors"
           >
-            Upgrade to Standard to unlock →
+            Upgrade to Growth to unlock →
           </button>
         </div>
       ) : (
@@ -759,7 +759,7 @@ type RequestStatus = IntakeRequest["status"];
 function IntakeRequestsCard({
   plan, requests, onUpgrade, onStatusChange,
 }: {
-  plan: "free" | "standard" | "growth";
+  plan: "free" | "standard" | "growth" | "partner";
   requests: IntakeRequest[];
   onUpgrade: () => void;
   onStatusChange: (id: string, status: RequestStatus) => void;
@@ -798,7 +798,7 @@ function IntakeRequestsCard({
         </div>
         {isLocked && (
           <span className="text-xs bg-slate-100 text-slate-400 font-semibold px-2.5 py-1 rounded-full">
-            🔒 Standard+
+            🔒 Growth+
           </span>
         )}
       </div>

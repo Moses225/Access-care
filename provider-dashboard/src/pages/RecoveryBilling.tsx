@@ -13,63 +13,61 @@ import NavBar from "../components/NavBar";
 import { useAuth } from "../context/AuthContext";
 
 const PLANS = {
-  free:     { label: "Free",     price: 0,   per: "forever" },
-  standard: { label: "Standard", price: 80,  per: "/ month" },
-  growth:   { label: "Growth",   price: 159, per: "/ month" },
+  free:    { label: "Free",    price: 0,  per: "forever"  },
+  growth:  { label: "Growth",  price: 49, per: "/ month"  },
+  partner: { label: "Partner", price: 99, per: "/ month"  },
 } as const;
 
 type Plan = keyof typeof PLANS;
 
-// ── Feature matrix ────────────────────────────────────────────────────────────
-// Each row: [label, free, standard, growth]
+// ── Feature matrix ─────────────────────────────────────────────────────────────
+// Each row: [label, free, growth, partner]
 // true = included, false = not included, "soon" = coming soon
 type Cell = boolean | "soon";
 
 const FEATURES: { section: string; rows: [string, Cell, Cell, Cell][] }[] = [
   {
-    section: "Listing Visibility",
+    section: "Listing & Visibility",
     rows: [
-      ["Listed in Morava patient search",            true,   true,  true ],
-      ["Name, city, phone displayed",                true,   true,  true ],
-      ["Availability status (available / full)",     true,   true,  true ],
-      ["Full profile — photos, description, certs",  false,  true,  true ],
-      ["Real-time exact bed counts",                 false,  true,  true ],
-      ["Priority placement in search results",       false,  true,  true ],
-      ["Featured placement — top of search",         false,  false, true ],
-      ["ODMHSAS / OKARR certification badges",       false,  true,  true ],
+      ["Facility profile (name, address, phone, email)",    true,  true,  true  ],
+      ["Bed availability indicator",                        true,  true,  true  ],
+      ["Gender served, sobriety requirement, funding types",true,  true,  true  ],
+      ["House rules",                                       true,  true,  true  ],
+      ["Certifications (OKARR, Oxford House, ODMHSAS)",     true,  true,  true  ],
+      ["Direct call and email button",                      true,  true,  true  ],
+      ["Listed in Recovery Housing tab",                    true,  true,  true  ],
+      ["Priority placement — top of city search results",   false, true,  true  ],
+      ["Verified badge on profile",                         false, true,  true  ],
+      ["Up to 10 photos",                                   false, true,  true  ],
+      ["Featured in 'Available Now' filter results first",  false, true,  true  ],
+      ["Featured placement on Find Care home screen",       false, false, true  ],
     ],
   },
   {
-    section: "Patient Contact",
+    section: "Patient Inquiries",
     rows: [
-      ["Phone number displayed",                     true,   true,  true ],
-      ["Email contact requests from patients",       false,  true,  true ],
-      ["Intake inquiry form — patients apply online",false, "soon","soon"],
-      ["Waitlist management",                        false,  false, true ],
+      ["Inquiry inbox — patients message in-app",           false, true,  true  ],
+      ["Patient status tracking (Under Review / Scheduled)",false, true,  true  ],
+      ["Push notifications to patient on status change",    false, true,  true  ],
+      ["Monthly inquiry report (views, calls, messages)",   false, true,  true  ],
     ],
   },
   {
-    section: "Analytics & Insights",
+    section: "Analytics & Reporting",
     rows: [
-      ["Listing views (30-day)",                     false, "soon","soon"],
-      ["Inquiry & contact request count",            false, "soon","soon"],
-      ["Advanced analytics — 90-day trends",         false,  false,"soon"],
-      ["Referral source breakdown",                  false,  false,"soon"],
-      ["Exportable reports (PDF / CSV)",             false,  false, true ],
+      ["Listing views and inquiry count",                   false, true,  true  ],
+      ["Referral source tracking",                          false, false, true  ],
+      ["ODMHSAS/grant documentation reports",               false, false, true  ],
+      ["Exportable analytics (PDF / CSV)",                  false, false, true  ],
     ],
   },
   {
-    section: "Case Manager Network",
+    section: "Account & Operations",
     rows: [
-      ["Case managers see your real-time beds",      false,  true,  true ],
-      ["Case manager email alerts when beds open",   false,  false, true ],
-    ],
-  },
-  {
-    section: "Account",
-    rows: [
-      ["Houses per account",                         "1 house" as unknown as Cell, "1 house" as unknown as Cell, "Up to 5" as unknown as Cell],
-      ["Priority support (same-day response)",       false,  false, true ],
+      ["Facility locations per account",                    "1" as unknown as Cell, "1" as unknown as Cell, "Up to 3" as unknown as Cell],
+      ["Direct integration with ODMHSAS voucher system",    false, false, "soon" ],
+      ["Early access to new features",                      false, false, true   ],
+      ["Priority support (same-day response)",              false, false, true   ],
     ],
   },
 ];
@@ -174,41 +172,41 @@ export default function RecoveryBilling() {
             plan="free"
             current={currentPlan === "free"}
             badge={undefined}
-            description="Get listed and found. Perfect for getting started or testing the platform."
+            description="Get listed and found. Every facility gets this — no time limit, no catch."
             cta={null}
-          />
-
-          {/* STANDARD */}
-          <PlanCard
-            plan="standard"
-            current={currentPlan === "standard"}
-            badge="Most popular"
-            description="Full profile, real-time beds, patient intake, and analytics. Everything to fill beds faster."
-            cta={
-              currentPlan === "standard" ? null : (
-                <a
-                  href={`mailto:support@moravacare.com?subject=${encodeURIComponent(upgradeSubject("standard"))}`}
-                  className="block w-full text-center bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 rounded-xl text-sm transition-colors"
-                >
-                  {currentPlan === "free" ? "Upgrade to Standard →" : "Downgrade to Standard"}
-                </a>
-              )
-            }
           />
 
           {/* GROWTH */}
           <PlanCard
             plan="growth"
             current={currentPlan === "growth"}
-            badge="Best for growing operators"
-            description="Featured placement, case manager alerts, multiple houses, and advanced analytics."
+            badge="Most popular"
+            description="Priority placement, verified badge, photos, inquiry inbox, and monthly reports. Everything to fill beds faster."
             cta={
               currentPlan === "growth" ? null : (
                 <a
                   href={`mailto:support@moravacare.com?subject=${encodeURIComponent(upgradeSubject("growth"))}`}
+                  className="block w-full text-center bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 rounded-xl text-sm transition-colors"
+                >
+                  {currentPlan === "free" ? "Upgrade to Growth →" : "Downgrade to Growth"}
+                </a>
+              )
+            }
+          />
+
+          {/* PARTNER */}
+          <PlanCard
+            plan="partner"
+            current={currentPlan === "partner"}
+            badge="Best for multi-house operators"
+            description="Up to 3 locations, referral tracking, ODMHSAS grant reports, and featured home screen placement."
+            cta={
+              currentPlan === "partner" ? null : (
+                <a
+                  href={`mailto:support@moravacare.com?subject=${encodeURIComponent(upgradeSubject("partner"))}`}
                   className="block w-full text-center bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl text-sm transition-colors"
                 >
-                  Upgrade to Growth →
+                  Upgrade to Partner →
                 </a>
               )
             }
@@ -224,12 +222,12 @@ export default function RecoveryBilling() {
           {/* Column headers */}
           <div className="grid grid-cols-4 border-b border-slate-100 bg-slate-50">
             <div className="px-5 py-3 text-xs font-bold text-slate-400 uppercase tracking-wide">Feature</div>
-            {(["free", "standard", "growth"] as Plan[]).map((p) => (
+            {(["free", "growth", "partner"] as Plan[]).map((p) => (
               <div
                 key={p}
                 className={`px-4 py-3 text-center text-xs font-bold uppercase tracking-wide ${
-                  p === "standard" ? "text-teal-600 bg-teal-50/60" :
-                  p === "growth"   ? "text-indigo-600" : "text-slate-400"
+                  p === "growth"  ? "text-teal-600 bg-teal-50/60" :
+                  p === "partner" ? "text-indigo-600" : "text-slate-400"
                 }`}
               >
                 {PLANS[p].label}
@@ -246,7 +244,7 @@ export default function RecoveryBilling() {
               <div className="px-5 py-2.5 bg-slate-50 border-y border-slate-100">
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">{section.section}</span>
               </div>
-              {section.rows.map(([label, free, standard, growth]) => (
+              {section.rows.map(([label, free, growth, partner]) => (
                 <div
                   key={label}
                   className="grid grid-cols-4 border-b border-slate-50 hover:bg-slate-50/50 transition-colors"
@@ -256,10 +254,10 @@ export default function RecoveryBilling() {
                     <Cell value={free} highlight={false} />
                   </div>
                   <div className="px-4 py-3 flex items-center justify-center bg-teal-50/30">
-                    <Cell value={standard} highlight={true} />
+                    <Cell value={growth} highlight={true} />
                   </div>
                   <div className="px-4 py-3 flex items-center justify-center">
-                    <Cell value={growth} highlight={false} />
+                    <Cell value={partner} highlight={false} />
                   </div>
                 </div>
               ))}
@@ -275,8 +273,8 @@ export default function RecoveryBilling() {
               <h3 className="font-bold text-teal-800 mb-2">The math is simple</h3>
               <p className="text-sm text-teal-700 leading-relaxed">
                 One filled bed from a Morava referral brings in <strong>$450–$750/month</strong>.
-                At $80/month for Standard, your listing pays for itself in hours — not weeks.
-                Growth at $159/month is covered by a single referral that would otherwise have gone elsewhere.
+                At $49/month for Growth, your listing pays for itself in hours — not weeks.
+                Partner at $99/month is covered by a single referral that would otherwise have gone elsewhere.
               </p>
             </div>
           </div>
@@ -370,15 +368,15 @@ function PlanCard({
   cta: React.ReactNode;
 }) {
   const meta = PLANS[plan];
-  const isStandard = plan === "standard";
-  const isGrowth   = plan === "growth";
+  const isGrowth   = plan === "growth" || plan === "standard"; // standard = legacy growth
+  const isPartner  = plan === "partner";
 
   const borderClass = current
-    ? isStandard ? "border-teal-400 ring-2 ring-teal-200"
-    : isGrowth   ? "border-indigo-400 ring-2 ring-indigo-100"
+    ? isGrowth   ? "border-teal-400 ring-2 ring-teal-200"
+    : isPartner  ? "border-indigo-400 ring-2 ring-indigo-100"
     : "border-slate-400 ring-2 ring-slate-100"
-    : isStandard ? "border-teal-200"
-    : isGrowth   ? "border-indigo-200"
+    : isGrowth   ? "border-teal-200"
+    : isPartner  ? "border-indigo-200"
     : "border-slate-200";
 
   return (
@@ -386,7 +384,7 @@ function PlanCard({
       {/* Badge — hidden when this is already the current plan to avoid overlap */}
       {badge && !current && (
         <div className={`absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap ${
-          isStandard ? "bg-teal-500 text-white" : "bg-indigo-500 text-white"
+          isGrowth ? "bg-teal-500 text-white" : "bg-indigo-500 text-white"
         }`}>
           {badge}
         </div>
@@ -394,8 +392,8 @@ function PlanCard({
       {/* Current plan pill — centered when there's no badge competing for space */}
       {current && (
         <div className={`absolute -top-3 ${badge ? "left-1/2 -translate-x-1/2" : "right-4"} text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap ${
-          isStandard ? "bg-teal-600 text-white"
-          : isGrowth  ? "bg-indigo-600 text-white"
+          isGrowth   ? "bg-teal-600 text-white"
+          : isPartner ? "bg-indigo-600 text-white"
           : "bg-slate-700 text-white"
         }`}>
           ✓ Current plan
@@ -406,7 +404,7 @@ function PlanCard({
       <div className="pt-2">
         <div className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">{meta.label}</div>
         <div className="flex items-baseline gap-1">
-          <span className={`text-4xl font-bold ${isStandard ? "text-teal-600" : isGrowth ? "text-indigo-600" : "text-slate-700"}`}>
+          <span className={`text-4xl font-bold ${isGrowth ? "text-teal-600" : isPartner ? "text-indigo-600" : "text-slate-700"}`}>
             ${meta.price}
           </span>
           <span className="text-slate-400 text-sm">{meta.per}</span>
@@ -426,25 +424,27 @@ function PlanCard({
             <Locked  label="Patient intake form" />
           </>
         )}
-        {plan === "standard" && (
+        {(plan === "growth" || plan === "standard") && (
           <>
-            <Feature label="Full profile, photos & certifications" />
-            <Feature label="Real-time exact bed counts" />
-            <Feature label="Email + call from patients" />
-            <Feature label="Patient intake inquiry form" soon />
-            <Feature label="Analytics — views & inquiries" soon />
-            <Locked  label="Featured placement" />
-            <Locked  label="Case manager alerts" />
+            <Feature label="Priority placement — top of city results" />
+            <Feature label="Verified badge on profile" />
+            <Feature label="Up to 10 photos" />
+            <Feature label="Inquiry inbox — patients apply in-app" />
+            <Feature label="Patient status tracking & push notifications" />
+            <Feature label="Monthly inquiry report" />
+            <Locked  label="Multi-location management" />
+            <Locked  label="ODMHSAS grant reports" />
           </>
         )}
-        {plan === "growth" && (
+        {plan === "partner" && (
           <>
-            <Feature label="Everything in Standard" />
-            <Feature label="Featured — top of search results" />
-            <Feature label="Case manager alert network" />
-            <Feature label="Up to 5 houses from one account" />
-            <Feature label="Advanced analytics & reports" soon />
-            <Feature label="Waitlist management" />
+            <Feature label="Everything in Growth" />
+            <Feature label="Up to 3 facility locations" />
+            <Feature label="Featured on Find Care home screen" />
+            <Feature label="ODMHSAS/grant documentation reports" />
+            <Feature label="Referral source tracking" />
+            <Feature label="ODMHSAS voucher integration" soon />
+            <Feature label="Early access to new features" />
             <Feature label="Priority support" />
           </>
         )}

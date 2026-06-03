@@ -107,55 +107,15 @@ const REGULAR_TIERS = [
   },
 ];
 
-// DPC tier definitions — maps to the existing plan field
-const DPC_TIERS = [
-  {
-    id: "founding",
-    label: "Founding",
-    price: "$25",
-    period: "/ month",
-    badge: "🏅 First 20 DPC providers",
-    color: "teal",
-    features: [
-      "🏥 'Direct Primary Care' badge on listing",
-      "💵 Monthly fee displayed on your provider card",
-      "🔍 Appears in DPC filter results on patient app",
-      "📋 EHR-ready patient summary with each booking request",
-      "📧 Instant email on every new membership inquiry",
-    ],
-  },
-  {
-    id: "growth",
-    label: "Growth",
-    price: "$49",
-    period: "/ month",
-    badge: null,
-    color: "purple",
-    features: [
-      "Everything in Founding, plus:",
-      "🔝 Priority placement in DPC filter results",
-      "✓ 'Accepting New Members' badge shown on listing",
-      "💰 'HSA Eligible' badge (if you qualify)",
-      "📱 Telehealth indicator on your listing",
-      "📊 Analytics — views, clicks, membership requests",
-    ],
-  },
-  {
-    id: "pro",
-    label: "Practice",
-    price: "$79",
-    period: "/ month",
-    badge: "Coming soon",
-    color: "slate",
-    features: [
-      "Everything in Growth, plus:",
-      "👥 Multiple provider listings under one practice",
-      "🏢 Employer & group inquiry form on your listing",
-      "⭐ Featured placement in 'Browse by Category'",
-      "🎧 Priority support",
-    ],
-  },
-];
+// DPC enrollment-fee model — free to list, pay only when a member enrolls.
+// Fee = one month of the provider's own membership fee, clamped [$50, $150].
+const DPC_FEE_FLOOR = 50;
+const DPC_FEE_CAP = 150;
+const DPC_FEE_DEFAULT = 75; // used when provider hasn't set a membership fee
+function dpcEnrollmentFee(monthlyFee?: number | null): number {
+  if (!monthlyFee || monthlyFee <= 0) return DPC_FEE_DEFAULT;
+  return Math.min(DPC_FEE_CAP, Math.max(DPC_FEE_FLOOR, Math.round(monthlyFee)));
+}
 
 // ── Card brand → display label ─────────────────────────────────────────────
 const BRAND_LABELS: Record<string, string> = {
@@ -244,11 +204,17 @@ export default function Billing() {
     }
   };
 
-  const features =
-    PLAN_FEATURES[plan as keyof typeof PLAN_FEATURES] ??
-    PLAN_FEATURES.standard;
-
-  const currentDPCTier = DPC_TIERS.find((t) => t.id === plan) ?? DPC_TIERS[0];
+  const DPC_FEATURES = [
+    "🏥 'Direct Primary Care' badge on your listing",
+    "💵 Your membership fee displayed on your card",
+    "🔍 Appears in DPC filter results on the patient app",
+    "📋 EHR-ready patient summary with each inquiry",
+    "📧 Instant email on every membership inquiry",
+    "💰 'HSA Eligible' badge (if you qualify)",
+  ];
+  const features = isDPC
+    ? DPC_FEATURES
+    : (PLAN_FEATURES[plan as keyof typeof PLAN_FEATURES] ?? PLAN_FEATURES.standard);
 
   const expiryLabel = (() => {
     if (!providerProfile?.foundingExpiresAt) return null;
@@ -310,88 +276,75 @@ export default function Billing() {
           </p>
         </div>
 
-        {/* ── DPC Tier View ─────────────────────────────────────────────────── */}
-        {isDPC && (
+        {/* ── DPC Enrollment-Fee Model ──────────────────────────────────────── */}
+        {isDPC && (() => {
+          const myFee = dpcEnrollmentFee(providerProfile?.dpcMonthlyFee);
+          const myMonthly = providerProfile?.dpcMonthlyFee;
+          return (
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-5">
               <span className="text-xl">🏥</span>
-              <h2 className="text-lg font-semibold text-slate-900">Direct Primary Care Listing Tier</h2>
-              <span className="bg-purple-100 text-purple-700 text-xs font-bold px-2.5 py-1 rounded-full">DPC Active</span>
+              <h2 className="text-lg font-semibold text-slate-900">Direct Primary Care Listing</h2>
+              <span className="bg-green-100 text-green-700 text-xs font-bold px-2.5 py-1 rounded-full">Free to list</span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              {DPC_TIERS.map((tier) => {
-                const isActive = tier.id === plan;
-                const colorMap: Record<string, string> = {
-                  teal: isActive ? "border-teal-500 bg-teal-50" : "border-slate-200 bg-white",
-                  purple: isActive ? "border-purple-500 bg-purple-50" : "border-slate-200 bg-white",
-                  slate: "border-slate-200 bg-slate-50 opacity-60",
-                };
-                const priceColor: Record<string, string> = {
-                  teal: "text-teal-700",
-                  purple: "text-purple-700",
-                  slate: "text-slate-500",
-                };
-                return (
-                  <div
-                    key={tier.id}
-                    className={`rounded-2xl border-2 p-5 transition-all ${colorMap[tier.color]}`}
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="font-bold text-slate-900 text-base">{tier.label}</span>
-                      {isActive && (
-                        <span className="text-xs bg-white text-slate-700 border border-slate-200 font-semibold px-2 py-0.5 rounded-full">✓ Your plan</span>
-                      )}
-                      {tier.badge && !isActive && (
-                        <span className="text-xs bg-slate-100 text-slate-500 font-medium px-2 py-0.5 rounded-full">{tier.badge}</span>
-                      )}
-                    </div>
-                    <div className="mb-4">
-                      <span className={`text-2xl font-extrabold ${priceColor[tier.color]}`}>{tier.price}</span>
-                      <span className="text-slate-400 text-sm ml-1">{tier.period}</span>
-                    </div>
-                    <div className="space-y-1.5">
-                      {tier.features.map((f) => (
-                        <div key={f} className="flex items-start gap-1.5 text-xs text-slate-600">
-                          <span className="flex-shrink-0 mt-0.5 text-slate-400">·</span>
-                          <span>{f}</span>
-                        </div>
-                      ))}
-                    </div>
-                    {!isActive && (
-                      <button
-                        onClick={() => {
-                          const subject = encodeURIComponent(
-                            tier.id === "pro"
-                              ? `DPC Practice tier — early access request`
-                              : `DPC tier upgrade — ${tier.label}`
-                          );
-                          window.open(`mailto:support@moravacare.com?subject=${subject}`, "_blank");
-                        }}
-                        className={`mt-4 w-full text-xs font-bold py-2 rounded-lg transition-colors ${
-                          tier.id === "pro"
-                            ? "bg-slate-200 hover:bg-slate-300 text-slate-700"
-                            : "bg-purple-600 hover:bg-purple-700 text-white"
-                        }`}
-                      >
-                        {tier.id === "pro" ? "Request early access" : `Upgrade to ${tier.label}`}
-                      </button>
-                    )}
+            {/* Hero — free to list */}
+            <div className="rounded-2xl border-2 border-teal-200 bg-teal-50 p-6 mb-4">
+              <div className="flex items-baseline gap-2 mb-2">
+                <span className="text-3xl font-extrabold text-teal-700">$0</span>
+                <span className="text-slate-500 text-sm">to list · no monthly subscription</span>
+              </div>
+              <p className="text-sm text-slate-600 mb-4">
+                You only pay Morava when we deliver a paying member. No upfront cost, no monthly fee,
+                no charge for months with no new members.
+              </p>
+              <div className="space-y-1.5">
+                {[
+                  "🏥 'Direct Primary Care' badge on your listing",
+                  "💵 Your membership fee displayed on your card",
+                  "🔍 Appears in DPC filter results on the patient app",
+                  "📋 EHR-ready patient summary with each membership inquiry",
+                  "📧 Instant email on every new membership inquiry",
+                  "💰 'HSA Eligible' badge (if you qualify)",
+                ].map((f) => (
+                  <div key={f} className="flex items-start gap-1.5 text-sm text-slate-700">
+                    <span className="flex-shrink-0 mt-0.5 text-teal-500">✓</span>
+                    <span>{f}</span>
                   </div>
-                );
-              })}
+                ))}
+              </div>
             </div>
 
-            {/* DPC billing explainer */}
+            {/* Enrollment fee card */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 mb-4">
+              <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+                <span className="font-bold text-slate-900 text-base">Your per-enrollment fee</span>
+                <span className="text-2xl font-extrabold text-purple-700">${myFee}<span className="text-sm font-medium text-slate-400"> / member</span></span>
+              </div>
+              <p className="text-sm text-slate-600">
+                {myMonthly && myMonthly > 0
+                  ? <>One month of your ${myMonthly}/mo membership, charged once when a patient enrolls and both you and the patient confirm.</>
+                  : <>Set your membership fee in your Profile and this becomes one month of that fee. Until then, the default is ${DPC_FEE_DEFAULT} per enrollment.</>}
+              </p>
+              <p className="text-xs text-slate-400 mt-2">
+                Fee is one month of your membership price, capped between ${DPC_FEE_FLOOR} and ${DPC_FEE_CAP}.
+                A typical member stays 1–3 years — this is a one-time fee on enrollment only.
+              </p>
+            </div>
+
+            {/* How it works */}
             <div className="bg-purple-50 border border-purple-100 rounded-xl p-4 text-xs text-purple-700 space-y-1.5">
               <p className="font-semibold text-purple-800 mb-1">How DPC billing works</p>
-              <p>• Your Morava listing tier is separate from the membership fees you charge patients.</p>
-              <p>• Morava does not collect or process patient membership payments — you set your own fee and bill patients directly.</p>
-              <p>• Morava charges you a flat monthly listing fee based on your tier above.</p>
-              <p>• To change tiers or discuss billing, email <a href="mailto:support@moravacare.com" className="underline">support@moravacare.com</a>.</p>
+              <p>• <strong>Free to list.</strong> No subscription, no monthly fee.</p>
+              <p>• A patient finds you on Morava and submits a membership inquiry.</p>
+              <p>• When they enroll, you mark them <strong>"Enrolled as member"</strong> in your dashboard, and the patient confirms enrollment in their app.</p>
+              <p>• Once <strong>both confirm</strong>, Morava charges a one-time finder's fee of one month's membership (${myFee} for you).</p>
+              <p>• Morava never touches your patients' membership payments — you bill members directly and keep 100% of their ongoing dues.</p>
+              <p>• Questions? Email <a href="mailto:support@moravacare.com" className="underline">support@moravacare.com</a>.</p>
             </div>
           </div>
-        )}
+          );
+        })()}
 
         {/* ── Regular provider tier comparison grid (non-DPC only) ──────────── */}
         {!isDPC && (
@@ -491,7 +444,7 @@ export default function Billing() {
                   <div className="flex items-center gap-2">
                     <span className="text-xl font-bold text-slate-900">
                       {isDPC
-                        ? `DPC ${currentDPCTier.label}`
+                        ? "DPC — Free Listing"
                         : plan === "founding"
                           ? "Founding Provider"
                           : plan === "pro"
@@ -520,11 +473,11 @@ export default function Billing() {
                 <div className="text-right">
                   <div className="text-2xl font-bold text-slate-900">
                     {isDPC
-                      ? currentDPCTier.price
+                      ? `$${dpcEnrollmentFee(providerProfile?.dpcMonthlyFee)}`
                       : plan === "pro" ? "$99" : plan === "founding" ? "$6" : "$10"}
                   </div>
                   <div className="text-xs text-slate-400">
-                    {isDPC ? "/ month" : plan === "pro" ? "/ month" : "/ completed visit"}
+                    {isDPC ? "/ enrolled member" : plan === "pro" ? "/ month" : "/ completed visit"}
                   </div>
                 </div>
               </div>

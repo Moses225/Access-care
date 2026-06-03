@@ -63,23 +63,25 @@ const DPC = {
 };
 
 const RECOVERY = {
-  name: "New Horizons Recovery",
-  city: "Oklahoma City, OK",
-  plan: "Free",
-  gender: "Men",
-  totalBeds: 24,
-  availableBeds: 18,
-  status: "available",
-  phone: "(405) 555-0177",
-  email: "intake@newhorizonsok.com",
-  ownerName: "Michael Torres",
-  description: "SAMHSA-certified recovery housing for men. Structured sober living with peer support, case management referrals, and employment assistance. Accepting SoonerCare.",
-  amenities: ["Peer Support", "Case Management Referrals", "Employment Assistance", "Structured Schedule", "SoonerCare Accepted", "Transportation Assistance"],
+  name: "Destiny Recovery Center",
+  city: "Ardmore, OK",
+  plan: "Growth",
+  planPrice: "$49/month",
+  gender: "Women",
+  totalBeds: 12,
+  availableBeds: 4,
+  status: "limited",
+  phone: "(580) 798-4421",
+  email: "destinyrecoverycenterardmore@gmail.com",
+  ownerName: "Lauren Vickers",
+  description: "A 12-bed women's sober living facility in Ardmore, Oklahoma. Safe, structured environment for adult women committed to recovery. Peer support, accountability, and a community-centered approach to long-term sobriety.",
+  amenities: ["Women-Only Facility", "Peer Support", "Structured Schedule", "Accountability Program", "Self-Pay & Sliding Scale", "Community-Centered Recovery"],
   inquiries: [
-    { name: "Referral via Valley Hope",      date: "Today, 8:45 AM",  status: "new"       },
-    { name: "Walk-in inquiry",               date: "Yesterday",       status: "contacted"  },
-    { name: "Referral via ODMHSAS",          date: "May 24",          status: "placed"     },
-    { name: "Family referral",               date: "May 23",          status: "placed"     },
+    { name: "Ashley M.",   date: "Today, 9:12 AM",   status: "new",       funding: "Self-Pay",            mat: false  },
+    { name: "Brianna T.",  date: "Today, 7:30 AM",   status: "contacted", funding: "ODMHSAS Voucher",     mat: false  },
+    { name: "Carla R.",    date: "Yesterday, 4:15 PM",status: "contacted", funding: "Medicaid/SoonerCare", mat: true   },
+    { name: "Destiny W.",  date: "May 30",            status: "placed",    funding: "Self-Pay",            mat: false  },
+    { name: "Erica N.",    date: "May 28",            status: "placed",    funding: "Private Insurance",   mat: false  },
   ],
 };
 
@@ -198,21 +200,24 @@ function MedicalHome() {
 }
 
 function DPCHome() {
+  // Stats mirror the real DPC dashboard: Morava tracks members/inquiries/consults
+  // it facilitates — NOT the practice's revenue (Morava never touches membership dues).
   return (
     <div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <StatCard label="Active Members"        value={DPC.members.active} color="teal"   />
-        <StatCard label="New this month"        value={DPC.members.new}    color="green"  sub="+13% from last month" />
-        <StatCard label="Monthly Recurring Revenue" value={DPC.members.mrr} color="purple" />
+        <StatCard label="Active Members"       value={DPC.members.active} color="purple" sub="via Morava" />
+        <StatCard label="Membership Inquiries" value={DPC.members.new}    color="amber"  sub="pending this month" />
+        <StatCard label="Consults Held"        value={7}                  color="teal"   sub="this month" />
       </div>
 
       <div className="bg-teal-600 rounded-2xl p-6 text-white mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <div className="text-sm text-teal-100 font-medium">DPC Membership Fee</div>
+          <div className="text-sm text-teal-100 font-medium">Your Membership Fee (you set this — you keep 100%)</div>
           <div className="text-4xl font-bold mt-1">{DPC.memberFee}<span className="text-xl text-teal-200 font-normal">/month</span></div>
-          <div className="flex items-center gap-3 mt-2">
+          <div className="flex items-center gap-3 mt-2 flex-wrap">
             <span className="text-xs bg-teal-500 border border-teal-400 text-white px-2.5 py-1 rounded-full font-medium">HSA Eligible ✓</span>
             <span className="text-xs bg-teal-500 border border-teal-400 text-white px-2.5 py-1 rounded-full font-medium">Accepting New Members ✓</span>
+            <span className="text-xs bg-white text-teal-700 px-2.5 py-1 rounded-full font-medium">Free to list · pay only on enrollment</span>
           </div>
         </div>
         <button className="text-sm bg-white text-teal-700 font-semibold px-4 py-2 rounded-xl hover:bg-teal-50 transition-colors" onClick={() => alert("Demo mode")}>Edit Settings</button>
@@ -220,7 +225,7 @@ function DPCHome() {
 
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100">
-          <h3 className="font-semibold text-slate-900">Today's Appointments</h3>
+          <h3 className="font-semibold text-slate-900">Membership Inquiries</h3>
         </div>
         {DPC.bookings.map((b) => (
           <div key={b.id} className="flex items-center justify-between px-6 py-4 border-b border-slate-50 last:border-0 hover:bg-slate-50">
@@ -306,18 +311,36 @@ function RecoveryHome() {
 
       {/* Inquiries */}
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100">
-          <h3 className="font-semibold text-slate-900">Recent Inquiries</h3>
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <h3 className="font-semibold text-slate-900">Inquiry Inbox</h3>
+          <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-1 rounded-full font-semibold">
+            {RECOVERY.inquiries.filter(i => i.status === "new").length} new
+          </span>
         </div>
         {RECOVERY.inquiries.map((inq, i) => (
-          <div key={i} className="flex items-center justify-between px-6 py-4 border-b border-slate-50 last:border-0 hover:bg-slate-50">
-            <div>
+          <div key={i} className="px-6 py-4 border-b border-slate-50 last:border-0 hover:bg-slate-50">
+            <div className="flex items-center justify-between mb-1.5">
               <div className="font-medium text-slate-900 text-sm">{inq.name}</div>
-              <div className="text-xs text-slate-500 mt-0.5">{inq.date}</div>
+              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${STATUS_STYLES[inq.status]}`}>
+                {STATUS_LABELS[inq.status]}
+              </span>
             </div>
-            <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${STATUS_STYLES[inq.status]}`}>
-              {STATUS_LABELS[inq.status]}
-            </span>
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-xs text-slate-400">{inq.date}</span>
+              <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">💳 {inq.funding}</span>
+              {inq.mat && <span className="text-xs bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full">💊 On MAT</span>}
+              {!inq.mat && inq.status === "new" && <span className="text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full">✓ No MAT</span>}
+            </div>
+            {inq.status === "new" && (
+              <div className="flex gap-2 mt-2.5">
+                <button className="text-xs bg-teal-500 hover:bg-teal-600 text-white font-semibold px-3 py-1.5 rounded-lg transition-colors" onClick={() => alert("Demo mode — in your real dashboard this marks the inquiry as Contacted and logs the timestamp")}>
+                  ✓ Mark Contacted
+                </button>
+                <button className="text-xs border border-slate-200 text-slate-500 hover:border-slate-300 font-medium px-3 py-1.5 rounded-lg" onClick={() => alert("Demo mode")}>
+                  ✕ Not a fit
+                </button>
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -378,32 +401,61 @@ function BillingTab({ type }: { type: ProviderType }) {
   if (type === "dpc") {
     return (
       <div>
-        <SectionTitle title="Billing & Membership" subtitle="DPC membership revenue and plan details." />
+        <SectionTitle title="Listing & Billing" subtitle="Free to list — you only pay when a patient enrolls." />
         <div className="grid sm:grid-cols-3 gap-4 mb-6">
-          <StatCard label="Active Members"       value={42}       color="teal"   />
-          <StatCard label="MRR"                  value="$6,258"   color="purple" sub="Monthly Recurring Revenue" />
-          <StatCard label="Avg Revenue / Member" value="$149"     color="green"  />
+          <StatCard label="Active Members"        value={42}       color="teal"   />
+          <StatCard label="Enrolled via Morava"   value={3}        color="purple" sub="this month" />
+          <StatCard label="Your Membership Fee"   value="$149"     color="green"  sub="you keep 100% ongoing" />
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-6">
-          <div className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-4">DPC Plan Settings</div>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between py-3 border-b border-slate-100">
-              <span className="text-sm text-slate-700 font-medium">Monthly Membership Fee</span>
-              <span className="text-sm font-bold text-teal-600">$149 / month</span>
-            </div>
-            <div className="flex items-center justify-between py-3 border-b border-slate-100">
-              <span className="text-sm text-slate-700 font-medium">HSA Eligible</span>
-              <span className="text-xs bg-green-50 text-green-700 border border-green-200 px-2.5 py-1 rounded-full font-medium">Yes ✓</span>
-            </div>
-            <div className="flex items-center justify-between py-3">
-              <span className="text-sm text-slate-700 font-medium">Accepting New Members</span>
-              <span className="text-xs bg-teal-50 text-teal-700 border border-teal-200 px-2.5 py-1 rounded-full font-medium">Open ✓</span>
-            </div>
+        {/* Free listing hero */}
+        <div className="bg-teal-50 border-2 border-teal-200 rounded-2xl p-6 mb-6">
+          <div className="flex items-baseline gap-2 mb-1">
+            <span className="text-3xl font-extrabold text-teal-700">$0</span>
+            <span className="text-slate-500 text-sm">to list · no monthly subscription</span>
           </div>
-          <button className="mt-4 text-sm bg-teal-500 hover:bg-teal-600 text-white font-semibold px-4 py-2 rounded-xl transition-colors" onClick={() => alert("Demo mode")}>
-            Edit DPC Settings
-          </button>
+          <p className="text-sm text-slate-600">
+            You only pay Morava a one-time finder's fee when a patient enrolls as a member —
+            and only after both you and the patient confirm. No patients enrolled = no charge.
+          </p>
+        </div>
+
+        {/* Enrollment fee + how it works */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-6">
+          <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+            <span className="text-sm font-bold text-slate-700">Your per-enrollment fee</span>
+            <span className="text-2xl font-extrabold text-purple-700">$149<span className="text-sm font-medium text-slate-400"> / member</span></span>
+          </div>
+          <p className="text-xs text-slate-500 mb-4">One month of your $149 membership, capped at $150. Charged once when a member enrolls.</p>
+          <div className="bg-purple-50 border border-purple-100 rounded-xl p-4 text-xs text-purple-700 space-y-1.5">
+            <p className="font-semibold text-purple-800 mb-1">How it works</p>
+            <p>1. A patient finds you on Morava and submits a membership inquiry.</p>
+            <p>2. When they enroll, you mark them "Enrolled as member" and they confirm in their app.</p>
+            <p>3. Once both confirm, Morava bills the one-time $149 finder's fee — that's it.</p>
+            <p>4. You keep 100% of every member's ongoing monthly dues. Morava never touches them.</p>
+          </div>
+        </div>
+
+        {/* Recent enrollments */}
+        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden mb-6">
+          <div className="px-6 py-4 border-b border-slate-100 font-semibold text-slate-900">Enrollments This Month</div>
+          {[
+            { name: "Patricia G.", date: "Jun 1, 2026", status: "Billed $149", color: "green" },
+            { name: "Marcus D.",   date: "May 28, 2026", status: "Billed $149", color: "green" },
+            { name: "Tony R.",     date: "Today",         status: "Awaiting patient confirm", color: "amber" },
+          ].map((e, i) => (
+            <div key={i} className="flex items-center justify-between px-6 py-4 border-b border-slate-50 last:border-0">
+              <div>
+                <div className="text-sm font-medium text-slate-800">{e.name}</div>
+                <div className="text-xs text-slate-400">{e.date}</div>
+              </div>
+              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                e.color === "green"
+                  ? "bg-green-50 text-green-700 border border-green-200"
+                  : "bg-amber-50 text-amber-700 border border-amber-200"
+              }`}>{e.status}</span>
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -413,25 +465,79 @@ function BillingTab({ type }: { type: ProviderType }) {
   return (
     <div>
       <SectionTitle title="Listing & Billing" subtitle="Your current plan and upgrade options." />
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-6">
+
+      {/* Current plan */}
+      <div className="bg-white rounded-2xl border border-teal-200 p-6 mb-6">
         <div className="flex items-start justify-between mb-4">
           <div>
             <div className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Current Plan</div>
-            <div className="text-2xl font-bold text-slate-900">Free</div>
-            <div className="text-sm text-slate-500 mt-1">Basic listing — no monthly fee</div>
+            <div className="text-2xl font-bold text-slate-900">Growth</div>
+            <div className="text-sm text-slate-500 mt-1">$49 / month · renews July 1, 2026</div>
           </div>
+          <span className="bg-teal-50 text-teal-700 border border-teal-200 text-xs font-semibold px-3 py-1 rounded-full">Active</span>
         </div>
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mt-4">
-          <div className="font-semibold text-amber-800 text-sm mb-2">Unlock more with Growth Plan — $29/month</div>
-          <div className="grid sm:grid-cols-2 gap-2 mt-2">
-            {["Patient intake applications", "Priority search placement", "Email contact requests", "Analytics & insights"].map(f => (
-              <div key={f} className="flex items-center gap-2 text-sm text-amber-700">🔓 {f}</div>
-            ))}
-          </div>
-          <button className="mt-3 text-sm bg-amber-500 hover:bg-amber-600 text-white font-semibold px-4 py-2 rounded-xl transition-colors" onClick={() => alert("Demo mode")}>
-            Upgrade to Growth
+        <div className="grid sm:grid-cols-2 gap-3 mt-2">
+          {[
+            "Priority placement — top of city results",
+            "Verified badge on profile",
+            "Up to 10 photos",
+            "Inquiry inbox — patients apply in-app",
+            "Patient status tracking & notifications",
+            "Monthly inquiry report",
+          ].map(f => (
+            <div key={f} className="flex items-center gap-2 text-sm text-slate-700">
+              <span className="text-teal-500 shrink-0">✓</span> {f}
+            </div>
+          ))}
+        </div>
+        <div className="mt-5 flex gap-2 flex-wrap">
+          <button className="text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2 rounded-xl transition-colors" onClick={() => alert("Demo mode — contact support@moravacare.com to upgrade")}>
+            Upgrade to Partner — $99/mo →
+          </button>
+          <button className="text-sm border border-slate-200 text-slate-600 hover:border-slate-300 font-medium px-4 py-2 rounded-xl" onClick={() => alert("Demo mode")}>
+            Manage Payment
           </button>
         </div>
+      </div>
+
+      {/* Partner tier upsell */}
+      <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-5 mb-6">
+        <div className="font-bold text-indigo-900 text-sm mb-3">Unlock Partner — $99/month</div>
+        <div className="grid sm:grid-cols-2 gap-2">
+          {[
+            "Up to 3 facility locations under one login",
+            "Featured placement on Find Care home screen",
+            "ODMHSAS/grant documentation reports",
+            "Referral source tracking",
+            "Direct ODMHSAS voucher integration (coming soon)",
+            "Early access to new features",
+          ].map(f => (
+            <div key={f} className="flex items-center gap-2 text-sm text-indigo-800">
+              <span className="text-indigo-400">🔓</span> {f}
+            </div>
+          ))}
+        </div>
+        <button className="mt-4 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2 rounded-xl transition-colors" onClick={() => alert("Demo mode — email support@moravacare.com to upgrade")}>
+          Upgrade to Partner →
+        </button>
+      </div>
+
+      {/* Invoice history */}
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 font-semibold text-slate-900">Invoice History</div>
+        {[
+          { date: "Jun 1, 2026", amount: "$49.00", status: "Paid" },
+          { date: "May 1, 2026", amount: "$49.00", status: "Paid" },
+        ].map((inv, i) => (
+          <div key={i} className="flex items-center justify-between px-6 py-4 border-b border-slate-50 last:border-0 hover:bg-slate-50">
+            <div className="text-sm text-slate-700">{inv.date}</div>
+            <div className="flex items-center gap-4">
+              <span className="text-sm font-medium text-slate-900">{inv.amount}</span>
+              <span className="text-xs text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">{inv.status}</span>
+              <button className="text-xs text-teal-600 hover:text-teal-700 font-medium" onClick={() => alert("Demo mode")}>Download</button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -514,20 +620,36 @@ function ProfileTab({ type }: { type: ProviderType }) {
 }
 
 // ── Analytics tab ─────────────────────────────────────────────────────────────
+// Mirrors the REAL dashboard: analytics is "launching soon" for everyone — a
+// blurred teaser, not a working chart. Locked plans see an upgrade nudge.
 function AnalyticsTab({ type }: { type: ProviderType }) {
-  const isPro = type === "dpc";
-  const isGrowth = type === "recovery";
-  const hasAnalytics = isPro || isGrowth;
+  // On the real dashboard, analytics is unlocked (but "soon") for DPC/Pro and
+  // recovery Growth+; locked for everyone else.
+  const unlocked = type === "dpc" || type === "recovery";
 
-  if (!hasAnalytics) {
+  if (!unlocked) {
     return (
       <div>
         <SectionTitle title="Analytics" />
         <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
-          <div className="text-5xl mb-4">📊</div>
-          <h3 className="text-xl font-bold text-slate-900 mb-2">Analytics on the Pro Plan</h3>
+          <div className="filter blur-sm pointer-events-none select-none mb-6">
+            <div className="grid grid-cols-4 gap-4">
+              {[
+                { label: "Total visits", val: "47" },
+                { label: "Avg per month", val: "8.2" },
+                { label: "No-show rate", val: "12%" },
+                { label: "Top insurance", val: "SoonerCare" },
+              ].map((s) => (
+                <div key={s.label} className="bg-slate-50 rounded-xl p-4">
+                  <div className="text-2xl font-bold text-slate-300 mb-1">{s.val}</div>
+                  <div className="text-xs text-slate-200">{s.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <h3 className="text-xl font-bold text-slate-900 mb-2">Analytics on the Pro plan</h3>
           <p className="text-slate-500 text-sm max-w-sm mx-auto mb-6">
-            Upgrade to Pro to unlock booking trends, patient views, peak hours, and conversion insights.
+            Upgrade to Pro to unlock booking trends, no-show rates, peak hours, and insurance breakdowns. Launching soon.
           </p>
           <button className="bg-teal-500 hover:bg-teal-600 text-white font-semibold px-6 py-2.5 rounded-xl transition-colors text-sm" onClick={() => alert("Demo mode")}>
             Upgrade to Pro
@@ -537,44 +659,27 @@ function AnalyticsTab({ type }: { type: ProviderType }) {
     );
   }
 
-  // Mock bar chart data
-  const weeks = ["Apr W3", "Apr W4", "May W1", "May W2", "May W3"];
-  const values = type === "dpc" ? [8, 11, 9, 14, 12] : [3, 5, 4, 7, 6];
-  const maxVal = Math.max(...values);
-
+  // Unlocked — but still "launching soon" (matches the real dashboard exactly)
   return (
     <div>
-      <SectionTitle title="Analytics" subtitle="Booking trends and practice insights — last 5 weeks." />
-      <div className="grid sm:grid-cols-3 gap-4 mb-8">
-        {type === "dpc" ? (
-          <>
-            <StatCard label="Bookings this month" value={54}    color="teal"   />
-            <StatCard label="Profile views"        value={312}   color="blue"   sub="Patients who viewed your listing" />
-            <StatCard label="Conversion rate"      value="17%"  color="purple" sub="Views → bookings" />
-          </>
-        ) : (
-          <>
-            <StatCard label="Inquiries this month" value={25}   color="teal"   />
-            <StatCard label="Profile views"        value={189}  color="blue"   sub="Patients who found your listing" />
-            <StatCard label="Placement rate"       value="72%"  color="green"  sub="Inquiries → placements" />
-          </>
-        )}
-      </div>
-
-      <div className="bg-white rounded-2xl border border-slate-200 p-6">
-        <h3 className="font-semibold text-slate-900 mb-6">{type === "dpc" ? "Weekly Bookings" : "Weekly Inquiries"}</h3>
-        <div className="flex items-end gap-3 h-40">
-          {weeks.map((week, i) => (
-            <div key={week} className="flex-1 flex flex-col items-center gap-2">
-              <span className="text-xs font-bold text-slate-700">{values[i]}</span>
-              <div
-                className="w-full bg-teal-500 rounded-t-md transition-all hover:bg-teal-600"
-                style={{ height: `${(values[i] / maxVal) * 100}%` }}
-                title={`${week}: ${values[i]}`}
-              />
-              <span className="text-xs text-slate-400 text-center leading-tight">{week}</span>
+      <SectionTitle title="Analytics" subtitle="Booking trends, patient insights, and practice performance." />
+      <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
+        <div className="text-5xl mb-4">📊</div>
+        <h2 className="text-2xl font-bold text-slate-900 mb-2">Analytics launching soon</h2>
+        <p className="text-slate-500 text-sm max-w-md mx-auto mb-6">
+          You'll be among the first to access {type === "dpc" ? "booking trends, membership conversion, and inquiry insights" : "listing views, inquiry trends, and placement rates"}. We'll notify you the moment it goes live.
+        </p>
+        <div className="max-w-2xl mx-auto">
+          <div className="filter blur-sm pointer-events-none select-none bg-slate-50 rounded-xl p-6 border border-slate-200">
+            <div className="flex items-end justify-center gap-3 h-24">
+              {[4, 7, 5, 9, 6, 11, 8, 13, 10, 15, 12, 14].map((h, i) => (
+                <div key={i} className="bg-teal-200 rounded-t" style={{ width: 20, height: `${h * 6}px` }} />
+              ))}
             </div>
-          ))}
+          </div>
+          <div className="text-xs text-teal-600 mt-3 font-medium">
+            📬 You'll be notified when analytics launches
+          </div>
         </div>
       </div>
     </div>

@@ -50,6 +50,11 @@ interface Booking {
   proposedDate?: string;
   proposedTime?: string;
   preRescheduleStatus?: string;
+  // DPC dual-confirmation enrollment
+  providerPracticeType?: string;
+  providerMarkedEnrolled?: boolean;
+  patientConfirmedEnrolled?: boolean;
+  dpcEnrollmentFee?: number;
   patientIntakeSummary?: {
     medications?: string | string[];
     allergies?: string | string[];
@@ -702,6 +707,30 @@ export default function Dashboard() {
     } catch (e) {
       console.error(e);
       showToast("Failed to mark complete. Please try again.", "error");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // ── DPC: mark patient enrolled as a member ───────────────────────────────────
+  // Sets the provider-side flag. The fee is only logged once the patient ALSO
+  // confirms in their app (dual confirmation, enforced by the Cloud Function).
+  const handleMarkEnrolled = async (booking: Booking) => {
+    if (booking.providerId !== providerProfile?.providerId) return;
+    setActionLoading(booking.id);
+    try {
+      await updateDoc(doc(db, "bookings", booking.id), {
+        providerMarkedEnrolled: true,
+        providerEnrolledAt: serverTimestamp(),
+      });
+      showToast(
+        booking.patientConfirmedEnrolled
+          ? `✓ ${booking.patientName} enrolled — finder's fee will be billed this month`
+          : `✓ Marked enrolled — waiting on ${booking.patientName} to confirm in their app`,
+      );
+    } catch (e) {
+      console.error(e);
+      showToast("Failed to update. Please try again.", "error");
     } finally {
       setActionLoading(null);
     }
@@ -1400,6 +1429,42 @@ export default function Dashboard() {
                             </button>
                           </>
                         )}
+                      </div>
+                    )}
+
+                    {/* DPC enrollment — dual confirmation. Shown for DPC inquiries
+                        once confirmed/completed and not already fee-logged. */}
+                    {booking.providerPracticeType === "dpc" &&
+                      (booking.status === "confirmed" || booking.status === "completed") &&
+                      !booking.dpcEnrollmentFee && (
+                      <div className="bg-purple-50 border border-purple-100 rounded-lg p-3 mt-1">
+                        {booking.providerMarkedEnrolled ? (
+                          <div className="flex items-center gap-2 text-xs text-purple-700">
+                            <span className="font-semibold">✓ You marked this patient enrolled.</span>
+                            {booking.patientConfirmedEnrolled
+                              ? <span>Patient confirmed — finder's fee bills this month.</span>
+                              : <span className="text-purple-500">Waiting on patient to confirm in their app.</span>}
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <div className="text-xs text-purple-700">
+                              <span className="font-semibold">Did this patient enroll as a member?</span>
+                              <div className="text-purple-500 mt-0.5">A one-time finder's fee applies only after you and the patient both confirm.</div>
+                            </div>
+                            <button
+                              onClick={() => handleMarkEnrolled(booking)}
+                              disabled={actionLoading === booking.id}
+                              className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+                            >
+                              {actionLoading === booking.id ? "..." : "Mark as Enrolled Member"}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {booking.providerPracticeType === "dpc" && booking.dpcEnrollmentFee && (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-3 mt-1 text-xs text-green-700">
+                        ✓ Enrolled member — ${booking.dpcEnrollmentFee} finder's fee logged for this month's billing.
                       </div>
                     )}
 

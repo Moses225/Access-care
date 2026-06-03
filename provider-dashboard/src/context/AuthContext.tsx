@@ -29,6 +29,8 @@ interface ProviderProfile {
   // DPC providers:     founding | growth | pro
   plan?: "founding" | "standard" | "growth" | "pro";
   foundingExpiresAt?: string | null;
+  // DPC membership fee the provider charges their own patients (display + enrollment-fee basis)
+  dpcMonthlyFee?: number | null;
   // Role-based routing — "recovery_facility" sends user to RecoveryDashboard
   role?: "provider" | "recovery_facility" | "admin";
   facilityId?: string;
@@ -36,8 +38,9 @@ interface ProviderProfile {
   // Recovery facility trial/billing fields
   listingStatus?: "active_free" | "trial_expired" | "active_paid" | "suspended";
   freeTrialStartedAt?: string | null;
-  // Recovery facility plan tier — free = basic listing only, standard = $80/mo, growth = $159/mo
-  listingPlan?: "free" | "standard" | "growth";
+  // Recovery facility plan tier — free = basic listing, growth = $49/mo, partner = $99/mo
+  // "standard" kept for backwards-compat with existing Firestore docs (maps to growth features)
+  listingPlan?: "free" | "standard" | "growth" | "partner";
   // ISO timestamp set when provider account is created — used for billing grace period
   createdAt?: string;
 }
@@ -208,6 +211,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           role: (d.role as "provider" | "recovery_facility" | "admin") || "provider",
           facilityId: d.facilityId || undefined,
           practiceType: prov.practiceType || d.practiceType || undefined,
+          dpcMonthlyFee: typeof prov.dpcMonthlyFee === "number" ? prov.dpcMonthlyFee : null,
           listingStatus: d.listingStatus || undefined,
           listingPlan: (d.listingPlan as "free" | "standard" | "growth") || "free",
           freeTrialStartedAt: (() => {
