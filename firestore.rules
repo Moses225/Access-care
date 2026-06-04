@@ -798,6 +798,16 @@ service cloud.firestore {
     }
 
     // ================================================================
+    // CONFIG — platform-wide switches (e.g. billing.enabled master guard).
+    // Admin-only write. Cloud Functions read via Admin SDK (bypass rules).
+    // The billing master guard must never be flippable by a client.
+    // ================================================================
+    match /config/{docId} {
+      allow read:  if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // ================================================================
     // PHONE CHECK RATE LIMIT — written by checkPhoneAvailability function
     // Only Admin SDK writes here; clients cannot read or manipulate.
     // ================================================================

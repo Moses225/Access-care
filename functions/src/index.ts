@@ -560,6 +560,17 @@ export const monthlyBilling = onSchedule(
     secrets: [stripeSecretKey, resendApiKey],
   },
   async () => {
+    // ── MASTER BILLING GUARD ──────────────────────────────────────────────────
+    // Provider billing stays OFF until the fee model is legally cleared
+    // (Anti-Kickback Statute / fee-splitting / EKRA review). No provider is
+    // charged until config/billing.enabled is explicitly set to true.
+    // Default (doc missing) = disabled. This is a hard safeguard, not a reminder.
+    const billingCfg = await db.collection("config").doc("billing").get();
+    if (billingCfg.data()?.enabled !== true) {
+      console.log("monthlyBilling: SKIPPED — billing disabled (config/billing.enabled is not true). No charges attempted.");
+      return;
+    }
+
     const stripe = new Stripe(stripeSecretKey.value(), {
       apiVersion: "2026-04-22.dahlia" as any,
     });
