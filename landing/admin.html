@@ -2249,9 +2249,9 @@
         const actionBtns = isLive
           ? `<span class="badge b-live" style="padding:6px 12px;">✓ Live — $${s.commissionAmount || "?"} logged</span>`
           : isRejected
-            ? `<span class="badge b-rejected" style="padding:6px 12px;">✕ Not verified</span> <button class="act-btn act-note" onclick="setStatus('${id}','pending_verification')">↩ Reopen</button>`
+            ? `<span class="badge b-rejected" style="padding:6px 12px;">✕ Not verified</span> <button class="act-btn act-note" onclick="reopenSubmission('${id}')">↩ Reopen</button>`
             : isDeclined
-            ? `<span class="badge b-rejected" style="padding:6px 12px;">🚫 Declined to join</span> <button class="act-btn act-note" onclick="setStatus('${id}','pending_verification')">↩ Reopen</button>`
+            ? `<span class="badge b-rejected" style="padding:6px 12px;">🚫 Declined to join</span> <button class="act-btn act-note" onclick="reopenSubmission('${id}')">↩ Reopen</button>`
             : `
       <button class="act-btn act-live" onclick="openLiveModal('${id}')">✓ Mark Live</button>
       <button class="act-btn act-decline" onclick="declineSubmission('${id}')">🚫 Provider Declined</button>
@@ -2399,43 +2399,99 @@
         if (el) el.classList.toggle("open");
       };
 
-      // Find and deactivate the provider listing that matches a submission.
+      // Find provider listings that match a submission.
       // Matches by NPI first (most reliable), then by practiceName + city.
-      // Returns the number of listings deactivated.
-      async function deactivateMatchingProvider(sub) {
-        if (!sub) return 0;
-        let matches = [];
+      async function findMatchingProviders(sub) {
+        if (!sub) return [];
         try {
           if (sub.npi) {
             const npiSnap = await getDocs(
               query(collection(db, "providers"), where("npi", "==", sub.npi), limit(5)),
             );
-            matches = npiSnap.docs;
+            if (npiSnap.docs.length) return npiSnap.docs;
           }
-          if (matches.length === 0 && sub.practiceName) {
+          if (sub.practiceName) {
             const nameSnap = await getDocs(
               query(collection(db, "providers"), where("practiceName", "==", sub.practiceName), limit(5)),
             );
-            matches = nameSnap.docs.filter(
+            return nameSnap.docs.filter(
               (d) => !sub.city || (d.data().city || "").toLowerCase() === (sub.city || "").toLowerCase(),
             );
           }
-          // Only deactivate ones that are currently active
-          const toDeactivate = matches.filter((d) => d.data().active !== false);
-          for (const d of toDeactivate) {
-            await updateDoc(d.ref, {
-              active: false,
-              deactivatedAt: new Date().toISOString(),
-              deactivatedReason: "submission_" + (sub.status || "closed"),
-              lastUpdated: new Date().toISOString(),
-            });
-          }
-          return toDeactivate.length;
+          return [];
         } catch (err) {
-          console.error("deactivateMatchingProvider failed:", err);
-          return 0;
+          console.error("findMatchingProviders failed:", err);
+          return [];
         }
       }
+
+      // Deactivate the matching provider listing(s). Returns count deactivated.
+      async function deactivateMatchingProvider(sub) {
+        const matches = await findMatchingProviders(sub);
+        const toDeactivate = matches.filter((d) => d.data().active !== false);
+        for (const d of toDeactivate) {
+          await updateDoc(d.ref, {
+            active: false,
+            deactivatedAt: new Date().toISOString(),
+            deactivatedReason: "submission_" + (sub.status || "closed"),
+            lastUpdated: new Date().toISOString(),
+          });
+        }
+        return toDeactivate.length;
+      }
+
+      // Reactivate listing(s) that were deactivated BY a submission close.
+      // Won't touch listings deactivated for other reasons (e.g. admin_takedown).
+      async function reactivateMatchingProvider(sub) {
+        const matches = await findMatchingProviders(sub);
+        const toReactivate = matches.filter(
+          (d) =>
+            d.data().active === false &&
+            String(d.data().deactivatedReason || "").startsWith("submission_"),
+        );
+        for (const d of toReactivate) {
+          await updateDoc(d.ref, {
+            active: true,
+            reactivatedAt: new Date().toISOString(),
+            deactivatedReason: null,
+            lastUpdated: new Date().toISOString(),
+          });
+        }
+        return toReactivate.length;
+      }
+
+      // Reopen a closed submission → back to pending, and offer to restore listing.
+      window.reopenSubmission = async function (docId) {
+        const sub = allSubmissions.find((s) => s._id === docId);
+        try {
+          await updateDoc(doc(db, "providerSubmissions", docId), {
+            status: "pending_verification",
+            declinedReason: null,
+            rejectionReason: null,
+            updatedAt: serverTimestamp(),
+          });
+          if (sub) sub.status = "pending_verification";
+
+          let msg = "Reopened — back to Pending.";
+          const matches = await findMatchingProviders(sub);
+          const restorable = matches.filter(
+            (d) =>
+              d.data().active === false &&
+              String(d.data().deactivatedReason || "").startsWith("submission_"),
+          );
+          if (restorable.length > 0 &&
+              confirm(`Found ${restorable.length} deactivated listing${restorable.length === 1 ? "" : "s"} for this provider. Reactivate ${restorable.length === 1 ? "it" : "them"} too?`)) {
+            const n = await reactivateMatchingProvider(sub);
+            msg = `Reopened and reactivated ${n} listing${n === 1 ? "" : "s"}.`;
+          }
+          updateStats();
+          renderSubmissions();
+          showToast(msg, "success");
+        } catch (err) {
+          showToast("Reopen failed.", "error");
+          console.error(err);
+        }
+      };
 
       // Provider was reached but declined to be listed (e.g. Dr. Combs).
       // Distinct from "not_verified" (couldn't confirm NPI/license). No commission.
