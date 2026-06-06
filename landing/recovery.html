@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recovery Housing in Oklahoma — Find Sober Living with Open Beds | Morava</title>
+  <meta name="description" content="Find sober living and recovery housing in Oklahoma with available beds and direct contact. Free to search on Morava — for individuals, families, and case managers." />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=DM+Serif+Display&display=swap" rel="stylesheet" />
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{--teal:#14B8A6;--teal-dark:#0d9488;--teal-light:#e0f7fa;--text:#0f172a;--text-2:#475569;--text-3:#94a3b8;--border:#e2e8f0;--bg:#f8fafc;--white:#fff}
+    body{font-family:'DM Sans',sans-serif;color:var(--text);background:var(--bg);line-height:1.6}
+    header{background:linear-gradient(135deg,#006064,#00acc1 60%,#1565c0);color:#fff;padding:44px 24px;text-align:center}
+    header h1{font-family:'DM Serif Display',serif;font-size:2rem;margin-bottom:8px}
+    header p{opacity:.92;font-size:.97rem;max-width:560px;margin:0 auto}
+    .nav-back{position:absolute;top:18px;left:20px;color:#fff;text-decoration:none;font-size:.85rem;opacity:.9}
+    .wrap{max-width:960px;margin:0 auto;padding:24px 20px 60px}
+    .controls{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:18px;margin:-32px auto 24px;position:relative;box-shadow:0 4px 20px rgba(0,0,0,.06)}
+    .search-row{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+    .search-row input{flex:1;min-width:200px;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:15px;font-family:inherit}
+    .search-row input:focus{outline:none;border-color:var(--teal)}
+    .chips{display:flex;gap:8px;flex-wrap:wrap}
+    .chip{padding:7px 14px;border:1.5px solid var(--border);border-radius:50px;background:#fff;font-size:.85rem;font-weight:600;cursor:pointer;color:var(--text-2)}
+    .chip.active{background:var(--teal);color:#fff;border-color:var(--teal)}
+    .count{font-size:.82rem;color:var(--text-3);margin-bottom:14px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+    .fac-card{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:18px;cursor:pointer;transition:box-shadow .15s,transform .15s}
+    .fac-card:hover{box-shadow:0 6px 22px rgba(0,0,0,.09);transform:translateY(-2px)}
+    .fac-name{font-family:'DM Serif Display',serif;font-size:1.15rem;margin-bottom:2px}
+    .fac-loc{font-size:.85rem;color:var(--text-3);margin-bottom:12px}
+    .avail{display:inline-flex;align-items:center;gap:6px;font-size:.82rem;font-weight:700;padding:5px 11px;border-radius:50px;margin-bottom:10px}
+    .avail .dot{width:8px;height:8px;border-radius:50%}
+    .tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+    .tag{font-size:.75rem;font-weight:600;background:var(--teal-light);color:var(--teal-dark);padding:3px 10px;border-radius:50px}
+    .fac-desc{font-size:.86rem;color:var(--text-2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .view-link{font-size:.84rem;font-weight:700;color:var(--teal-dark);margin-top:10px;display:inline-block}
+    .state{text-align:center;padding:60px 20px;color:var(--text-3)}
+    .state .ico{font-size:42px;margin-bottom:12px}
+    /* Modal */
+    .overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:flex-end;justify-content:center;z-index:50;padding:0}
+    .overlay.open{display:flex}
+    .modal{background:#fff;border-radius:18px 18px 0 0;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;padding:24px}
+    @media(min-width:640px){.overlay{align-items:center;padding:20px}.modal{border-radius:18px}}
+    .modal-close{float:right;background:#f1f5f9;border:none;width:34px;height:34px;border-radius:50%;font-size:18px;cursor:pointer;color:var(--text-2)}
+    .m-name{font-family:'DM Serif Display',serif;font-size:1.5rem;margin-bottom:4px}
+    .m-loc{font-size:.9rem;color:var(--text-3);margin-bottom:14px}
+    .m-section{margin:16px 0}
+    .m-label{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);margin-bottom:6px}
+    .m-text{font-size:.92rem;color:var(--text-2);line-height:1.7}
+    .contact-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+    .btn{flex:1;min-width:130px;text-align:center;padding:14px;border-radius:12px;font-size:15px;font-weight:700;text-decoration:none;border:none;cursor:pointer;font-family:inherit}
+    .btn-call{background:var(--teal);color:#fff}
+    .btn-email{background:#fff;color:var(--teal-dark);border:1.5px solid var(--teal)}
+    .btn-web{background:#f1f5f9;color:var(--text-2)}
+    .crisis{background:#fef2f2;border:1px solid #fca5a5;border-radius:12px;padding:16px;margin-top:24px}
+    .crisis a{color:#dc2626;font-weight:700;text-decoration:none}
+    .unclaimed-note{background:#fff8e1;border:1px solid #ffe082;border-radius:10px;padding:10px 13px;font-size:.8rem;color:#92400e;margin-top:12px}
+    footer{text-align:center;padding:28px 20px;color:var(--text-3);font-size:.82rem}
+    footer a{color:var(--teal-dark);text-decoration:none}
+  </style>
+</head>
+<body>
+  <header>
+    <a href="/" class="nav-back">← Morava</a>
+    <h1>Recovery Housing in Oklahoma</h1>
+    <p>Find sober living with open beds and a direct way to connect. Free to search — for individuals, families, and case managers.</p>
+  </header>
+
+  <div class="wrap">
+    <div class="controls">
+      <div class="search-row">
+        <input type="text" id="searchInput" placeholder="Search by name or city…" />
+      </div>
+      <div class="chips" id="genderChips">
+        <button class="chip active" data-gender="all">All</button>
+        <button class="chip" data-gender="men">Men</button>
+        <button class="chip" data-gender="women">Women</button>
+        <button class="chip" data-gender="co-ed">Co-ed</button>
+        <button class="chip" data-avail="1">Open beds only</button>
+      </div>
+    </div>
+
+    <div class="count" id="count"></div>
+    <div class="grid" id="grid">
+      <div class="state"><div class="ico">⏳</div>Loading recovery housing…</div>
+    </div>
+
+    <div class="crisis">
+      <strong>🆘 Need help right now?</strong><br/>
+      <a href="tel:18006624357">SAMHSA Helpline: 1-800-662-4357</a> · <a href="tel:988">988 Suicide &amp; Crisis Lifeline</a><br/>
+      <span style="font-size:.8rem;color:#991b1b;">Free · Confidential · 24/7</span>
+    </div>
+  </div>
+
+  <!-- Detail modal -->
+  <div class="overlay" id="overlay">
+    <div class="modal" id="modalContent"></div>
+  </div>
+
+  <footer>
+    © 2026 Morava Care LLC · Oklahoma City, OK · <a href="/">Provider search</a> · <a href="https://moses225.github.io/Access-care/terms.html">Terms</a>
+  </footer>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, query, where, getDocs }
+      from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const app = initializeApp({
+      apiKey: "AIzaSyAMYBfxhljita9XVqTc_HHahMA7mFVFPn8",
+      authDomain: "accesscare-app.firebaseapp.com",
+      projectId: "accesscare-app",
+      storageBucket: "accesscare-app.firebasestorage.app",
+      messagingSenderId: "283308941540",
+      appId: "1:283308941540:web:e3c57ebf0e16ca9c8f4cf1",
+    });
+    const db = getFirestore(app);
+
+    // ── XSS sanitization (all Firestore data passes through these) ──────────────
+    const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const safePhone = (s) => String(s ?? "").replace(/[^0-9+\-() .]/g, "").slice(0, 20);
+    const safeURL = (u) => { const s = String(u ?? "").trim(); return /^https?:\/\//i.test(s) ? esc(s) : ""; };
+
+    // ── Label helpers (mirror data/recoveryHousing.ts) ──────────────────────────
+    const genderLabel = (g) => ({ men: "Men only", women: "Women only", "co-ed": "Co-ed", lgbtq_affirming: "LGBTQ+ affirming" }[g] || "");
+    function availInfo(f) {
+      const beds = f.availableBeds;
+      const status = f.availabilityStatus || (typeof beds === "number" ? (beds > 0 ? "available" : "full") : "call");
+      const map = {
+        available: { color: "#22C55E", label: beds > 0 ? `${beds} bed${beds > 1 ? "s" : ""} available` : "Beds available" },
+        limited:   { color: "#F59E0B", label: beds > 0 ? `Limited — ${beds} left` : "Limited availability" },
+        waitlist:  { color: "#F97316", label: f.waitlistDays ? `Waitlist — est. ${f.waitlistDays} days` : "Waitlist — call" },
+        full:      { color: "#EF4444", label: "No beds available" },
+        call:      { color: "#94A3B8", label: "Call for availability" },
+      };
+      return map[status] || map.call;
+    }
+
+    let all = [];
+    let gFilter = "all";
+    let availOnly = false;
+
+    async function load() {
+      try {
+        const snap = await getDocs(query(collection(db, "recoveryHousing"), where("active", "==", true)));
+        all = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        // Most available first
+        all.sort((a, b) => (b.availableBeds || 0) - (a.availableBeds || 0));
+        render();
+      } catch (e) {
+        document.getElementById("grid").innerHTML = '<div class="state"><div class="ico">⚠️</div>Could not load listings. Please try again.</div>';
+        console.error(e);
+      }
+    }
+
+    function render() {
+      const q = (document.getElementById("searchInput").value || "").toLowerCase().trim();
+      let list = all.filter((f) => {
+        if (gFilter !== "all" && (f.genderServed || "") !== gFilter) return false;
+        if (availOnly && !(f.availableBeds > 0)) return false;
+        if (q && !(`${f.facilityName || ""} ${f.city || ""}`.toLowerCase().includes(q))) return false;
+        return true;
+      });
+
+      document.getElementById("count").textContent = `${list.length} recovery ${list.length === 1 ? "home" : "homes"} in Oklahoma`;
+
+      const grid = document.getElementById("grid");
+      if (list.length === 0) {
+        grid.innerHTML = '<div class="state"><div class="ico">🔍</div>No recovery homes match your search.</div>';
+        return;
+      }
+      grid.innerHTML = list.map((f, i) => {
+        const a = availInfo(f);
+        const g = genderLabel(f.genderServed);
+        return `<div class="fac-card" onclick="openFacility(${i})">
+          <div class="fac-name">${esc(f.facilityName || "Recovery Home")}</div>
+          <div class="fac-loc">📍 ${esc(f.city || "Oklahoma")}, ${esc(f.state || "OK")}</div>
+          <div class="avail" style="background:${a.color}1a;color:${a.color};"><span class="dot" style="background:${a.color}"></span>${esc(a.label)}</div>
+          <div class="tags">${g ? `<span class="tag">${esc(g)}</span>` : ""}${f.totalBeds ? `<span class="tag">${parseInt(f.totalBeds, 10)} beds</span>` : ""}</div>
+          ${f.description ? `<div class="fac-desc">${esc(f.description)}</div>` : ""}
+          <div class="view-link">View &amp; contact →</div>
+        </div>`;
+      }).join("");
+      window._filtered = list;
+    }
+
+    window.openFacility = function (i) {
+      const f = (window._filtered || [])[i];
+      if (!f) return;
+      const a = availInfo(f);
+      const g = genderLabel(f.genderServed);
+      const phone = safePhone(f.phone);
+      const web = safeURL(f.website);
+      // Free-tier / unclaimed listings: public email is intentionally not shown
+      const email = (f.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email)) ? esc(f.email) : "";
+
+      document.getElementById("modalContent").innerHTML = `
+        <button class="modal-close" onclick="closeFacility()">×</button>
+        <div class="m-name">${esc(f.facilityName || "Recovery Home")}</div>
+        <div class="m-loc">📍 ${esc(f.city || "Oklahoma")}, ${esc(f.state || "OK")}</div>
+        <div class="avail" style="background:${a.color}1a;color:${a.color};"><span class="dot" style="background:${a.color}"></span>${esc(a.label)}</div>
+        <div class="tags" style="margin-top:8px;">${g ? `<span class="tag">${esc(g)}</span>` : ""}${f.totalBeds ? `<span class="tag">${parseInt(f.totalBeds, 10)} beds</span>` : ""}</div>
+        ${f.description ? `<div class="m-section"><div class="m-label">About</div><div class="m-text">${esc(f.description)}</div></div>` : ""}
+        ${f.houseRules ? `<div class="m-section"><div class="m-label">Admission &amp; House Rules</div><div class="m-text">${esc(f.houseRules)}</div></div>` : ""}
+        <div class="m-section">
+          <div class="m-label">Contact ${esc(f.facilityName || "this home")} directly</div>
+          <div class="contact-actions">
+            ${phone ? `<a class="btn btn-call" href="tel:${phone}">📞 Call ${esc(phone)}</a>` : ""}
+            ${email ? `<a class="btn btn-email" href="mailto:${email}">✉️ Email</a>` : ""}
+            ${web ? `<a class="btn btn-web" href="${web}" target="_blank" rel="noopener">🌐 Website</a>` : ""}
+          </div>
+        </div>
+        ${f.verified !== true ? `<div class="unclaimed-note">This listing was created to help people find recovery housing. Please confirm details directly with the home when you call.</div>` : ""}
+        <div class="crisis" style="margin-top:20px;">
+          <strong>🆘 Need help now?</strong> <a href="tel:18006624357">SAMHSA 1-800-662-4357</a> · <a href="tel:988">988</a>
+        </div>`;
+      document.getElementById("overlay").classList.add("open");
+    };
+    window.closeFacility = () => document.getElementById("overlay").classList.remove("open");
+    document.getElementById("overlay").addEventListener("click", (e) => { if (e.target.id === "overlay") closeFacility(); });
+
+    document.getElementById("searchInput").addEventListener("input", render);
+    document.getElementById("genderChips").addEventListener("click", (e) => {
+      const b = e.target.closest(".chip"); if (!b) return;
+      if (b.dataset.avail) { availOnly = !availOnly; b.classList.toggle("active"); }
+      else {
+        gFilter = b.dataset.gender;
+        document.querySelectorAll("#genderChips .chip[data-gender]").forEach((c) => c.classList.toggle("active", c === b));
+      }
+      render();
+    });
+
+    load();
+  </script>
+</body>
+</html>
