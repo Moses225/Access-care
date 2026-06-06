@@ -588,6 +588,14 @@
       .act-npi:hover {
         background: #ede9fe;
       }
+      .act-decline {
+        background: #fff7ed;
+        color: #9a3412;
+        border-color: #fdba74;
+      }
+      .act-decline:hover {
+        background: #ffedd5;
+      }
       .act-note {
         background: var(--white);
         color: var(--text-2);
@@ -1555,6 +1563,12 @@
             >
               Awaiting NPI <span class="filter-count" id="fc-npi">0</span>
             </button>
+            <button
+              class="filter-btn"
+              onclick="filterSubmissions('declined', this)"
+            >
+              Declined <span class="filter-count" id="fc-declined">0</span>
+            </button>
             <input
               class="search-input"
               id="subSearch"
@@ -2126,6 +2140,11 @@
         document.getElementById("fc-npi").textContent = allSubmissions.filter(
           (s) => s.status === "awaiting_npi",
         ).length;
+        const declinedCountEl = document.getElementById("fc-declined");
+        if (declinedCountEl)
+          declinedCountEl.textContent = allSubmissions.filter(
+            (s) => s.status === "declined",
+          ).length;
 
         document.getElementById("ac-all").textContent = allApplications.length;
         document.getElementById("ac-new").textContent = allApplications.filter(
@@ -2197,6 +2216,7 @@
           awaiting_npi: `<span class="badge b-npi">⟳ Awaiting NPI</span>`,
           live: `<span class="badge b-live">● Live</span>`,
           not_verified: `<span class="badge b-rejected">✕ Not verified</span>`,
+          declined: `<span class="badge b-rejected">🚫 Declined</span>`,
         };
         return map[status] || `<span class="badge b-new">${esc(status)}</span>`;
       }
@@ -2224,19 +2244,26 @@
         const id = esc(s._id);
         const isLive = s.status === "live";
         const isRejected = s.status === "not_verified";
+        const isDeclined = s.status === "declined";
 
         const actionBtns = isLive
           ? `<span class="badge b-live" style="padding:6px 12px;">✓ Live — $${s.commissionAmount || "?"} logged</span>`
           : isRejected
-            ? `<span class="badge b-rejected" style="padding:6px 12px;">✕ Not verified</span>`
+            ? `<span class="badge b-rejected" style="padding:6px 12px;">✕ Not verified</span> <button class="act-btn act-note" onclick="setStatus('${id}','pending_verification')">↩ Reopen</button>`
+            : isDeclined
+            ? `<span class="badge b-rejected" style="padding:6px 12px;">🚫 Declined to join</span> <button class="act-btn act-note" onclick="setStatus('${id}','pending_verification')">↩ Reopen</button>`
             : `
       <button class="act-btn act-live" onclick="openLiveModal('${id}')">✓ Mark Live</button>
+      <button class="act-btn act-decline" onclick="declineSubmission('${id}')">🚫 Provider Declined</button>
       <button class="act-btn act-reject" onclick="openRejectModal('${id}')">✕ Not Verified</button>
       <button class="act-btn act-npi" onclick="setStatus('${id}','awaiting_npi')">⟳ Awaiting NPI</button>
     `;
 
         const savedNote = s.adminNote
           ? `<div class="saved-note">"${esc(s.adminNote)}"</div>`
+          : "";
+        const declineNote = s.declinedReason
+          ? `<div class="saved-note" style="color:#9a3412;">🚫 Declined: "${esc(s.declinedReason)}"</div>`
           : "";
 
         return `
@@ -2271,6 +2298,7 @@
           <input type="text" placeholder="Internal note (not visible to reps)..." maxlength="300" id="note-input-${id}"/>
           <button class="note-save" onclick="saveNote('${id}')">Save</button>
         </div>
+        ${declineNote}
         ${savedNote}
       </div>
     </div>`;
@@ -2369,6 +2397,32 @@
       window.toggleExpand = function (id) {
         const el = document.getElementById(id);
         if (el) el.classList.toggle("open");
+      };
+
+      // Provider was reached but declined to be listed (e.g. Dr. Combs).
+      // Distinct from "not_verified" (couldn't confirm NPI/license). No commission.
+      window.declineSubmission = async function (docId) {
+        const reason = prompt(
+          "Provider declined to be listed. Optional reason (e.g. 'already with another platform', 'not interested'):",
+          "",
+        );
+        if (reason === null) return; // cancelled
+        try {
+          await updateDoc(doc(db, "providerSubmissions", docId), {
+            status: "declined",
+            declinedReason: (reason || "").slice(0, 300),
+            declinedAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          });
+          const sub = allSubmissions.find((s) => s._id === docId);
+          if (sub) { sub.status = "declined"; sub.declinedReason = reason || ""; }
+          updateStats();
+          renderSubmissions();
+          showToast("Marked as declined. Remember to deactivate their listing in the Providers tab if one was created.", "success");
+        } catch (err) {
+          showToast("Update failed.", "error");
+          console.error(err);
+        }
       };
 
       window.setStatus = async function (docId, status) {
