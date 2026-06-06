@@ -178,6 +178,8 @@ export default function RecoveryBilling() {
           )}
         </div>
 
+        {/* Tier/pricing sections — hidden for complimentary founding accounts */}
+        {!isComped && (<>
         {/* ── Tier cards ───────────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
 
@@ -318,8 +320,9 @@ export default function RecoveryBilling() {
             </div>
           </div>
         </div>
+        </>)}
 
-        {/* ── What competitors DON'T have callout ─────────────────────────── */}
+        {/* ── What competitors DON'T have callout (shown to everyone) ──────── */}
         <div className="bg-slate-800 rounded-2xl p-6 mb-8 text-white">
           <h3 className="font-bold text-white mb-1">Why Morava vs. other directories</h3>
           <p className="text-slate-400 text-xs mb-4">What you get here that you won't get anywhere else in Oklahoma</p>
