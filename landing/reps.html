@@ -1249,7 +1249,7 @@ function renderStatus(submissions) {
   const total = submissions.length;
   const live = submissions.filter(s=>s.status==='live').length;
   const pending = submissions.filter(s=>['pending_verification','awaiting_npi','in_review'].includes(s.status)).length;
-  const rejected = submissions.filter(s=>s.status==='not_verified').length;
+  const rejected = submissions.filter(s=>['not_verified','declined'].includes(s.status)).length;
 
   const paidCommissions = submissions.filter(s=>s.commissionAmount && !s.commissionPaid).map(s=>s.commissionAmount||0);
   const pendingPayout = paidCommissions.reduce((a,b)=>a+b,0);
@@ -1270,12 +1270,13 @@ function renderStatus(submissions) {
       in_review: '<span class="badge b-review">◑ In review</span>',
       awaiting_npi: '<span class="badge b-npi">⟳ Awaiting NPI</span>',
       not_verified: '<span class="badge b-rejected">✕ Not verified</span>',
+      declined: '<span class="badge b-rejected">🚫 Provider declined</span>',
     };
     return map[s] || `<span class="badge b-pending">${s}</span>`;
   };
 
   const commCell = s => {
-    if (s.status === 'not_verified') return '<span class="st-commission na">—</span>';
+    if (s.status === 'not_verified' || s.status === 'declined') return '<span class="st-commission na">—</span>';
     if (s.commissionAmount && s.commissionPaid) return `<span class="st-commission paid">$${s.commissionAmount} paid ✓</span>`;
     if (s.commissionAmount && !s.commissionPaid) return `<span class="st-commission pending">$${s.commissionAmount} pending</span>`;
     return '<span class="st-commission pending">Pending</span>';

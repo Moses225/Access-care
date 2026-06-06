@@ -2399,6 +2399,44 @@
         if (el) el.classList.toggle("open");
       };
 
+      // Find and deactivate the provider listing that matches a submission.
+      // Matches by NPI first (most reliable), then by practiceName + city.
+      // Returns the number of listings deactivated.
+      async function deactivateMatchingProvider(sub) {
+        if (!sub) return 0;
+        let matches = [];
+        try {
+          if (sub.npi) {
+            const npiSnap = await getDocs(
+              query(collection(db, "providers"), where("npi", "==", sub.npi), limit(5)),
+            );
+            matches = npiSnap.docs;
+          }
+          if (matches.length === 0 && sub.practiceName) {
+            const nameSnap = await getDocs(
+              query(collection(db, "providers"), where("practiceName", "==", sub.practiceName), limit(5)),
+            );
+            matches = nameSnap.docs.filter(
+              (d) => !sub.city || (d.data().city || "").toLowerCase() === (sub.city || "").toLowerCase(),
+            );
+          }
+          // Only deactivate ones that are currently active
+          const toDeactivate = matches.filter((d) => d.data().active !== false);
+          for (const d of toDeactivate) {
+            await updateDoc(d.ref, {
+              active: false,
+              deactivatedAt: new Date().toISOString(),
+              deactivatedReason: "submission_" + (sub.status || "closed"),
+              lastUpdated: new Date().toISOString(),
+            });
+          }
+          return toDeactivate.length;
+        } catch (err) {
+          console.error("deactivateMatchingProvider failed:", err);
+          return 0;
+        }
+      }
+
       // Provider was reached but declined to be listed (e.g. Dr. Combs).
       // Distinct from "not_verified" (couldn't confirm NPI/license). No commission.
       window.declineSubmission = async function (docId) {
@@ -2416,9 +2454,16 @@
           });
           const sub = allSubmissions.find((s) => s._id === docId);
           if (sub) { sub.status = "declined"; sub.declinedReason = reason || ""; }
+          // Auto-deactivate any matching provider listing
+          const n = await deactivateMatchingProvider(sub);
           updateStats();
           renderSubmissions();
-          showToast("Marked as declined. Remember to deactivate their listing in the Providers tab if one was created.", "success");
+          showToast(
+            n > 0
+              ? `Marked declined. ${n} matching listing${n === 1 ? "" : "s"} deactivated automatically.`
+              : "Marked declined. No matching live listing found.",
+            "success",
+          );
         } catch (err) {
           showToast("Update failed.", "error");
           console.error(err);
@@ -2582,10 +2627,17 @@
             sub.status = "not_verified";
             sub.rejectionReason = reason;
           }
+          // Auto-deactivate any matching provider listing
+          const n = await deactivateMatchingProvider(sub);
           updateStats();
           renderSubmissions();
           closeModal("rejectModal");
-          showToast("Provider marked as not verified.", "success");
+          showToast(
+            n > 0
+              ? `Marked not verified. ${n} matching listing${n === 1 ? "" : "s"} deactivated.`
+              : "Provider marked as not verified.",
+            "success",
+          );
         } catch (err) {
           showToast("Update failed.", "error");
           console.error(err);
