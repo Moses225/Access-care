@@ -93,7 +93,9 @@ export default function RecoveryDashboard() {
     if (isNaN(ms)) return 0;
     return Math.max(0, 7 - Math.floor((Date.now() - ms) / 86_400_000));
   })();
-  const showRecoveryBillingBanner = !isFreePlan && !hasPaymentMethod;
+  // Founding/comped accounts never see billing pressure — full features, no charge.
+  const isComped = providerProfile?.foundingComp === true;
+  const showRecoveryBillingBanner = !isFreePlan && !hasPaymentMethod && !isComped;
 
   const [facility, setFacility]             = useState<FacilityData | null>(null);
   const [loading, setLoading]               = useState(true);

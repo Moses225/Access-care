@@ -25,6 +25,8 @@ interface ProviderProfile {
   stripeCustomerId?: string;
   stripePaymentMethodId?: string;
   manualBilling?: boolean;
+  // Complimentary "founding provider" account — full features, no charge, no billing prompts
+  foundingComp?: boolean;
   // Regular providers: founding | standard | pro
   // DPC providers:     founding | growth | pro
   plan?: "founding" | "standard" | "growth" | "pro";
@@ -214,6 +216,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           dpcMonthlyFee: typeof prov.dpcMonthlyFee === "number" ? prov.dpcMonthlyFee : null,
           listingStatus: d.listingStatus || undefined,
           listingPlan: (d.listingPlan as "free" | "standard" | "growth") || "free",
+          foundingComp: (d.foundingComp as boolean) || (prov.foundingComp as boolean) || false,
           freeTrialStartedAt: (() => {
             const raw = d.freeTrialStartedAt;
             if (!raw) return null;

@@ -94,6 +94,7 @@ export default function RecoveryBilling() {
   const [loggingOut, setLoggingOut] = useState(false);
 
   const currentPlan: Plan = (providerProfile?.listingPlan as Plan) || "free";
+  const isComped = providerProfile?.foundingComp === true;
   const isActive = providerProfile?.listingStatus === "active_paid" || currentPlan !== "free";
 
   const handleLogout = async () => {
@@ -152,15 +153,28 @@ export default function RecoveryBilling() {
         {/* ── Page header ──────────────────────────────────────────────────── */}
         <div className="text-center mb-10">
           <h1 className="text-3xl font-bold text-slate-900 mb-2">Listing & Billing</h1>
-          <p className="text-slate-500 text-sm max-w-lg mx-auto">
-            Choose the plan that fits where you are. Upgrade anytime — no contracts, no auto-charges.
-            We'll reach out before anything changes.
-          </p>
-          {currentPlan !== "free" && (
-            <div className="inline-flex items-center gap-2 mt-4 bg-teal-50 border border-teal-200 text-teal-700 text-sm font-semibold px-4 py-2 rounded-full">
-              <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" />
-              Current plan: {PLANS[currentPlan].label}
-            </div>
+          {isComped ? (
+            <>
+              <p className="text-slate-500 text-sm max-w-lg mx-auto">
+                Your listing is complimentary — all features included, no charge.
+              </p>
+              <div className="inline-flex items-center gap-2 mt-4 bg-amber-50 border border-amber-200 text-amber-800 text-sm font-semibold px-4 py-2 rounded-full">
+                ⭐ Founding Provider — Complimentary (no payment required)
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-slate-500 text-sm max-w-lg mx-auto">
+                Choose the plan that fits where you are. Upgrade anytime — no contracts, no auto-charges.
+                We'll reach out before anything changes.
+              </p>
+              {currentPlan !== "free" && (
+                <div className="inline-flex items-center gap-2 mt-4 bg-teal-50 border border-teal-200 text-teal-700 text-sm font-semibold px-4 py-2 rounded-full">
+                  <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" />
+                  Current plan: {PLANS[currentPlan].label}
+                </div>
+              )}
+            </>
           )}
         </div>
 
