@@ -10,14 +10,15 @@ export default function NavBar() {
 
   const isGrowthPlan = providerProfile?.listingPlan === "growth";
 
-  // Recovery facilities get a purpose-built tab set.
-  // Analytics is visible but locked on Free/Standard — creates upgrade awareness.
+  // Recovery facilities get a purpose-built tab set. Analytics (views,
+  // inquiries, contact rate) is shown directly on the Home dashboard, so there
+  // is no separate Analytics tab — avoids a redundant tab that bounced to Home.
+  void isGrowthPlan;
   const tabs = isRecoveryFacility
     ? [
         { label: "Home",              path: "/dashboard" },
         { label: "Listing & Billing", path: "/billing"   },
         { label: "Facility Profile",  path: "/profile"   },
-        { label: "Analytics",         path: "/analytics", locked: !isGrowthPlan, soon: isGrowthPlan },
       ]
     : [
         { label: "Home",      path: "/dashboard"  },

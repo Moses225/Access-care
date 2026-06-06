@@ -469,8 +469,8 @@ function PlanCard({
         <div className="mt-2">{cta}</div>
       ) : current ? (
         <div className={`text-center text-sm font-semibold py-3 rounded-xl border ${
-          isStandard ? "border-teal-200 text-teal-600 bg-teal-50"
-          : isGrowth   ? "border-indigo-200 text-indigo-600 bg-indigo-50"
+          isGrowth   ? "border-teal-200 text-teal-600 bg-teal-50"
+          : isPartner ? "border-indigo-200 text-indigo-600 bg-indigo-50"
           : "border-slate-200 text-slate-500 bg-slate-50"
         }`}>
           ✓ Your current plan

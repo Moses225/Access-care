@@ -15,24 +15,24 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // ── Facility photos ────────────────────────────────────────────────────
+    // ── Facility photos & video tours ───────────────────────────────────────
     match /facility-photos/{facilityId}/{allPaths=**} {
-      // Public read — patients and case managers see facility photos
+      // Public read — patients and case managers see facility photos/videos
       allow read: if true;
 
-      // Write only if:
-      //   1. User is authenticated
-      //   2. Their facilityId custom claim matches the folder they're writing to
-      //      (stamped by Admin SDK in setRecoveryFacilityRole.js — tamper-proof)
-      //   3. File is an image under 6 MB
+      // Write only if authenticated, facilityId claim matches, and either an
+      // image under 10 MB or a video tour under 200 MB.
       allow write: if request.auth != null
                    && request.auth.token.facilityId == facilityId
-                   && request.resource.size < 6 * 1024 * 1024
-                   && request.resource.contentType.matches('image/.*');
+                   && (
+                     (request.resource.contentType.matches('image/.*') && request.resource.size < 10 * 1024 * 1024)
+                     || (request.resource.contentType.matches('video/.*') && request.resource.size < 200 * 1024 * 1024)
+                   );
 
-      // Only admin can delete facility photos (prevent operators wiping others' photos)
+      // Operators can replace/delete their own media; admin can delete any
       allow delete: if request.auth != null
-                    && request.auth.token.admin == true;
+                    && (request.auth.token.facilityId == facilityId
+                        || request.auth.token.admin == true);
     }
 
     // ── Provider profile photos (existing) ────────────────────────────────

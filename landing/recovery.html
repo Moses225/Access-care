@@ -26,6 +26,7 @@
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
     .fac-card{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:18px;cursor:pointer;transition:box-shadow .15s,transform .15s}
     .fac-card:hover{box-shadow:0 6px 22px rgba(0,0,0,.09);transform:translateY(-2px)}
+    .fac-cover{width:calc(100% + 36px);height:150px;margin:-18px -18px 14px;border-radius:14px 14px 0 0;background-size:cover;background-position:center;background-color:#e0f7fa}
     .fac-name{font-family:'DM Serif Display',serif;font-size:1.15rem;margin-bottom:2px}
     .fac-loc{font-size:.85rem;color:var(--text-3);margin-bottom:12px}
     .avail{display:inline-flex;align-items:center;gap:6px;font-size:.82rem;font-weight:700;padding:5px 11px;border-radius:50px;margin-bottom:10px}
@@ -42,6 +43,9 @@
     .modal{background:#fff;border-radius:18px 18px 0 0;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;padding:24px}
     @media(min-width:640px){.overlay{align-items:center;padding:20px}.modal{border-radius:18px}}
     .modal-close{float:right;background:#f1f5f9;border:none;width:34px;height:34px;border-radius:50%;font-size:18px;cursor:pointer;color:var(--text-2)}
+    .gallery{display:flex;gap:8px;overflow-x:auto;margin:-6px -6px 14px;padding:6px;scroll-snap-type:x mandatory}
+    .gallery-img{height:170px;min-width:240px;border-radius:12px;object-fit:cover;scroll-snap-align:start}
+    .video-tour{width:100%;border-radius:12px;margin-bottom:14px;max-height:280px;background:#000}
     .m-name{font-family:'DM Serif Display',serif;font-size:1.5rem;margin-bottom:4px}
     .m-loc{font-size:.9rem;color:var(--text-3);margin-bottom:14px}
     .m-section{margin:16px 0}
@@ -120,6 +124,31 @@
     const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
     const safePhone = (s) => String(s ?? "").replace(/[^0-9+\-() .]/g, "").slice(0, 20);
     const safeURL = (u) => { const s = String(u ?? "").trim(); return /^https?:\/\//i.test(s) ? esc(s) : ""; };
+    // Only allow https image URLs from our storage/CDN domains (XSS-safe)
+    const safeImg = (u) => { const s = String(u ?? "").trim(); return /^https:\/\/[^\s"'<>]+$/i.test(s) ? esc(s) : ""; };
+    const photosOf = (f) => {
+      const arr = Array.isArray(f.photoURLs) ? f.photoURLs : [];
+      const all = arr.length ? arr : (f.photoURL ? [f.photoURL] : []);
+      return all.map(safeImg).filter(Boolean);
+    };
+    function fundingOf(f) {
+      const out = [];
+      if (f.acceptsDHS) out.push("DHS Families");
+      if (f.acceptsODMHSAS) out.push("ODMHSAS voucher");
+      if (f.acceptsMedicaid) out.push("Medicaid / SoonerCare");
+      if (f.acceptsVouchers) out.push("Vouchers");
+      if (f.slidingScale) out.push("Sliding scale");
+      if (f.acceptsPrivateInsurance) out.push("Private insurance");
+      if (!out.length && f.monthlyRate) out.push("$" + parseInt(f.monthlyRate, 10) + "/mo private pay");
+      return out;
+    }
+    function certsOf(f) {
+      const out = [];
+      if (f.okarrCertified) out.push("OKARR Certified");
+      if (f.oxfordHouseAffiliated) out.push("Oxford House");
+      if (f.odmhsasLicensed) out.push("ODMHSAS Licensed");
+      return out;
+    }
 
     // ── Label helpers (mirror data/recoveryHousing.ts) ──────────────────────────
     const genderLabel = (g) => ({ men: "Men only", women: "Women only", "co-ed": "Co-ed", lgbtq_affirming: "LGBTQ+ affirming" }[g] || "");
@@ -172,7 +201,9 @@
       grid.innerHTML = list.map((f, i) => {
         const a = availInfo(f);
         const g = genderLabel(f.genderServed);
+        const cover = photosOf(f)[0];
         return `<div class="fac-card" onclick="openFacility(${i})">
+          ${cover ? `<div class="fac-cover" style="background-image:url('${cover}')"></div>` : ""}
           <div class="fac-name">${esc(f.facilityName || "Recovery Home")}</div>
           <div class="fac-loc">📍 ${esc(f.city || "Oklahoma")}, ${esc(f.state || "OK")}</div>
           <div class="avail" style="background:${a.color}1a;color:${a.color};"><span class="dot" style="background:${a.color}"></span>${esc(a.label)}</div>
@@ -206,13 +237,22 @@
       );
       const mailto = email ? `mailto:${email}?subject=${emailSubject}&body=${emailBody}` : "";
 
+      const photos = photosOf(f);
+      const videoTour = safeImg(f.videoTourURL);
+      const funding = fundingOf(f);
+      const certs = certsOf(f);
+
       document.getElementById("modalContent").innerHTML = `
         <button class="modal-close" onclick="closeFacility()">×</button>
+        ${photos.length ? `<div class="gallery">${photos.map((p) => `<img class="gallery-img" src="${p}" alt="${esc(f.facilityName || "")}" loading="lazy" />`).join("")}</div>` : ""}
+        ${videoTour ? `<video class="video-tour" controls preload="metadata" src="${videoTour}"></video>` : ""}
         <div class="m-name">${esc(f.facilityName || "Recovery Home")}</div>
         <div class="m-loc">📍 ${esc(f.city || "Oklahoma")}, ${esc(f.state || "OK")}</div>
         <div class="avail" style="background:${a.color}1a;color:${a.color};"><span class="dot" style="background:${a.color}"></span>${esc(a.label)}</div>
-        <div class="tags" style="margin-top:8px;">${g ? `<span class="tag">${esc(g)}</span>` : ""}${f.totalBeds ? `<span class="tag">${parseInt(f.totalBeds, 10)} beds</span>` : ""}</div>
+        <div class="tags" style="margin-top:8px;">${g ? `<span class="tag">${esc(g)}</span>` : ""}${f.totalBeds ? `<span class="tag">${parseInt(f.totalBeds, 10)} beds</span>` : ""}${certs.map((c) => `<span class="tag">${esc(c)}</span>`).join("")}</div>
         ${f.description ? `<div class="m-section"><div class="m-label">About</div><div class="m-text">${esc(f.description)}</div></div>` : ""}
+        ${funding.length ? `<div class="m-section"><div class="m-label">Payment &amp; Funding</div><div class="tags">${funding.map((x) => `<span class="tag">${esc(x)}</span>`).join("")}</div></div>` : ""}
+        ${typeof f.sobrietyRequirementDays === "number" && f.sobrietyRequirementDays > 0 ? `<div class="m-section"><div class="m-label">Sobriety Requirement</div><div class="m-text">${parseInt(f.sobrietyRequirementDays, 10)} days clean/sober</div></div>` : ""}
         ${f.houseRules ? `<div class="m-section"><div class="m-label">Admission &amp; House Rules</div><div class="m-text">${esc(f.houseRules)}</div></div>` : ""}
         <div class="m-section">
           <div class="m-label">Contact ${esc(f.facilityName || "this home")} directly</div>
