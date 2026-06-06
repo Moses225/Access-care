@@ -194,6 +194,18 @@
       // Free-tier / unclaimed listings: public email is intentionally not shown
       const email = (f.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email)) ? esc(f.email) : "";
 
+      // Pre-filled bed-request email so the patient just adds their situation & sends
+      const emailSubject = encodeURIComponent(`Bed availability inquiry — ${f.facilityName || "Recovery Housing"}`);
+      const emailBody = encodeURIComponent(
+        `Hi,\n\nI found ${f.facilityName || "your recovery home"} on Morava and I'm interested in recovery housing. A little about my situation:\n\n` +
+        `• Who needs housing (e.g. myself, a couple, a parent with children):\n` +
+        `• When you need a bed:\n` +
+        `• How you plan to pay (self-pay, Medicaid/SoonerCare, voucher, not sure):\n` +
+        `• Anything else that would help:\n\n` +
+        `Please let me know about availability. Thank you.`
+      );
+      const mailto = email ? `mailto:${email}?subject=${emailSubject}&body=${emailBody}` : "";
+
       document.getElementById("modalContent").innerHTML = `
         <button class="modal-close" onclick="closeFacility()">×</button>
         <div class="m-name">${esc(f.facilityName || "Recovery Home")}</div>
@@ -206,7 +218,7 @@
           <div class="m-label">Contact ${esc(f.facilityName || "this home")} directly</div>
           <div class="contact-actions">
             ${phone ? `<a class="btn btn-call" href="tel:${phone}">📞 Call ${esc(phone)}</a>` : ""}
-            ${email ? `<a class="btn btn-email" href="mailto:${email}">✉️ Email</a>` : ""}
+            ${email ? `<a class="btn btn-email" href="${mailto}">✉️ Email about a bed</a>` : ""}
             ${web ? `<a class="btn btn-web" href="${web}" target="_blank" rel="noopener">🌐 Website</a>` : ""}
           </div>
         </div>
