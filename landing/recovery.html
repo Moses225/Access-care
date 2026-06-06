@@ -45,7 +45,8 @@
     .modal-close{float:right;background:#f1f5f9;border:none;width:34px;height:34px;border-radius:50%;font-size:18px;cursor:pointer;color:var(--text-2)}
     .gallery{display:flex;gap:8px;overflow-x:auto;margin:-6px -6px 14px;padding:6px;scroll-snap-type:x mandatory}
     .gallery-img{height:170px;min-width:240px;border-radius:12px;object-fit:cover;scroll-snap-align:start}
-    .video-tour{width:100%;border-radius:12px;margin-bottom:14px;max-height:280px;background:#000}
+    .video-tour{position:relative;width:100%;aspect-ratio:16/9;border-radius:12px;overflow:hidden;margin-bottom:14px;background:#000}
+    .video-tour iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
     .m-name{font-family:'DM Serif Display',serif;font-size:1.5rem;margin-bottom:4px}
     .m-loc{font-size:.9rem;color:var(--text-3);margin-bottom:14px}
     .m-section{margin:16px 0}
@@ -149,6 +150,15 @@
       if (f.odmhsasLicensed) out.push("ODMHSAS Licensed");
       return out;
     }
+    // YouTube/Vimeo link → safe embed URL (only these two domains allowed)
+    function embedURL(url) {
+      const u = String(url || "").trim();
+      let m = u.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([\w-]{11})/);
+      if (m) return "https://www.youtube.com/embed/" + m[1];
+      m = u.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+      if (m) return "https://player.vimeo.com/video/" + m[1];
+      return "";
+    }
 
     // ── Label helpers (mirror data/recoveryHousing.ts) ──────────────────────────
     const genderLabel = (g) => ({ men: "Men only", women: "Women only", "co-ed": "Co-ed", lgbtq_affirming: "LGBTQ+ affirming" }[g] || "");
@@ -238,14 +248,14 @@
       const mailto = email ? `mailto:${email}?subject=${emailSubject}&body=${emailBody}` : "";
 
       const photos = photosOf(f);
-      const videoTour = safeImg(f.videoTourURL);
+      const videoEmbed = embedURL(f.videoURL);
       const funding = fundingOf(f);
       const certs = certsOf(f);
 
       document.getElementById("modalContent").innerHTML = `
         <button class="modal-close" onclick="closeFacility()">×</button>
         ${photos.length ? `<div class="gallery">${photos.map((p) => `<img class="gallery-img" src="${p}" alt="${esc(f.facilityName || "")}" loading="lazy" />`).join("")}</div>` : ""}
-        ${videoTour ? `<video class="video-tour" controls preload="metadata" src="${videoTour}"></video>` : ""}
+        ${videoEmbed ? `<div class="video-tour"><iframe src="${videoEmbed}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>` : ""}
         <div class="m-name">${esc(f.facilityName || "Recovery Home")}</div>
         <div class="m-loc">📍 ${esc(f.city || "Oklahoma")}, ${esc(f.state || "OK")}</div>
         <div class="avail" style="background:${a.color}1a;color:${a.color};"><span class="dot" style="background:${a.color}"></span>${esc(a.label)}</div>
