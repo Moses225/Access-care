@@ -1528,6 +1528,9 @@
           <button class="tab" onclick="switchTab('providers', this)">
             🏥 Providers
           </button>
+          <button class="tab" onclick="switchTab('recovery', this)">
+            🛏 Recovery Submissions
+          </button>
         </div>
 
         <!-- ── SUBMISSIONS TAB ──────────────────────────────── -->
@@ -1656,6 +1659,20 @@
           <div id="providerCount" style="font-size:12px;color:var(--text-3);margin-bottom:10px;"></div>
           <div class="data-table" id="providersTable">
             <div class="table-loading">Click "Providers" to load…</div>
+          </div>
+        </div>
+
+        <!-- ── RECOVERY SUBMISSIONS TAB ─────────────────────── -->
+        <div class="tab-panel" id="tab-recovery">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:12px;flex-wrap:wrap;">
+            <div style="font-size:13px;color:var(--text-3);">
+              Recovery housing operators who submitted via moravacare.com/list-recovery. Review and publish as a live listing.
+            </div>
+            <button class="refresh-btn" onclick="loadRecoverySubs()">↻ Refresh</button>
+          </div>
+          <div id="recoverySubCount" style="font-size:12px;color:var(--text-3);margin-bottom:10px;"></div>
+          <div class="data-table" id="recoverySubsTable">
+            <div class="table-loading">Click "Recovery Submissions" to load…</div>
           </div>
         </div>
       </div>
@@ -3573,7 +3590,152 @@
         document.getElementById("tab-" + id).classList.add("active");
         // Lazy-load providers the first time the tab is opened
         if (id === "providers" && !window._providersLoaded) loadProviders();
+        if (id === "recovery" && !window._recoverySubsLoaded) loadRecoverySubs();
       }
+
+      // ── Recovery housing submissions (review & publish) ─────────────────────
+      window._recoverySubsLoaded = false;
+      window.loadRecoverySubs = async function () {
+        const table = document.getElementById("recoverySubsTable");
+        table.innerHTML = '<div class="table-loading">Loading submissions…</div>';
+        try {
+          const snap = await getDocs(collection(db, "recoveryHousingSubmissions"));
+          window._recoverySubs = snap.docs
+            .map((d) => ({ id: d.id, ...d.data() }))
+            .sort((a, b) => (b.submittedAt?.toMillis?.() || 0) - (a.submittedAt?.toMillis?.() || 0));
+          window._recoverySubsLoaded = true;
+          renderRecoverySubs();
+        } catch (err) {
+          console.error(err);
+          table.innerHTML = '<div class="table-empty"><p>Could not load submissions.</p></div>';
+        }
+      };
+
+      function renderRecoverySubs() {
+        const table = document.getElementById("recoverySubsTable");
+        const subs = window._recoverySubs || [];
+        const pending = subs.filter((s) => s.status === "pending_review").length;
+        document.getElementById("recoverySubCount").textContent =
+          `${pending} pending · ${subs.length} total`;
+
+        if (subs.length === 0) {
+          table.innerHTML = '<div class="table-empty"><div class="table-empty-icon">🛏</div><p>No recovery housing submissions yet.</p></div>';
+          return;
+        }
+
+        table.innerHTML = subs.map((s) => {
+          const id = esc(s.id);
+          const isPending = s.status === "pending_review";
+          const isPublished = s.status === "published";
+          const statusBadge = isPublished
+            ? '<span class="badge b-live" style="padding:5px 10px;">● Published</span>'
+            : s.status === "dismissed"
+              ? '<span class="badge b-rejected" style="padding:5px 10px;">✕ Dismissed</span>'
+              : '<span class="badge b-pending" style="padding:5px 10px;">◌ Pending review</span>';
+          const actions = isPending
+            ? `<button class="act-btn act-live" onclick="publishRecoverySub('${id}')">✓ Publish as Listing</button>
+               <button class="act-btn act-reject" onclick="dismissRecoverySub('${id}')">✕ Dismiss</button>`
+            : isPublished
+              ? `<button class="act-btn act-note" onclick="setRecoverySubStatus('${id}','pending_review')">↩ Reopen</button>`
+              : `<button class="act-btn act-note" onclick="setRecoverySubStatus('${id}','pending_review')">↩ Reopen</button>`;
+          return `
+            <div style="padding:14px;border-bottom:1px solid var(--border);">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+                <div style="min-width:0;">
+                  <div style="font-weight:700;font-size:15px;">${esc(s.organizationName)}</div>
+                  <div style="font-size:12px;color:var(--text-3);margin-top:2px;">
+                    ${esc(s.housingType || "Housing type not specified")} · ${esc(s.address || "Oklahoma")}
+                  </div>
+                  <div style="font-size:12px;color:var(--text-2);margin-top:4px;">
+                    👤 ${esc(s.contactName)} · 📞 ${esc(s.phone)}${s.email ? " · ✉️ " + esc(s.email) : ""}
+                  </div>
+                </div>
+                <div style="flex-shrink:0;">${statusBadge}</div>
+              </div>
+              ${s.description ? `<div style="font-size:13px;color:var(--text-2);margin-top:10px;background:var(--bg);border-radius:8px;padding:10px 12px;">${esc(s.description)}</div>` : ""}
+              ${s.admissionRequirements ? `<div style="font-size:12px;color:var(--text-3);margin-top:6px;"><strong>Admission:</strong> ${esc(s.admissionRequirements)}</div>` : ""}
+              ${s.currentCapacity ? `<div style="font-size:12px;color:var(--text-3);margin-top:4px;"><strong>Capacity:</strong> ${esc(s.currentCapacity)}</div>` : ""}
+              ${s.website ? `<div style="font-size:12px;margin-top:4px;"><a href="${esc(s.website)}" target="_blank" rel="noopener" style="color:var(--teal-dark);">🌐 ${esc(s.website)}</a></div>` : ""}
+              <div class="action-row" style="margin-top:12px;">${actions}</div>
+            </div>`;
+        }).join("");
+      }
+
+      // Map housing type → app genderServed value
+      function mapGender(housingType) {
+        const t = (housingType || "").toLowerCase();
+        if (t.includes("men's") || t === "men") return "men";
+        if (t.includes("women")) return "women";
+        if (t.includes("co-ed") || t.includes("coed")) return "co-ed";
+        return "";
+      }
+
+      window.publishRecoverySub = async function (subId) {
+        const sub = (window._recoverySubs || []).find((s) => s.id === subId);
+        if (!sub) return;
+        if (!confirm(`Publish "${sub.organizationName}" as a live recovery housing listing?`)) return;
+        try {
+          // Parse capacity to a number if possible
+          const bedsNum = parseInt(String(sub.currentCapacity || "").replace(/[^0-9]/g, ""), 10);
+          const facility = {
+            facilityName:       sub.organizationName || "",
+            ownerName:          sub.contactName || "",
+            phone:              sub.phone || "",
+            ownerEmail:         sub.email || null,   // internal contact only
+            email:             null,                  // not shown publicly
+            website:            sub.website || "",
+            address:            sub.address || "",
+            city:               sub.address || "Oklahoma City",
+            state:              "OK",
+            genderServed:       mapGender(sub.housingType),
+            description:        sub.description || "",
+            houseRules:         sub.admissionRequirements || "",
+            totalBeds:          isNaN(bedsNum) ? null : bedsNum,
+            availableBeds:      null,
+            availabilityStatus: sub.displayAvailability === "Yes" ? "available" : "call",
+            waitlistDays:       0,
+            listingPlan:        "free",
+            active:             true,    // admin-reviewed → visible
+            verified:           false,   // unclaimed-style — contact-only until claimed
+            source:             "list-recovery-form",
+            createdAt:          serverTimestamp(),
+            updatedAt:          serverTimestamp(),
+          };
+          const ref = await addDoc(collection(db, "recoveryHousing"), facility);
+          await updateDoc(doc(db, "recoveryHousingSubmissions", subId), {
+            status: "published",
+            publishedFacilityId: ref.id,
+            publishedAt: serverTimestamp(),
+          });
+          sub.status = "published";
+          renderRecoverySubs();
+          showToast(`Published "${sub.organizationName}" — now live in the app & website.`, "success");
+        } catch (err) {
+          console.error(err);
+          showToast("Publish failed. Please try again.", "error");
+        }
+      };
+
+      window.dismissRecoverySub = async function (subId) {
+        if (!confirm("Dismiss this submission? It won't be published.")) return;
+        await setRecoverySubStatus(subId, "dismissed");
+      };
+
+      window.setRecoverySubStatus = async function (subId, status) {
+        try {
+          await updateDoc(doc(db, "recoveryHousingSubmissions", subId), {
+            status,
+            updatedAt: serverTimestamp(),
+          });
+          const sub = (window._recoverySubs || []).find((s) => s.id === subId);
+          if (sub) sub.status = status;
+          renderRecoverySubs();
+          showToast("Status updated to: " + status, "success");
+        } catch (err) {
+          console.error(err);
+          showToast("Update failed.", "error");
+        }
+      };
 
       // ── Providers management (deactivate / reactivate / takedown) ───────────
       window._allProviders = [];
