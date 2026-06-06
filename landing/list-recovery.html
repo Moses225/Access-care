@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>List Your Recovery Housing — Morava</title>
+  <meta name="description" content="Add your sober living or recovery housing to Morava — free, no setup, helping Oklahomans find available beds." />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=DM+Serif+Display&display=swap" rel="stylesheet" />
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{--teal:#14B8A6;--teal-dark:#0d9488;--teal-light:#e0f7fa;--text:#0f172a;--text-2:#475569;--text-3:#94a3b8;--border:#e2e8f0;--bg:#f8fafc;--white:#fff;--green:#16a34a;--green-bg:#f0fdf4;--error:#dc2626}
+    body{font-family:'DM Sans',sans-serif;color:var(--text);background:var(--bg);line-height:1.6}
+    header{background:linear-gradient(135deg,#006064,#00acc1 60%,#1565c0);color:#fff;padding:40px 24px;text-align:center}
+    header h1{font-family:'DM Serif Display',serif;font-size:1.9rem;margin-bottom:8px}
+    header p{opacity:.9;font-size:.95rem;max-width:520px;margin:0 auto}
+    .wrap{max-width:640px;margin:0 auto;padding:24px 20px 64px}
+    .intro{background:var(--teal-light);border-left:4px solid var(--teal);border-radius:10px;padding:16px 18px;margin:24px 0;font-size:.92rem;color:#006064}
+    .intro strong{color:#004d56}
+    .card{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:18px}
+    .sec-title{font-weight:800;font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:var(--teal-dark);margin-bottom:16px}
+    .field{margin-bottom:16px}
+    .field label{display:block;font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:6px}
+    .field .req{color:var(--error)}
+    .field .hint{font-size:.78rem;color:var(--text-3);font-weight:400}
+    input[type=text],input[type=tel],input[type=email],input[type=url],textarea,select{
+      width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:15px;font-family:inherit;color:var(--text);background:#fff}
+    input:focus,textarea:focus,select:focus{outline:none;border-color:var(--teal)}
+    textarea{resize:vertical;min-height:84px}
+    .input-error{border-color:var(--error)!important}
+    .radio-row,.check-col{display:flex;flex-direction:column;gap:8px}
+    .opt{display:flex;align-items:center;gap:10px;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;font-size:.92rem}
+    .opt:hover{border-color:var(--teal)}
+    .opt input{width:auto;accent-color:var(--teal)}
+    .submit-btn{width:100%;background:var(--teal);color:#fff;border:none;border-radius:12px;padding:15px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px}
+    .submit-btn:hover{background:var(--teal-dark)}
+    .submit-btn:disabled{background:#94a3b8;cursor:not-allowed}
+    .err-msg{display:none;background:#fef2f2;border:1px solid #fca5a5;color:#991b1b;border-radius:10px;padding:12px 14px;font-size:.88rem;margin-bottom:16px}
+    .success{display:none;text-align:center;padding:48px 24px}
+    .success .check{width:72px;height:72px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 20px}
+    .success h2{font-family:'DM Serif Display',serif;font-size:1.6rem;margin-bottom:10px}
+    .success p{color:var(--text-2);max-width:420px;margin:0 auto 8px}
+    footer{text-align:center;padding:28px 20px;color:var(--text-3);font-size:.82rem}
+    footer a{color:var(--teal-dark);text-decoration:none}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>List Your Recovery Housing</h1>
+    <p>Help Oklahomans find your beds. Free to list, nothing to set up, and you can update or remove it anytime.</p>
+  </header>
+
+  <div class="wrap">
+    <div class="intro">
+      <strong>Morava is free for recovery housing.</strong> We help individuals, families, and case managers find sober living with available beds and a real way to make contact. Fill out as much or as little as you'd like — we can always add details later.
+    </div>
+
+    <div class="err-msg" id="errMsg"></div>
+
+    <form id="listForm">
+      <div class="card">
+        <div class="sec-title">1 · Organization</div>
+        <div class="field"><label>Facility / Organization Name <span class="req">*</span></label><input type="text" id="organizationName" maxlength="200" required /></div>
+        <div class="field"><label>Your Name <span class="req">*</span></label><input type="text" id="contactName" maxlength="150" required /></div>
+        <div class="field"><label>Phone Number <span class="req">*</span></label><input type="tel" id="phone" maxlength="30" required /></div>
+        <div class="field"><label>Email <span class="hint">(for our team — not shown publicly)</span></label><input type="email" id="email" maxlength="200" /></div>
+        <div class="field"><label>Website <span class="hint">(optional)</span></label><input type="url" id="website" maxlength="300" placeholder="https://" /></div>
+        <div class="field"><label>City / Address <span class="hint">(optional)</span></label><input type="text" id="address" maxlength="300" placeholder="Oklahoma City, OK" /></div>
+      </div>
+
+      <div class="card">
+        <div class="sec-title">2 · Housing Details</div>
+        <div class="field">
+          <label>Housing Type</label>
+          <div class="radio-row">
+            <label class="opt"><input type="radio" name="housingType" value="Men's Recovery Housing" /> Men's Recovery Housing</label>
+            <label class="opt"><input type="radio" name="housingType" value="Women's Recovery Housing" /> Women's Recovery Housing</label>
+            <label class="opt"><input type="radio" name="housingType" value="Co-Ed" /> Co-Ed</label>
+            <label class="opt"><input type="radio" name="housingType" value="Other" /> Other</label>
+          </div>
+        </div>
+        <div class="field"><label>Brief Program Description <span class="hint">(2–5 sentences)</span></label><textarea id="description" maxlength="1500" placeholder="Tell people about your house, your approach, and what makes it a good place to recover."></textarea></div>
+        <div class="field"><label>General Admission Requirements <span class="hint">(optional)</span></label><textarea id="admissionRequirements" maxlength="1500" placeholder="e.g. sobriety requirement, intake process, what residents should expect."></textarea></div>
+        <div class="field">
+          <label>Do you interview applicants before admission?</label>
+          <div class="radio-row">
+            <label class="opt"><input type="radio" name="conductsInterviews" value="Yes" /> Yes</label>
+            <label class="opt"><input type="radio" name="conductsInterviews" value="No" /> No</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="sec-title">3 · Capacity & Availability</div>
+        <div class="field"><label>Total Beds / Capacity <span class="hint">(optional)</span></label><input type="text" id="currentCapacity" maxlength="50" placeholder="e.g. 12 beds" /></div>
+        <div class="field">
+          <label>Would you like to show bed availability on your listing?</label>
+          <div class="radio-row">
+            <label class="opt"><input type="radio" name="displayAvailability" value="Yes" /> Yes</label>
+            <label class="opt"><input type="radio" name="displayAvailability" value="No" /> No — just show contact info</label>
+          </div>
+        </div>
+        <div class="field">
+          <label>If yes, how would you prefer to update availability?</label>
+          <div class="check-col">
+            <label class="opt"><input type="checkbox" name="updatePreference" value="Email" /> Email</label>
+            <label class="opt"><input type="checkbox" name="updatePreference" value="Phone" /> Phone</label>
+            <label class="opt"><input type="checkbox" name="updatePreference" value="Self-service portal" /> Self-service portal</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="sec-title">4 · Media & Links</div>
+        <div class="field">
+          <label>What would you like displayed?</label>
+          <div class="check-col">
+            <label class="opt"><input type="checkbox" name="photos" value="Logo" /> Our logo</label>
+            <label class="opt"><input type="checkbox" name="photos" value="Facility Photos" /> Facility photos</label>
+          </div>
+          <p class="hint" style="margin-top:6px">You can email photos to support@moravacare.com anytime.</p>
+        </div>
+        <div class="field"><label>Social Media Links <span class="hint">(optional)</span></label><textarea id="socialLinks" maxlength="500" placeholder="Facebook, Instagram, etc."></textarea></div>
+        <div class="field"><label>Anything else we should know? <span class="hint">(optional)</span></label><textarea id="additionalInfo" maxlength="1500"></textarea></div>
+      </div>
+
+      <button type="submit" class="submit-btn" id="submitBtn">Submit Listing →</button>
+      <p class="hint" style="text-align:center;margin-top:12px">Free to list · No cost, ever, for being found · Update or remove anytime</p>
+    </form>
+
+    <div class="success" id="success">
+      <div class="check">✓</div>
+      <h2>Thank you!</h2>
+      <p>Your recovery housing listing has been submitted. Our team will review it and reach out if we need anything.</p>
+      <p>Questions? Email <a href="mailto:support@moravacare.com">support@moravacare.com</a> or call (432) 803-0136.</p>
+    </div>
+  </div>
+
+  <footer>
+    © 2026 Morava Care LLC · Oklahoma City, OK · <a href="https://moravacare.com">moravacare.com</a>
+  </footer>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, serverTimestamp }
+      from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const app = initializeApp({
+      apiKey: "AIzaSyAMYBfxhljita9XVqTc_HHahMA7mFVFPn8",
+      authDomain: "accesscare-app.firebaseapp.com",
+      projectId: "accesscare-app",
+      storageBucket: "accesscare-app.firebasestorage.app",
+      messagingSenderId: "283308941540",
+      appId: "1:283308941540:web:e3c57ebf0e16ca9c8f4cf1",
+    });
+    const db = getFirestore(app);
+
+    // Basic client-side sanitization (server rules enforce the real guard)
+    const clean = (s, max) => String(s || "").trim().replace(/[<>]/g, "").slice(0, max);
+    const radio = (name) => document.querySelector(`input[name="${name}"]:checked`)?.value || "";
+    const checks = (name) => Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map(c => c.value);
+
+    document.getElementById("listForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const errEl = document.getElementById("errMsg");
+      errEl.style.display = "none";
+
+      const organizationName = clean(document.getElementById("organizationName").value, 200);
+      const contactName = clean(document.getElementById("contactName").value, 150);
+      const phone = clean(document.getElementById("phone").value, 30);
+
+      // Required validation
+      let bad = false;
+      [["organizationName", organizationName], ["contactName", contactName], ["phone", phone]].forEach(([id, val]) => {
+        const el = document.getElementById(id);
+        if (!val) { el.classList.add("input-error"); bad = true; } else { el.classList.remove("input-error"); }
+      });
+      if (bad) { errEl.textContent = "Please fill in your facility name, your name, and a phone number."; errEl.style.display = "block"; return; }
+
+      const btn = document.getElementById("submitBtn");
+      btn.disabled = true; btn.textContent = "Submitting...";
+
+      try {
+        await addDoc(collection(db, "recoveryHousingSubmissions"), {
+          status: "pending_review",
+          organizationName,
+          contactName,
+          phone,
+          email: clean(document.getElementById("email").value, 200),
+          website: clean(document.getElementById("website").value, 300),
+          address: clean(document.getElementById("address").value, 300),
+          housingType: radio("housingType"),
+          description: clean(document.getElementById("description").value, 1500),
+          admissionRequirements: clean(document.getElementById("admissionRequirements").value, 1500),
+          conductsInterviews: radio("conductsInterviews"),
+          currentCapacity: clean(document.getElementById("currentCapacity").value, 50),
+          displayAvailability: radio("displayAvailability"),
+          updatePreference: checks("updatePreference"),
+          photos: checks("photos"),
+          socialLinks: clean(document.getElementById("socialLinks").value, 500),
+          additionalInfo: clean(document.getElementById("additionalInfo").value, 1500),
+          source: "list-recovery-form",
+          submittedAt: serverTimestamp(),
+        });
+        document.getElementById("listForm").style.display = "none";
+        document.querySelector(".intro").style.display = "none";
+        document.getElementById("success").style.display = "block";
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } catch (err) {
+        console.error(err);
+        btn.disabled = false; btn.textContent = "Submit Listing →";
+        errEl.textContent = "Something went wrong. Please try again, or email support@moravacare.com.";
+        errEl.style.display = "block";
+      }
+    });
+  </script>
+</body>
+</html>

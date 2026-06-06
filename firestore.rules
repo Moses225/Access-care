@@ -798,6 +798,29 @@ service cloud.firestore {
     }
 
     // ================================================================
+    // RECOVERY HOUSING SUBMISSIONS — public self-listing form.
+    // Operators submit their facility from moravacare.com/list-recovery.
+    // Public create (validated + script-guarded); admin reviews & promotes
+    // to a real recoveryHousing listing. No public read — submissions are
+    // not directory data until an admin approves them.
+    // ================================================================
+    match /recoveryHousingSubmissions/{docId} {
+      allow read, update, delete: if isAdmin();
+      allow create: if request.resource.data.status == "pending_review"
+                    && validString(request.resource.data.organizationName, 200)
+                    && noScript('organizationName')
+                    && validString(request.resource.data.contactName, 150)
+                    && noScript('contactName')
+                    && validString(request.resource.data.phone, 30)
+                    && validOptionalString('email', 200)
+                    && validOptionalString('website', 300)
+                    && validOptionalString('address', 300)
+                    && (!('description' in request.resource.data) || (noScript('description') && request.resource.data.description.size() <= 1500))
+                    && (!('admissionRequirements' in request.resource.data) || (noScript('admissionRequirements') && request.resource.data.admissionRequirements.size() <= 1500))
+                    && (!('additionalInfo' in request.resource.data) || (noScript('additionalInfo') && request.resource.data.additionalInfo.size() <= 1500));
+    }
+
+    // ================================================================
     // CONFIG — platform-wide switches (e.g. billing.enabled master guard).
     // Admin-only write. Cloud Functions read via Admin SDK (bypass rules).
     // The billing master guard must never be flippable by a client.
