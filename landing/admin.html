@@ -3576,6 +3576,14 @@
         t.className = "toast show" + (type ? " " + type : "");
         setTimeout(() => (t.className = "toast"), 3000);
       }
+
+      // Expose Firestore helpers + utils to the trailing classic <script> below,
+      // where switchTab / loadProviders / loadRecoverySubs are defined and need
+      // these at call time (that script can't import from this module's scope).
+      Object.assign(window, {
+        getDocs, collection, doc, updateDoc, addDoc, serverTimestamp,
+        query, where, limit, db, esc, showToast,
+      });
     </script>
 
     <script>
