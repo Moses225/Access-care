@@ -60,6 +60,10 @@
     .crisis{background:#fef2f2;border:1px solid #fca5a5;border-radius:12px;padding:16px;margin-top:24px}
     .crisis a{color:#dc2626;font-weight:700;text-decoration:none}
     .unclaimed-note{background:#fff8e1;border:1px solid #ffe082;border-radius:10px;padding:10px 13px;font-size:.8rem;color:#92400e;margin-top:12px}
+    .operator-cta{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;background:linear-gradient(135deg,#0d9488,#14b8a6);color:#fff;border-radius:14px;padding:20px 24px;margin-top:24px}
+    .operator-cta-title{font-family:'DM Serif Display',serif;font-size:1.2rem}
+    .operator-cta-sub{font-size:.9rem;opacity:.92;margin-top:2px}
+    .operator-cta-btn{background:#fff;color:var(--teal-dark);font-weight:700;padding:11px 20px;border-radius:50px;text-decoration:none;white-space:nowrap;font-size:.92rem}
     footer{text-align:center;padding:28px 20px;color:var(--text-3);font-size:.82rem}
     footer a{color:var(--teal-dark);text-decoration:none}
   </style>
@@ -90,6 +94,14 @@
       <div class="state"><div class="ico">⏳</div>Loading recovery housing…</div>
     </div>
 
+    <div class="operator-cta">
+      <div>
+        <div class="operator-cta-title">Run a recovery home?</div>
+        <div class="operator-cta-sub">List your facility free so families and case managers can find your open beds.</div>
+      </div>
+      <a href="/list-recovery" class="operator-cta-btn">List your home free →</a>
+    </div>
+
     <div class="crisis">
       <strong>🆘 Need help right now?</strong><br/>
       <a href="tel:18006624357">SAMHSA Helpline: 1-800-662-4357</a> · <a href="tel:988">988 Suicide &amp; Crisis Lifeline</a><br/>
@@ -103,7 +115,7 @@
   </div>
 
   <footer>
-    © 2026 Morava Care LLC · Oklahoma City, OK · <a href="/">Provider search</a> · <a href="https://moses225.github.io/Access-care/terms.html">Terms</a>
+    © 2026 Morava Care LLC · Oklahoma City, OK · <a href="/list-recovery">List your recovery home</a> · <a href="/">Provider search</a> · <a href="https://moses225.github.io/Access-care/terms.html">Terms</a>
   </footer>
 
   <script type="module">
