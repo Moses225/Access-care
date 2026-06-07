@@ -962,9 +962,38 @@
         text-decoration: none;
       }
 
+      .nav-toggle {
+        display: none;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 24px;
+        line-height: 1;
+        color: var(--text);
+        padding: 6px;
+      }
       @media (max-width: 900px) {
+        .nav-toggle { display: block; }
         .nav-links {
+          position: absolute;
+          top: 64px;
+          left: 0;
+          right: 0;
+          flex-direction: column;
+          gap: 0;
+          background: #fff;
+          border-bottom: 1px solid var(--border);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+          padding: 8px 0;
           display: none;
+        }
+        .nav-links.open { display: flex; }
+        .nav-links li { width: 100%; }
+        .nav-links a {
+          display: block;
+          padding: 14px 24px;
+          font-size: 16px;
+          border-bottom: 1px solid var(--border);
         }
         .main-layout {
           grid-template-columns: 1fr;
@@ -1114,17 +1143,36 @@
           </div>
           Morava
         </a>
-        <ul class="nav-links">
-          <li><a href="#find">Find Providers</a></li>
+        <ul class="nav-links" id="navLinks">
+          <li><a href="#find" onclick="closeNav()">Find Providers</a></li>
           <li><a href="/recovery.html">Recovery Housing</a></li>
-          <li><a href="#why">Why Morava</a></li>
-          <li><a href="#faq">FAQ</a></li>
-          <li><a href="#providers">For Providers</a></li>
+          <li><a href="#why" onclick="closeNav()">Why Morava</a></li>
+          <li><a href="#faq" onclick="closeNav()">FAQ</a></li>
+          <li><a href="#providers" onclick="closeNav()">For Providers</a></li>
           <li><a href="/reps.html">Become a Rep 💰</a></li>
         </ul>
-        <a class="nav-cta" href="#find">Find Care Free →</a>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <a class="nav-cta" href="#find">Find Care Free →</a>
+          <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false" onclick="toggleNav()">☰</button>
+        </div>
       </div>
     </nav>
+    <script>
+      function toggleNav() {
+        var l = document.getElementById('navLinks');
+        var t = document.getElementById('navToggle');
+        var open = l.classList.toggle('open');
+        t.setAttribute('aria-expanded', open ? 'true' : 'false');
+        t.textContent = open ? '✕' : '☰';
+      }
+      function closeNav() {
+        var l = document.getElementById('navLinks');
+        var t = document.getElementById('navToggle');
+        l.classList.remove('open');
+        t.setAttribute('aria-expanded', 'false');
+        t.textContent = '☰';
+      }
+    </script>
 
     <!-- HERO -->
     <section class="hero" id="find">
