@@ -401,13 +401,13 @@ export default function RecoveryHousingDetailScreen() {
 
       {/* Funding / financial */}
       <Section title="Payment & Funding">
-        {facility.monthlyRate && (
+        {facility.monthlyRate ? (
           <Row
-            label="Monthly rate"
-            value={`$${facility.monthlyRate}/month${facility.slidingScale ? " (sliding scale available)" : ""}`}
+            label="Rate"
+            value={`$${facility.monthlyRate}/${facility.ratePeriod === "weekly" ? "week" : facility.ratePeriod === "biweekly" ? "2 weeks" : "month"}${facility.slidingScale ? " (sliding scale available)" : ""}`}
             icon="💰"
           />
-        )}
+        ) : null}
         <BoolRow label="Medicaid accepted" value={facility.acceptsMedicaid} icon="🏥" />
         <BoolRow label="ODMHSAS voucher accepted" value={facility.acceptsODMHSAS} icon="📄" />
         <BoolRow label="Other vouchers accepted" value={facility.acceptsVouchers} icon="📄" />
@@ -425,13 +425,13 @@ export default function RecoveryHousingDetailScreen() {
         <BoolRow label="Pets allowed" value={facility.petsAllowed} icon="🐾" />
         <BoolRow label="Smoking allowed" value={facility.smokingAllowed} icon="🚭" />
         {facility.curfew && <Row label="Curfew" value={facility.curfew} icon="🕐" />}
-        {facility.maxStayMonths && (
+        {facility.maxStayMonths ? (
           <Row
             label="Maximum stay"
-            value={`${facility.maxStayMonths} months`}
+            value={`${facility.maxStayMonths} ${facility.maxStayUnit || "months"}`}
             icon="📆"
           />
-        )}
+        ) : null}
       </Section>
 
       {/* House rules */}

@@ -63,6 +63,7 @@ export interface RecoveryHousingFacility {
 
   // Financial
   monthlyRate?: number;
+  ratePeriod?: "weekly" | "biweekly" | "monthly";
   acceptsMedicaid?: boolean;
   acceptsVouchers?: boolean;
   acceptsODMHSAS?: boolean;
@@ -80,6 +81,7 @@ export interface RecoveryHousingFacility {
   housingLevel?: HousingLevel;
   isTransitional?: boolean;
   maxStayMonths?: number;
+  maxStayUnit?: "days" | "weeks" | "months";
 
   // Amenities
   mealsProvided?: boolean;
@@ -153,6 +155,7 @@ export function mapFirestoreToFacility(
     requiresInterview: (data.requiresInterview as boolean) ?? false,
     intakeNotes: data.intakeNotes as string | undefined,
     monthlyRate: data.monthlyRate as number | undefined,
+    ratePeriod: data.ratePeriod as "weekly" | "biweekly" | "monthly" | undefined,
     acceptsMedicaid: (data.acceptsMedicaid as boolean) ?? false,
     acceptsVouchers: (data.acceptsVouchers as boolean) ?? false,
     acceptsODMHSAS: (data.acceptsODMHSAS as boolean) ?? false,
@@ -166,6 +169,7 @@ export function mapFirestoreToFacility(
     housingLevel: data.housingLevel as HousingLevel | undefined,
     isTransitional: (data.isTransitional as boolean) ?? false,
     maxStayMonths: data.maxStayMonths as number | undefined,
+    maxStayUnit: data.maxStayUnit as "days" | "weeks" | "months" | undefined,
     mealsProvided: (data.mealsProvided as boolean) ?? false,
     transportationProvided: (data.transportationProvided as boolean) ?? false,
     employmentSupport: (data.employmentSupport as boolean) ?? false,

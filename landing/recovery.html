@@ -140,7 +140,10 @@
       if (f.acceptsVouchers) out.push("Vouchers");
       if (f.slidingScale) out.push("Sliding scale");
       if (f.acceptsPrivateInsurance) out.push("Private insurance");
-      if (!out.length && f.monthlyRate) out.push("$" + parseInt(f.monthlyRate, 10) + "/mo private pay");
+      if (f.monthlyRate) {
+        const per = f.ratePeriod === "weekly" ? "week" : f.ratePeriod === "biweekly" ? "2 wks" : "mo";
+        out.push("$" + parseInt(f.monthlyRate, 10) + "/" + per + (out.length ? "" : " private pay"));
+      }
       return out;
     }
     function certsOf(f) {
@@ -263,6 +266,7 @@
         ${f.description ? `<div class="m-section"><div class="m-label">About</div><div class="m-text">${esc(f.description)}</div></div>` : ""}
         ${funding.length ? `<div class="m-section"><div class="m-label">Payment &amp; Funding</div><div class="tags">${funding.map((x) => `<span class="tag">${esc(x)}</span>`).join("")}</div></div>` : ""}
         ${typeof f.sobrietyRequirementDays === "number" && f.sobrietyRequirementDays > 0 ? `<div class="m-section"><div class="m-label">Sobriety Requirement</div><div class="m-text">${parseInt(f.sobrietyRequirementDays, 10)} days clean/sober</div></div>` : ""}
+        ${f.maxStayMonths ? `<div class="m-section"><div class="m-label">Maximum Stay</div><div class="m-text">${parseInt(f.maxStayMonths, 10)} ${esc(f.maxStayUnit || "months")}</div></div>` : ""}
         ${f.houseRules ? `<div class="m-section"><div class="m-label">Admission &amp; House Rules</div><div class="m-text">${esc(f.houseRules)}</div></div>` : ""}
         <div class="m-section">
           <div class="m-label">Contact ${esc(f.facilityName || "this home")} directly</div>

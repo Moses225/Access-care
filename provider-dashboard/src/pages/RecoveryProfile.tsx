@@ -54,12 +54,14 @@ interface FacilityProfile {
   slidingScale: boolean;
   acceptsPrivateInsurance: boolean;
   monthlyRate: number;
+  ratePeriod?: "weekly" | "biweekly" | "monthly";
   okarrCertified: boolean;
   oxfordHouseAffiliated: boolean;
   odmhsasLicensed: boolean;
   housingLevel: HousingLevel;
   isTransitional: boolean;
   maxStayMonths: number;
+  maxStayUnit?: "days" | "weeks" | "months";
   mealsProvided: boolean;
   transportationProvided: boolean;
   employmentSupport: boolean;
@@ -274,12 +276,14 @@ export default function RecoveryProfile() {
         slidingScale:               data.slidingScale ?? false,
         acceptsPrivateInsurance:    data.acceptsPrivateInsurance ?? false,
         monthlyRate:                data.monthlyRate || 0,
+        ratePeriod:                 data.ratePeriod || "monthly",
         okarrCertified:             data.okarrCertified ?? false,
         oxfordHouseAffiliated:      data.oxfordHouseAffiliated ?? false,
         odmhsasLicensed:            data.odmhsasLicensed ?? false,
         housingLevel:               data.housingLevel || "level_1",
         isTransitional:             data.isTransitional ?? false,
         maxStayMonths:              data.maxStayMonths || 0,
+        maxStayUnit:                data.maxStayUnit || "months",
         mealsProvided:              data.mealsProvided ?? false,
         transportationProvided:     data.transportationProvided ?? false,
         employmentSupport:          data.employmentSupport ?? false,
@@ -719,17 +723,26 @@ export default function RecoveryProfile() {
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">
-                Monthly Rate (USD)
+                Private-Pay Rate (USD)
               </label>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-slate-400 text-sm">$</span>
                 <input
                   type="number" min={0}
                   value={data.monthlyRate || 0}
                   onChange={(e) => set("monthlyRate", parseInt(e.target.value) || 0)}
-                  className="w-40 border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  className="w-32 border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
                 />
-                <span className="text-slate-400 text-sm">/ month</span>
+                <span className="text-slate-400 text-sm">per</span>
+                <select
+                  value={data.ratePeriod || "monthly"}
+                  onChange={(e) => set("ratePeriod", e.target.value)}
+                  className="border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                >
+                  <option value="weekly">week</option>
+                  <option value="biweekly">2 weeks</option>
+                  <option value="monthly">month</option>
+                </select>
               </div>
               <p className="text-xs text-slate-400 mt-1">Set 0 if no private-pay rate or rate varies</p>
             </div>
@@ -773,14 +786,25 @@ export default function RecoveryProfile() {
 
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">
-                Maximum Stay (months)
+                Maximum Stay
               </label>
-              <input
-                type="number" min={0}
-                value={data.maxStayMonths || 0}
-                onChange={(e) => set("maxStayMonths", parseInt(e.target.value) || 0)}
-                className="w-32 border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-              />
+              <div className="flex items-center gap-2">
+                <input
+                  type="number" min={0}
+                  value={data.maxStayMonths || 0}
+                  onChange={(e) => set("maxStayMonths", parseInt(e.target.value) || 0)}
+                  className="w-28 border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                />
+                <select
+                  value={data.maxStayUnit || "months"}
+                  onChange={(e) => set("maxStayUnit", e.target.value)}
+                  className="border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                >
+                  <option value="days">days</option>
+                  <option value="weeks">weeks</option>
+                  <option value="months">months</option>
+                </select>
+              </div>
               <p className="text-xs text-slate-400 mt-1">Set 0 for no maximum</p>
             </div>
           </div>
