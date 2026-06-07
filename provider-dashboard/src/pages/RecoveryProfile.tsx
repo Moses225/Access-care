@@ -303,8 +303,9 @@ export default function RecoveryProfile() {
         lastUpdatedBy:              "facility",
         lastUpdated:                new Date(),
       };
-      if (data.photoURL)   payload.photoURL   = data.photoURL;
-      if (data.photoURLs)  payload.photoURLs  = data.photoURLs;
+      // Always write (even empty) so removing a cover/gallery photo persists
+      payload.photoURL  = data.photoURL  || "";
+      payload.photoURLs = data.photoURLs || [];
       if (data.videoURL !== undefined) payload.videoURL = data.videoURL || "";
       await updateDoc(doc(db, "recoveryHousing", facilityId), payload);
       setSaved(true);
@@ -417,24 +418,47 @@ export default function RecoveryProfile() {
                 Cover Photo
               </label>
               <div className="flex items-center gap-4">
-                <div className="w-24 h-24 rounded-xl bg-slate-100 border-2 border-slate-200 overflow-hidden flex-shrink-0">
-                  {(data.photoURLs?.[0] || data.photoURL) ? (
-                    <img src={data.photoURLs?.[0] || data.photoURL} alt="Facility" className="w-full h-full object-cover" />
+                <div className="relative w-24 h-24 rounded-xl bg-slate-100 border-2 border-slate-200 overflow-hidden flex-shrink-0">
+                  {data.photoURL ? (
+                    <>
+                      <img src={data.photoURL} alt="Cover" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => set("photoURL", "")}
+                        title="Remove cover photo"
+                        className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600"
+                      >
+                        ×
+                      </button>
+                    </>
+                  ) : data.photoURLs?.[0] ? (
+                    <img src={data.photoURLs[0]} alt="Cover" className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-slate-300 text-3xl">🏡</div>
                   )}
                 </div>
                 <div>
                   <input type="file" ref={fileRef} accept="image/*" onChange={handlePhotoUpload} className="hidden" />
-                  <button
-                    type="button"
-                    onClick={() => fileRef.current?.click()}
-                    disabled={photoUploading}
-                    className="border border-slate-200 hover:border-teal-300 text-slate-600 hover:text-teal-600 text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-                  >
-                    {photoUploading ? `Uploading ${photoProgress}%...` : "Upload cover photo"}
-                  </button>
-                  <p className="text-xs text-slate-400 mt-1">JPG, PNG or WebP · Max 6 MB</p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => fileRef.current?.click()}
+                      disabled={photoUploading}
+                      className="border border-slate-200 hover:border-teal-300 text-slate-600 hover:text-teal-600 text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                    >
+                      {photoUploading ? `Uploading ${photoProgress}%...` : data.photoURL ? "Replace cover photo" : "Upload cover photo"}
+                    </button>
+                    {data.photoURL && (
+                      <button
+                        type="button"
+                        onClick={() => set("photoURL", "")}
+                        className="text-sm text-red-500 hover:text-red-600 font-medium px-2 py-2"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1">JPG, PNG or WebP · Max 10 MB. Don't forget to Save.</p>
                 </div>
               </div>
             </div>
