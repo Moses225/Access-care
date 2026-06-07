@@ -3598,17 +3598,19 @@
       window.loadRecoverySubs = async function () {
         const table = document.getElementById("recoverySubsTable");
         table.innerHTML = '<div class="table-loading">Loading submissions…</div>';
+        let snap;
         try {
-          const snap = await getDocs(collection(db, "recoveryHousingSubmissions"));
-          window._recoverySubs = snap.docs
-            .map((d) => ({ id: d.id, ...d.data() }))
-            .sort((a, b) => (b.submittedAt?.toMillis?.() || 0) - (a.submittedAt?.toMillis?.() || 0));
-          window._recoverySubsLoaded = true;
-          renderRecoverySubs();
+          snap = await getDocs(collection(db, "recoveryHousingSubmissions"));
         } catch (err) {
-          console.error(err);
-          table.innerHTML = '<div class="table-empty"><p>Could not load submissions.</p></div>';
+          console.error("recoverySubs load failed:", err);
+          table.innerHTML = `<div class="table-empty"><p>Could not load submissions: ${esc(err?.code || err?.message || "unknown")}</p></div>`;
+          return;
         }
+        window._recoverySubs = snap.docs
+          .map((d) => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => (b.submittedAt?.toMillis?.() || 0) - (a.submittedAt?.toMillis?.() || 0));
+        window._recoverySubsLoaded = true;
+        renderRecoverySubs();
       };
 
       function renderRecoverySubs() {
