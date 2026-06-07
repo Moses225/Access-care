@@ -169,8 +169,9 @@ export default function RecoveryProfile() {
   // ── Photo upload ─────────────────────────────────────────────────────────────
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !facilityId) return;
-    if (file.size > 5 * 1024 * 1024) { setError("Photo must be under 5MB."); return; }
+    if (!file) return;
+    if (!facilityId) { setError("No facility linked to this account — cannot upload."); return; }
+    if (file.size > 10 * 1024 * 1024) { setError("Photo must be under 10MB."); return; }
     if (!file.type.startsWith("image/")) { setError("File must be an image."); return; }
     setPhotoUploading(true);
     setError("");
@@ -179,7 +180,11 @@ export default function RecoveryProfile() {
     task.on(
       "state_changed",
       (snap) => setPhotoProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100)),
-      () => { setError("Photo upload failed."); setPhotoUploading(false); },
+      (err: any) => {
+        console.error("[cover upload] failed:", err?.code, err?.message, err);
+        setError(`Photo upload failed: ${err?.code || err?.message || "unknown"}`);
+        setPhotoUploading(false);
+      },
       async () => {
         const url = await getDownloadURL(task.snapshot.ref);
         set("photoURL", url);
@@ -216,8 +221,9 @@ export default function RecoveryProfile() {
         urls.push(url);
       }
       set("photoURLs", [...current, ...urls]);
-    } catch {
-      setError("Gallery upload failed. Please try again.");
+    } catch (err: any) {
+      console.error("[gallery upload] failed:", err?.code, err?.message, err);
+      setError(`Gallery upload failed: ${err?.code || err?.message || "unknown"}`);
     } finally {
       setGalleryUploading(false);
       if (galleryRef.current) galleryRef.current.value = "";
