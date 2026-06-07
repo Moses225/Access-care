@@ -103,8 +103,17 @@ service cloud.firestore {
     function isRecoverySafeUpdate() {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
         'listingStatus', 'listingPlan', 'freeTrialStartedAt', 'warningEmailSent',
-        'managedByUid', 'active'
-      ]);
+        'managedByUid', 'active', 'verified', 'foundingComp', 'foundingCompNote'
+      ])
+      // Script guards on operator-editable free-text fields (defense-in-depth;
+      // all render paths also escape, but block stored payloads at the source)
+      && (!('description' in request.resource.data)       || noScript('description'))
+      && (!('houseRules' in request.resource.data)        || noScript('houseRules'))
+      && (!('intakeNotes' in request.resource.data)       || noScript('intakeNotes'))
+      && (!('facilityName' in request.resource.data)      || noScript('facilityName'))
+      && (!('ownerName' in request.resource.data)         || noScript('ownerName'))
+      && (!('curfew' in request.resource.data)            || noScript('curfew'))
+      && (!('familyHousingNote' in request.resource.data) || noScript('familyHousingNote'));
     }
 
     // isProviderUsersSafeUpdate — blocks recovery facility operators from

@@ -179,7 +179,12 @@ export function mapFirestoreToFacility(
     houseRules: data.houseRules as string | undefined,
     petsAllowed: (data.petsAllowed as boolean) ?? false,
     smokingAllowed: (data.smokingAllowed as boolean) ?? false,
-    photos: (data.photos as string[]) ?? [],
+    // Dashboard saves photoURLs (gallery) + photoURL (cover); fall back to legacy `photos`
+    photos: (Array.isArray(data.photoURLs) && data.photoURLs.length
+              ? (data.photoURLs as string[])
+              : data.photoURL
+                ? [data.photoURL as string]
+                : (data.photos as string[])) ?? [],
     listingPlan: (data.listingPlan as "free" | "standard" | "growth") ?? "free",
     verified: (data.verified as boolean) ?? false,
     active: (data.active as boolean) ?? true,
