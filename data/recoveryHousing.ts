@@ -98,6 +98,7 @@ export interface RecoveryHousingFacility {
 
   // Photos
   photos?: string[];
+  videoURL?: string;
 
   // Morava admin
   verified?: boolean;
@@ -179,12 +180,13 @@ export function mapFirestoreToFacility(
     houseRules: data.houseRules as string | undefined,
     petsAllowed: (data.petsAllowed as boolean) ?? false,
     smokingAllowed: (data.smokingAllowed as boolean) ?? false,
-    // Dashboard saves photoURLs (gallery) + photoURL (cover); fall back to legacy `photos`
-    photos: (Array.isArray(data.photoURLs) && data.photoURLs.length
-              ? (data.photoURLs as string[])
-              : data.photoURL
-                ? [data.photoURL as string]
-                : (data.photos as string[])) ?? [],
+    // Combine cover (photoURL) + gallery (photoURLs) + legacy (photos), de-duped
+    photos: Array.from(new Set([
+      ...(data.photoURL ? [data.photoURL as string] : []),
+      ...(Array.isArray(data.photoURLs) ? (data.photoURLs as string[]) : []),
+      ...(Array.isArray(data.photos) ? (data.photos as string[]) : []),
+    ].filter(Boolean))),
+    videoURL: data.videoURL as string | undefined,
     listingPlan: (data.listingPlan as "free" | "standard" | "growth") ?? "free",
     verified: (data.verified as boolean) ?? false,
     active: (data.active as boolean) ?? true,

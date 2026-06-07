@@ -25,6 +25,7 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Dimensions,
   Image,
   KeyboardAvoidingView,
   Linking,
@@ -37,6 +38,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
+const SCREEN_W = Dimensions.get("window").width;
 import { useTheme } from "../../../context/ThemeContext";
 import { useAuth } from "../../../context/AuthContext";
 import { db } from "../../../firebase";
@@ -266,25 +269,40 @@ export default function RecoveryHousingDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Photo carousel */}
+      {/* Photo carousel — swipeable */}
       {facility.photos && facility.photos.length > 0 ? (
         <View style={s.photoContainer}>
-          <Image
-            source={{ uri: facility.photos[photoIndex] }}
-            style={s.photo}
-            resizeMode="cover"
-          />
+          <ScrollView
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={(e) =>
+              setPhotoIndex(Math.round(e.nativeEvent.contentOffset.x / SCREEN_W))
+            }
+          >
+            {facility.photos.map((uri: string, i: number) => (
+              <Image
+                key={i}
+                source={{ uri }}
+                style={{ width: SCREEN_W, height: 220 }}
+                resizeMode="cover"
+              />
+            ))}
+          </ScrollView>
           {facility.photos.length > 1 && (
-            <View style={s.photoDots}>
-              {facility.photos.map((_: string, i: number) => (
-                <TouchableOpacity key={i} onPress={() => setPhotoIndex(i)}>
-                  <View style={[
+            <>
+              <View style={s.photoDots}>
+                {facility.photos.map((_: string, i: number) => (
+                  <View key={i} style={[
                     s.dot,
                     { backgroundColor: i === photoIndex ? "#fff" : "rgba(255,255,255,0.4)" }
                   ]} />
-                </TouchableOpacity>
-              ))}
-            </View>
+                ))}
+              </View>
+              <View style={s.photoCount}>
+                <Text style={s.photoCountText}>{photoIndex + 1}/{facility.photos.length}</Text>
+              </View>
+            </>
           )}
         </View>
       ) : (
@@ -293,6 +311,17 @@ export default function RecoveryHousingDetailScreen() {
           <Text style={{ color: "#0369A1", fontSize: 13, marginTop: 4 }}>Photos coming soon</Text>
         </View>
       )}
+
+      {/* Video tour */}
+      {facility.videoURL ? (
+        <TouchableOpacity
+          style={s.videoBtn}
+          onPress={() => Linking.openURL(facility.videoURL!)}
+        >
+          <Ionicons name="play-circle" size={20} color="#00838F" />
+          <Text style={s.videoBtnText}>Watch video tour</Text>
+        </TouchableOpacity>
+      ) : null}
 
       {/* Facility name + certifications */}
       <View style={[s.nameSection, { backgroundColor: colors.card }]}>
@@ -738,6 +767,30 @@ const s = StyleSheet.create({
     gap: 6,
   },
   dot: { width: 7, height: 7, borderRadius: 4 },
+  photoCount: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  photoCountText: { color: "#fff", fontSize: 11, fontWeight: "700" },
+  videoBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginHorizontal: 16,
+    marginTop: 12,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: "#00838F",
+    backgroundColor: "#E0F7FA",
+  },
+  videoBtnText: { color: "#00838F", fontSize: 15, fontWeight: "700" },
   photoPlaceholder: {
     height: 140,
     alignItems: "center",
