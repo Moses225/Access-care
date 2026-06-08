@@ -990,7 +990,10 @@ export default function ProviderDetailScreen() {
   }, [loadProvider, checkIfFavorite, fetchVoucherStatus]);
 
   const handleCall = () => {
-    if (provider?.phone) Linking.openURL(`tel:${provider.phone}`);
+    if (provider?.phone)
+      Linking.openURL(`tel:${provider.phone}`).catch(() =>
+        Alert.alert("Couldn't start call", `Please dial ${provider.phone} directly.`),
+      );
   };
 
   const handleDirections = async () => {
@@ -1000,13 +1003,30 @@ export default function ProviderDetailScreen() {
       Platform.OS === "ios"
         ? `maps://?daddr=${latitude},${longitude}`
         : `geo:${latitude},${longitude}?q=${latitude},${longitude}`;
-    const webFallback = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
-    try {
-      const canOpen = await Linking.canOpenURL(nativeUrl);
-      Linking.openURL(canOpen ? nativeUrl : webFallback);
-    } catch {
-      Linking.openURL(webFallback);
+    // Apple Maps (iOS) is the most reliable fallback; Google Maps web last.
+    const fallbacks =
+      Platform.OS === "ios"
+        ? [`http://maps.apple.com/?daddr=${latitude},${longitude}`,
+           `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`]
+        : [`https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`];
+
+    // Try the native maps scheme, then each fallback. await each so a rejected
+    // openURL is caught here (not surfaced as an unhandled promise rejection).
+    const candidates = [nativeUrl, ...fallbacks];
+    for (const url of candidates) {
+      try {
+        const canOpen = await Linking.canOpenURL(url);
+        if (!canOpen) continue;
+        await Linking.openURL(url);
+        return; // success
+      } catch {
+        /* try next candidate */
+      }
     }
+    Alert.alert(
+      "Couldn't open maps",
+      "We couldn't open a maps app. You can search this address in your maps app directly.",
+    );
   };
 
   const toggleFavorite = async () => {
